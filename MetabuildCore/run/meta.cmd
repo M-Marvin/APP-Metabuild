@@ -1,0 +1,1 @@
+java -jar %~dp0metabuild.jar %* -cache-dir .meta

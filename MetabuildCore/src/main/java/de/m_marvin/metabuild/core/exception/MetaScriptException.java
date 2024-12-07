@@ -23,9 +23,22 @@ public class MetaScriptException extends RuntimeException {
 	}
 	
 	public void printStack(PrintWriter s) {
+		printStack(0, s);
+	}
+	
+	protected void printStack(int l, PrintWriter s) {
+		StringBuilder pad = new StringBuilder();
+		for (int i = 0; i < l; i++) {
+			pad.append("    ");
+		}
+		pad.append(l == 0 ? "==> " : "\\-> ");
 		
-		s.println("test");
-		
+		s.println(pad.toString() + getMessage());
+		if (getCause() instanceof MetaScriptException e) {
+			e.printStack(l + 1, s);
+		} else if (getCause() != null) {
+			getCause().printStackTrace(s);
+		}
 	}
 	
 }

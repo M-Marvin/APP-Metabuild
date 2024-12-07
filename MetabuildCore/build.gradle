@@ -39,7 +39,7 @@ dependencies {
 	implementation "com.google.code.gson:gson:2.9.1"
 	
 	// SimpleLogging
-	implementation 'de.m_marvin.simplelogging:simplelogging:2.0'
+	implementation 'de.m_marvin.simplelogging:simplelogging:2.1.1'
 	
 	// JavaRun
 	implementation 'de.m_marvin.javarun:javarun:1.2'
@@ -61,6 +61,17 @@ jar {
     }
 }
 
+task assembleTest() {
+	description "Copies metabuild instance into MetaTest project"
+	group = "build"
+	
+	doLast {
+		ant.copy(file:'build/libs/MetabuildCore-' + version + '-all.jar', tofile:'../MetaTest/meta/metabuild.jar')
+	}
+}
+
+assembleTest.dependsOn(shadowJar)
+
 task assembleBin() {
 	description "Copies all required files into the output installation folder"
 	group = 'build'
@@ -71,5 +82,4 @@ task assembleBin() {
 }
 
 assembleBin.dependsOn(shadowJar)
-
 build.dependsOn(assembleBin)

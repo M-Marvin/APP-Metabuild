@@ -21,7 +21,6 @@ public class MetaLaunch {
 		// Initialize argument parser
 		CommandLineParser parser = new CommandLineParser();
 		parser.addOption("help", false, "show command help");
-		parser.addOption("build-dir", Metabuild.DEFAULT_BUILD_DIRECTORY, "directory to place build files in");
 		parser.addOption("build-file", Metabuild.DEFAULT_BUILD_FILE_NAME, "build file to load and run tasks from");
 		parser.addOption("cache-dir", Metabuild.DEFAULT_CACHE_DIRECTORY, "directory to save all cache data");
 		parser.addOption("log", Metabuild.DEFAULT_BUILD_LOG_NAME, "file to write build log to");
@@ -51,8 +50,6 @@ public class MetaLaunch {
 		Metabuild mb = new Metabuild(workingDir);
 		
 		// TODO initialize CLI-UI output
-		if (args.getOption("build-dir") != null)
-			mb.setBuildDirectory(new File(args.getOption("build-dir")));
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
 		if (args.getOption("cache-dir") != null)
@@ -65,8 +62,9 @@ public class MetaLaunch {
 		if (!mb.initBuild(buildFile)) return -1;
 		
 		// Run tasks
-		for (String taskName : taskList) {
-			if (!mb.runTask(taskName)) return -2;
+		if (!mb.runTasks(taskList)) {
+			Metabuild.terminate();
+			return -1;
 		}
 		
 		Metabuild.terminate();

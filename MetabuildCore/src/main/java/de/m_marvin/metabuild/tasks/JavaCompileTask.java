@@ -9,8 +9,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,7 +37,6 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.core.script.BuildTask;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
 
@@ -42,7 +45,7 @@ public class JavaCompileTask extends BuildTask {
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
 	public final List<String> options = new ArrayList<>();
-	public File stateCache = new File("../.classmeta");
+	public File stateCache = null; // if not set, will be set by prepare
 	
 	public static record SourceMetaData(File[] classFiles, FileTime timestamp) { }
 	
@@ -97,6 +100,17 @@ public class JavaCompileTask extends BuildTask {
 	public TaskState prepare() {
 		
 		File srcPath = FileUtility.absolute(this.sourcesDir);
+		
+		if (this.stateCache == null) {
+			String hash = "";
+			try {
+				ByteBuffer buf = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(this.sourcesDir.getPath().getBytes(StandardCharsets.UTF_8)));
+				hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(Integer::toHexString).reduce(String::concat).get();
+			} catch (NoSuchAlgorithmException e) {
+				logger().warnt(logTag(), "failed to generate hash name for class state cache: %s", this.classesDir, e);
+			}
+			this.stateCache = new File("../" + hash + ".classmeta");
+		}
 		
 		loadMetadata();
 		
@@ -174,8 +188,6 @@ public class JavaCompileTask extends BuildTask {
 	
 	protected Optional<List<File>> compileSource(File source) {
 		
-		logger().debugt(logTag(), "compiling source file: %s", source);
-		
 		String sourceName = FileUtility.getNameNoExtension(source);
 		SimpleJavaFileObject sourceFileObject = new FileJavaSource(sourceName, source);
 		
@@ -184,9 +196,29 @@ public class JavaCompileTask extends BuildTask {
 		CompilationTask task = javac.getTask(logger().errorWriter(), fileManager, diagnostics, this.options, null, Collections.singleton(sourceFileObject));
 		
 		if (!task.call()) {
-			logger().warnt(logTag(), "errors occured while compiling file: %s", source);
+			logger().warnt(logTag(), "problems occured while compiling file: %s", source);
 			for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
-				logger().errort(logTag(), "[%s] : %d/%s %s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), diagnostic.getMessage(null));
+				String info = null;
+				
+				try {
+					long lineNr = diagnostic.getLineNumber();
+					
+					BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
+					String line = "";
+					for (long i = 0; i < lineNr; i++) line = reader.readLine();
+					reader.close();
+					
+					StringBuffer buff = new StringBuffer();
+					buff.append(line).append("\n");
+					for (long i = 0; i < diagnostic.getColumnNumber() - 1; i++) buff.append(" ");
+					buff.append("^ Here: ").append(diagnostic.getMessage(null));
+					
+					info = buff.toString();
+				} catch (IOException e) {
+					info = "source line unavailable";
+				}
+				
+				logger().warnt(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
 			}
 			return Optional.empty();
 		}
@@ -224,6 +256,9 @@ public class JavaCompileTask extends BuildTask {
 		
 		// Compile outdated files
 		for (File sourceFile : this.toCompile) {
+			
+			logger().debugt(logTag(), "compiling source file: %s", sourceFile);
+			
 			File file = FileUtility.absolute(sourceFile, srcPath);
 			Optional<List<File>> classFiles = compileSource(file);
 			if (classFiles.isEmpty()) {

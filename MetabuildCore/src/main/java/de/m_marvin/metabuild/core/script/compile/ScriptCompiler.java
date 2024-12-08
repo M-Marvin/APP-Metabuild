@@ -22,8 +22,8 @@ import javax.tools.ToolProvider;
 import de.m_marvin.javarun.compile.SourceCompiler;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.MetaInitError;
-import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.script.BuildScript;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class ScriptCompiler {

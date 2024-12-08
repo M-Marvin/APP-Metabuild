@@ -1,11 +1,8 @@
-08.12.2024_02:28:10: [ INFO] Metabuild: #########################################
-08.12.2024_02:28:10: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
-08.12.2024_02:28:10: [ INFO] Metabuild: #########################################
-08.12.2024_02:28:10: [ INFO] Metabuild: buildfile: build.meta
-08.12.2024_02:28:10: [ INFO] Metabuild: begin build init phase
-08.12.2024_02:28:10: [ INFO] Metabuild: begin build run phase
-08.12.2024_02:28:10: [ INFO] make_archive/jar: make archive from files: build\libs\test.jar
-08.12.2024_02:28:10: [DEBUG] make_archive/jar: archive manifest
-08.12.2024_02:28:10: [DEBUG] make_archive/jar: archive file: de\test\Test.class
-08.12.2024_02:28:10: [ INFO] Metabuild: build completed
-08.12.2024_02:28:10: [ INFO] Metabuild: build run phase finished, shuting down
+08.12.2024_17:04:59: [ INFO] Metabuild: #########################################
+08.12.2024_17:04:59: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
+08.12.2024_17:04:59: [ INFO] Metabuild: #########################################
+08.12.2024_17:04:59: [ INFO] Metabuild: buildfile: build.meta
+08.12.2024_17:04:59: [ INFO] Metabuild: begin build init phase
+08.12.2024_17:04:59: [ INFO] Metabuild: begin build run phase
+08.12.2024_17:04:59: [ INFO] Metabuild: nothing to do
+08.12.2024_17:04:59: [ INFO] Metabuild: TASKS: 2  UP_TO_DATE: 2  FAILED: 0

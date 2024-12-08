@@ -15,7 +15,8 @@ public class MetaLaunch {
 		// Read list of tasks to run
 		List<String> taskRunList = new ArrayList<>();
 		for (String s : args) {
-			if (Metabuild.TASK_NAME_FILTER.matcher(s).matches()) taskRunList.add(s);
+			if (!Metabuild.TASK_NAME_FILTER.matcher(s).matches()) break;
+			taskRunList.add(s);
 		}
 		
 		// Initialize argument parser
@@ -24,6 +25,7 @@ public class MetaLaunch {
 		parser.addOption("build-file", Metabuild.DEFAULT_BUILD_FILE_NAME, "build file to load and run tasks from");
 		parser.addOption("cache-dir", Metabuild.DEFAULT_CACHE_DIRECTORY, "directory to save all cache data");
 		parser.addOption("log", Metabuild.DEFAULT_BUILD_LOG_NAME, "file to write build log to");
+		parser.addOption("threads", Integer.toString(Metabuild.DEFAULT_TASK_THREADS), "number of threads to utilize for executing build tasks");
 		
 		// Parse and check arguments
 		parser.parseInput(Arrays.copyOfRange(args, taskRunList.size(), args.length));
@@ -60,6 +62,10 @@ public class MetaLaunch {
 		if (args.getOption("build-file") != null)
 			buildFile = new File(args.getOption("build-file"));
 		if (!mb.initBuild(buildFile)) return -1;
+		
+		// Parse build threads
+		if (args.getOption("threads") != null)
+			mb.setTaskThreads(Integer.parseInt(args.getOption("threads")));
 		
 		// Run tasks
 		if (!mb.runTasks(taskList)) {

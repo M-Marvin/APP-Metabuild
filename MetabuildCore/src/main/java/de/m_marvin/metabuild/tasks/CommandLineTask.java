@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.core.script.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
 
 public class CommandLineTask extends BuildTask {

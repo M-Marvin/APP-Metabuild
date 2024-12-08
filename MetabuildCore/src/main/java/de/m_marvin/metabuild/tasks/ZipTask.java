@@ -71,6 +71,12 @@ public class ZipTask extends BuildTask {
 	}
 	
 	@Override
+	public TaskState prepare() {
+		// TODO Auto-generated method stub
+		return super.prepare();
+	}
+	
+	@Override
 	public boolean run() {
 		
 		logger().infot(logTag(), "make archive from files: %s", this.archive);

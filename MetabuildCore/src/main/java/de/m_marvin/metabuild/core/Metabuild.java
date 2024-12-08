@@ -239,7 +239,7 @@ public final class Metabuild {
 		}
 
 		try {
-			if (!task.prepare().requiresBuild() && dependendNodes.isEmpty()) {
+			if (!task.state().requiresBuild() && dependendNodes.isEmpty()) {
 				this.taskTree = new TaskNode(Optional.empty(), new HashSet<>());
 				return;
 			}
@@ -259,7 +259,7 @@ public final class Metabuild {
 			this.taskTree = null;
 			
 			for (BuildTask task : this.registeredTasks.values()) {
-				if (task.prepare().requiresBuild() && tasks.contains(task.name))
+				if (task.state().requiresBuild() && tasks.contains(task.name))
 					tasks.add(task.name);
 			}
 			
@@ -318,6 +318,8 @@ public final class Metabuild {
 	
 	public boolean runTasks(List<String> tasks) {
 
+		for (BuildTask task : this.registeredTasks.values()) task.reset();
+		
 		logger().infot(LOG_TAG, "begin build init phase");
 		
 		if (!buildTaskTree(tasks)) {

@@ -10,6 +10,7 @@ public abstract class BuildTask {
 	
 	public TaskType type;
 	public String name;
+	public TaskState state;
 	
 	public BuildTask(String name) {
 		this.name = name;
@@ -31,6 +32,15 @@ public abstract class BuildTask {
 	
 	protected String logTag() {
 		return String.format("%s/%s", this.type.toString(), this.name);
+	}
+	
+	public void reset() {
+		this.state = null;
+	}
+	
+	public TaskState state() {
+		if (this.state == null) this.state = prepare();
+		return this.state;
 	}
 	
 	public TaskState prepare() {

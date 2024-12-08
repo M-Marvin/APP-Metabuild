@@ -1,12 +1,11 @@
-07.12.2024_01:54:30: [ INFO] Metabuild: #########################################
-07.12.2024_01:54:30: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
-07.12.2024_01:54:30: [ INFO] Metabuild: #########################################
-07.12.2024_01:54:30: [ INFO] Metabuild: buildfile: build.meta
-07.12.2024_01:54:30: [ INFO] Metabuild: begin build init phase
-07.12.2024_01:54:30: [ INFO] Metabuild: begin build run phase
-07.12.2024_01:54:30: [ INFO] make_archive/jar: make archive from files: build\libs\test.jar
-07.12.2024_01:54:30: [DEBUG] make_archive/jar: archive manifest
-07.12.2024_01:54:30: [DEBUG] make_archive/jar: archive file: de\test\Test.class
-07.12.2024_01:54:30: [DEBUG] make_archive/jar: archive file: de\test\Test2.class
-07.12.2024_01:54:30: [ INFO] Metabuild: build completed
-07.12.2024_01:54:30: [ INFO] Metabuild: build run phase finished, shuting down
+08.12.2024_02:28:10: [ INFO] Metabuild: #########################################
+08.12.2024_02:28:10: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
+08.12.2024_02:28:10: [ INFO] Metabuild: #########################################
+08.12.2024_02:28:10: [ INFO] Metabuild: buildfile: build.meta
+08.12.2024_02:28:10: [ INFO] Metabuild: begin build init phase
+08.12.2024_02:28:10: [ INFO] Metabuild: begin build run phase
+08.12.2024_02:28:10: [ INFO] make_archive/jar: make archive from files: build\libs\test.jar
+08.12.2024_02:28:10: [DEBUG] make_archive/jar: archive manifest
+08.12.2024_02:28:10: [DEBUG] make_archive/jar: archive file: de\test\Test.class
+08.12.2024_02:28:10: [ INFO] Metabuild: build completed
+08.12.2024_02:28:10: [ INFO] Metabuild: build run phase finished, shuting down

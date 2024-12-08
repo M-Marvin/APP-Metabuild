@@ -1,13 +1,5 @@
-12.11.2024_20:49:56: [ INFO] Metabuild: #########################################
-12.11.2024_20:49:56: [ INFO] Metabuild:       null vernull
-12.11.2024_20:49:56: [ INFO] Metabuild: #########################################
-12.11.2024_20:49:56: [ERROR] Metabuild: test
-12.11.2024_20:49:56: [ERROR] Metabuild: 
-12.11.2024_20:49:56: [ERROR] Metabuild: java.lang.Exception: test
-12.11.2024_20:49:56: [ERROR] Metabuild: 	at de.m_marvin.metabuild.core.Metabuild.initDirectories(Metabuild.java:159)
-12.11.2024_20:49:56: [ERROR] Metabuild: 	at de.m_marvin.metabuild.core.Metabuild.initBuild(Metabuild.java:182)
-12.11.2024_20:49:56: [ERROR] Metabuild: 	at de.m_marvin.metabuild.cli.MetaLaunch.launchMetabuild(MetaLaunch.java:62)
-12.11.2024_20:49:56: [ERROR] Metabuild: 	at de.m_marvin.metabuild.cli.MetaLaunch.main(MetaLaunch.java:39)
-12.11.2024_20:49:56: [ERROR] Metabuild: 
-12.11.2024_20:49:56: [ERROR] ScriptCompiler: could not compile buildfile: build.meta (Das System kann die angegebene Datei nicht finden)
-12.11.2024_20:49:56: [ERROR] Metabuild: failed to load buildfile, build aborted!
+07.12.2024_20:05:31: [ INFO] Metabuild: #########################################
+07.12.2024_20:05:31: [ INFO] Metabuild:       null vernull
+07.12.2024_20:05:31: [ INFO] Metabuild: #########################################
+07.12.2024_20:05:31: [ERROR] ScriptCompiler: could not compile buildfile: build.meta (Das System kann die angegebene Datei nicht finden)
+07.12.2024_20:05:31: [ERROR] Metabuild: failed to load buildfile, build aborted!

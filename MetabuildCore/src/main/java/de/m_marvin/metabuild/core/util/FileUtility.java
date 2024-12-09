@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayDeque;
@@ -157,6 +158,68 @@ public class FileUtility {
 		File path = file.getParentFile();
 		String name = getNameNoExtension(file);
 		return new File(path, name + (ext.isBlank() ? "" : "." + ext));
+	}
+
+	protected static boolean relocate(File from, File to, boolean rename, boolean copy) {
+		File t = rename ? to : new File(to, from.getName());
+		if (from.isDirectory()) {
+			if (!t.exists() && !t.mkdir()) return false;
+			for (File f : from.listFiles()) {
+				relocate(f, t, false, copy);
+			}
+			if (copy) return true;
+			try {
+				Files.delete(from.toPath());
+				return true;
+			} catch (IOException e) {
+				return false;
+			}
+		} else if (from.isFile()) {
+			try {
+				if (copy)
+					Files.copy(from.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				else
+					Files.move(from.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				return true;
+			} catch (IOException e) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	
+	public static boolean delete(File file) {
+		if (file.isDirectory()) {
+			for (File f : file.listFiles()) {
+				if (!delete(f)) return false;
+			}
+		}
+		return file.delete();
+	}
+	
+	public static boolean move(File from, File to) {
+		if (!to.exists()) {
+			return relocate(from, to, true, false);
+		} else if (from.isFile() && to.isFile()) {	
+			return relocate(from, to, true, false);
+		} else if (to.isDirectory()) {
+			return relocate(from, to, false, false);
+		} else {
+			return false;
+		}	
+	}
+
+	public static boolean copy(File from, File to) {
+		if (!to.exists()) {
+			return relocate(from, to, true, true);
+		} else if (from.isFile() && to.isFile()) {	
+			return relocate(from, to, true, true);
+		} else if (to.isDirectory()) {
+			return relocate(from, to, false, true);
+		} else {
+			return false;
+		}	
 	}
 	
 }

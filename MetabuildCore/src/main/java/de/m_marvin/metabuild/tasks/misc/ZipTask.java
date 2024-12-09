@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks;
+package de.m_marvin.metabuild.tasks.misc;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,6 +17,7 @@ import java.util.zip.ZipOutputStream;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.tasks.BuildTask;
 
 public class ZipTask extends BuildTask {
 

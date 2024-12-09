@@ -4,23 +4,19 @@ import java.io.File;
 import javax.management.RuntimeErrorException;
 
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
-import de.m_marvin.metabuild.script.BuildScript;
+import de.m_marvin.metabuild.script.JavaBuildScript;
 import de.m_marvin.metabuild.tasks.JavaCompileTask;
 import de.m_marvin.metabuild.tasks.JarTask;
 
-public class Buildfile extends BuildScript {
+public class Buildfile extends JavaBuildScript {
 	
 	public void init() {
-		
-		var compileJava = new JavaCompileTask("compileJava");
-		compileJava.sourcesDir = new File("src/main/java");
-		compileJava.classesDir = new File("build/classes/main/");
-		
-		var jar = new JarTask("jar");
-		jar.entries.put(new File("build/classes/main"), "");
-		jar.archive = new File("build/libs/test.jar");
-		jar.dependsOn(compileJava);
-		
+		this.projectName = "Test-Project";
+		super.init();
+	}
+	
+	public void manifest(JarTask jar) {
+
 		jar.metainfo.put("Main-Class", "de.test.Test");
 		
 	}

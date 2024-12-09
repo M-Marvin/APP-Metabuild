@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks;
+package de.m_marvin.metabuild.tasks.java;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -9,6 +9,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.tasks.misc.ZipTask;
 
 public class JarTask extends ZipTask {
 

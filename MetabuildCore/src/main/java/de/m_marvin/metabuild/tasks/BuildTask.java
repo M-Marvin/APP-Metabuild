@@ -3,6 +3,7 @@ package de.m_marvin.metabuild.tasks;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.simplelogging.api.Logger;
@@ -11,7 +12,7 @@ import de.m_marvin.simplelogging.api.Logger;
  * An task that has to be run to produce results from its inputs.<br>
  * Every build file consists of multiple build tasks.
  */
-public abstract class BuildTask {
+public class BuildTask {
 	
 	public TaskType type;
 	public String name;
@@ -28,19 +29,35 @@ public abstract class BuildTask {
 	}
 	
 	/**
-	 * Register a new dependency for this task
-	 * @param taskName The name of the dependency task
+	 * Register new dependencies for this task
+	 * @param taskName The name of the dependency tasks
 	 */
 	public void dependsOn(String... taskName) {
 		Metabuild.get().taskDepend(this, Stream.of(taskName).map(Metabuild.get()::taskNamed).toArray(BuildTask[]::new));
 	}
 	
 	/**
-	 * Register a new dependency for this task
-	 * @param task The dependency task
+	 * Register new dependencies for this task
+	 * @param task The dependency tasks
 	 */
 	public void dependsOn(BuildTask... task) {
 		Metabuild.get().taskDepend(this, task);
+	}
+	
+	/**
+	 * Register this task as dependency for an another task
+	 * @param task The task to add this task as dependency to
+	 */
+	public void dependencyOf(String task) {
+		Metabuild.get().taskDepend(Metabuild.get().taskNamed(task), this);
+	}
+
+	/**
+	 * Register this task as dependency for an another task
+	 * @param task The task to add this task as dependency to
+	 */
+	public void dependencyOf(BuildTask task) {
+		Metabuild.get().taskDepend(task, this);
 	}
 	
 	public Logger logger() {
@@ -70,7 +87,7 @@ public abstract class BuildTask {
 	 * @return The state of the task
 	 */
 	protected TaskState prepare() {
-		return TaskState.OUTDATED;
+		return TaskState.UPTODATE;
 	}
 	
 	/**
@@ -103,7 +120,9 @@ public abstract class BuildTask {
 	 * This method performs the actual work of the task.
 	 * @return true if and only if the task completed successfully
 	 */
-	protected abstract boolean run();
+	protected boolean run() {
+		return true;
+	}
 	
 	/**
 	 * The different states a task can have before and after execution

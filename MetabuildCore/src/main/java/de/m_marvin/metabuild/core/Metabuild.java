@@ -30,8 +30,8 @@ import de.m_marvin.metabuild.core.script.compile.ScriptCompiler;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.script.BuildScript;
 import de.m_marvin.metabuild.tasks.BuildTask;
-import de.m_marvin.metabuild.tasks.RootTask;
 import de.m_marvin.metabuild.tasks.BuildTask.TaskState;
+import de.m_marvin.metabuild.tasks.RootTask;
 import de.m_marvin.simplelogging.Log;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.MultiLogger;
@@ -187,9 +187,10 @@ public final class Metabuild {
 	 * @param dependencies The dependencies to add
 	 */
 	public void taskDepend(BuildTask task, BuildTask... dependencies) {
+		if (task == null) return;
 		Set<String> dep = this.taskDependencies.get(task.name);
 		if (dep == null) this.taskDependencies.put(task.name, dep = new HashSet<>());
-		dep.addAll(Stream.of(dependencies).map(t -> t.name).toList());
+		dep.addAll(Stream.of(dependencies).filter(t -> t != null).map(t -> t.name).toList());
 	}
 	
 	/**
@@ -312,7 +313,7 @@ public final class Metabuild {
 				if (this.taskTree.task().isPresent()) dependendNodes.add(this.taskTree);
 			}
 		}
-
+		
 		try {
 			if (!task.state().requiresBuild() && dependendNodes.isEmpty()) {
 				this.taskTree = new TaskNode(Optional.empty(), new HashSet<>());

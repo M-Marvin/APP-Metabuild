@@ -1,5 +1,5 @@
-07.12.2024_20:05:31: [ INFO] Metabuild: #########################################
-07.12.2024_20:05:31: [ INFO] Metabuild:       null vernull
-07.12.2024_20:05:31: [ INFO] Metabuild: #########################################
-07.12.2024_20:05:31: [ERROR] ScriptCompiler: could not compile buildfile: build.meta (Das System kann die angegebene Datei nicht finden)
-07.12.2024_20:05:31: [ERROR] Metabuild: failed to load buildfile, build aborted!
+09.12.2024_13:44:37: [ INFO] Metabuild: #########################################
+09.12.2024_13:44:37: [ INFO] Metabuild:       null vernull
+09.12.2024_13:44:37: [ INFO] Metabuild: #########################################
+09.12.2024_13:44:37: [ERROR] ScriptCompiler: could not compile buildfile: build.meta (Das System kann die angegebene Datei nicht finden)
+09.12.2024_13:44:37: [ERROR] Metabuild: failed to load buildfile, build aborted!

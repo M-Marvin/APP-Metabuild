@@ -56,7 +56,7 @@ public class ScriptCompiler {
 		String hash = null;
 		try {
 			ByteBuffer buf = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(buildFile.getAbsolutePath().getBytes(StandardCharsets.UTF_8)));
-			hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(Integer::toHexString).reduce(String::concat).get();
+			hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
 		} catch (NoSuchAlgorithmException e) {
 			logger().warnt(LOG_TAG, "could not get message digest instance, this could cause problems!");
 			hash = Long.toHexString(buildFile.getAbsolutePath().hashCode());

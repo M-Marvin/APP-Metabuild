@@ -107,7 +107,7 @@ public class JavaCompileTask extends BuildTask {
 			String hash = "";
 			try {
 				ByteBuffer buf = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(this.sourcesDir.getPath().getBytes(StandardCharsets.UTF_8)));
-				hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(Integer::toHexString).reduce(String::concat).get();
+				hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
 			} catch (NoSuchAlgorithmException e) {
 				logger().warnt(logTag(), "failed to generate hash name for class state cache: %s", this.classesDir, e);
 			}

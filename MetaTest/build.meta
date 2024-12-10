@@ -5,14 +5,19 @@ import javax.management.RuntimeErrorException;
 
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.script.JavaBuildScript;
-import de.m_marvin.metabuild.tasks.JavaCompileTask;
-import de.m_marvin.metabuild.tasks.JarTask;
+import de.m_marvin.metabuild.tasks.java.JavaCompileTask;
+import de.m_marvin.metabuild.tasks.java.JarTask;
 
 public class Buildfile extends JavaBuildScript {
 	
 	public void init() {
+		
 		this.projectName = "Test-Project";
+		
 		super.init();
+		
+		withSourcesJar();
+		
 	}
 	
 	public void manifest(JarTask jar) {

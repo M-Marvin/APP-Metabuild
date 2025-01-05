@@ -115,6 +115,12 @@ public class JavaCompileTask extends BuildTask {
 		}
 		
 		loadMetadata();
+
+		// Check for changed classpath file
+		Optional<SourceMetaData> oldest = this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst();
+		Optional<FileTime> classpath = FileUtility.timestamp(FileUtility.absolute(this.classpath));
+		if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0)
+			this.sourceMetadata.clear(); // clearing the metadata causes all files to be recompiled
 		
 		List<File> sourceFiles = FileUtility.deepList(srcPath, f -> FileUtility.getExtension(f).equalsIgnoreCase("java")).stream().
 				map(f -> FileUtility.relative(f, srcPath))
@@ -287,7 +293,7 @@ public class JavaCompileTask extends BuildTask {
 			}
 			
 			// Update metadata and remove possible outdated class files
-			SourceMetaData newMeta = new SourceMetaData(classFiles.get().toArray(File[]::new), FileUtility.timestamp(file).get());
+			SourceMetaData newMeta = new SourceMetaData(classFiles.get().toArray(File[]::new), FileUtility.timestamp(classFiles.get().get(0)).get());
 			SourceMetaData oldMeta = this.sourceMetadata.put(sourceFile, newMeta);
 			if (oldMeta != null) {
 				List<File> outdatedFiles = Stream.of(oldMeta.classFiles()).filter(f -> !Arrays.asList(newMeta.classFiles()).contains(f)).toList();
@@ -300,7 +306,7 @@ public class JavaCompileTask extends BuildTask {
 				}
 			}
 		}
-
+		
 		saveMetadata();
 		
 		return true;

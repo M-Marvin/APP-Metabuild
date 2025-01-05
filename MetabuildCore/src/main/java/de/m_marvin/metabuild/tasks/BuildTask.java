@@ -3,7 +3,6 @@ package de.m_marvin.metabuild.tasks;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
-import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.simplelogging.api.Logger;

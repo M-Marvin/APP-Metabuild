@@ -353,11 +353,6 @@ public final class Metabuild {
 			this.task2node.clear();
 			this.taskTree = null;
 			
-			for (BuildTask task : this.registeredTasks.values()) {
-				if (task.state().requiresBuild() && tasks.contains(task.name))
-					tasks.add(task.name);
-			}
-			
 			Set<TaskNode> dependencies = new HashSet<>();
 			
 			for (String task : tasks) {
@@ -496,6 +491,9 @@ public final class Metabuild {
 			}
 			this.taskQueue.clear();
 		} catch (InterruptedException e) {}
+		
+		// Disable refresh, only active for one execution
+		this.refreshDependencies = false;
 		
 		printStatus();
 		

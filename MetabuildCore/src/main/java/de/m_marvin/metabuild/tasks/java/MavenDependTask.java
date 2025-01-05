@@ -5,7 +5,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -79,13 +81,26 @@ public class MavenDependTask extends BuildTask {
 	@Override
 	protected TaskState prepare() {
 		if (Metabuild.get().isRefreshDependencies()) return TaskState.OUTDATED;
-		if (!FileUtility.absolute(this.classpath).isFile()) return TaskState.OUTDATED;
+
+		// Test if dependencies are missing in cache
 		try {
 			this.resolver.resolveDependencies(this.scope, QueryMode.CACHE_ONLY);
-			return TaskState.UPTODATE;
 		} catch (MetaScriptException e) {
 			return TaskState.OUTDATED;
 		}
+		
+		// Test if jar files have chaned since last classpath file
+		File classpathFile = FileUtility.absolute(this.classpath);
+		Optional<FileTime> classpathTimestamp = FileUtility.timestamp(classpathFile);
+		if (classpathTimestamp.isEmpty())
+			return TaskState.OUTDATED;
+		for (File entry : getClasspathEntries()) {
+			Optional<FileTime> t = FileUtility.timestamp(entry);
+			if (t.isPresent() && classpathTimestamp.get().compareTo(t.get()) < 0)
+				return TaskState.OUTDATED;
+		}
+
+		return TaskState.UPTODATE;
 	}
 	
 	@Override

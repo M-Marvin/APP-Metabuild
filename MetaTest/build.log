@@ -1,0 +1,10 @@
+05.01.2025_18:23:18: [ INFO] Metabuild: #########################################
+05.01.2025_18:23:18: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
+05.01.2025_18:23:18: [ INFO] Metabuild: #########################################
+05.01.2025_18:23:18: [ INFO] Metabuild: buildfile: build.meta
+05.01.2025_18:23:18: [ INFO] Metabuild: begin build init phase
+05.01.2025_18:23:18: [ INFO] java_dependency/javaDependRun: resolve dependency: 'de.m_marvin.univec:univec:1.6'
+05.01.2025_18:23:18: [ INFO] Metabuild: begin build run phase
+05.01.2025_18:23:18: [ INFO] Metabuild: nothing to do
+05.01.2025_18:23:18: [ INFO] java_dependency/javaDependImpl: resolve dependency: 'de.m_marvin.univec:univec:1.6'
+05.01.2025_18:23:18: [ INFO] Metabuild: TASKS: 6  UP_TO_DATE: 6  FAILED: 0

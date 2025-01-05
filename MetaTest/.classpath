@@ -9,5 +9,7 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
 	<classpathentry kind="lib" path="meta/metabuild.jar"/>
+	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/de.m_marvin.univec/univec/1.6/univec-1.6.jar"/>
+	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/de.m_marvin.univec/univec/1.6/univec-1.6-sources.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>

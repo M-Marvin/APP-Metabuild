@@ -45,7 +45,7 @@ public class DependencyResolver {
 	
 	public DependencyResolver(File cache, Logger logger) throws Exception {
 		this.logger = logger;
-		this.resolver = new MavenResolver(cache, new TagLogger(logger, "maven"));
+		this.resolver = new MavenResolver(cache, new TagLogger(logger, "/maven"));
 	}
 	
 	public MavenResolver getResolver() {

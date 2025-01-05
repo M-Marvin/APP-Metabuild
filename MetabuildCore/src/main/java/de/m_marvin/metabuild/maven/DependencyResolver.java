@@ -1,503 +1,198 @@
 package de.m_marvin.metabuild.maven;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Authenticator;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.PasswordAuthentication;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.Queue;
+import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
+import org.xml.sax.SAXException;
 
-import de.m_marvin.metabuild.maven.DependencyResolver.MavenRepository.Credentials;
-import de.m_marvin.metabuild.maven.DependencyResolver.POM.Scope;
+import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository;
+import de.m_marvin.metabuild.maven.MavenResolver.POM;
+import de.m_marvin.metabuild.maven.MavenResolver.POM.ArtifactAbs;
+import de.m_marvin.metabuild.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.api.Logger;
+import de.m_marvin.simplelogging.impl.TagLogger;
 
 public class DependencyResolver {
 	
-	private File cache;
-	private Logger logger;
-	private TimeUnit timeoutUnit = TimeUnit.SECONDS;
-	private long timeout = 5;
-	
-	private final DocumentBuilderFactory factory;
-	private final DocumentBuilder builder;
-	
-	public DependencyResolver(File cacheDir, Logger logger) throws Exception {
-		this.cache = cacheDir;
-		this.logger = logger;
-		
-		try {
-			this.factory = DocumentBuilderFactory.newInstance();
-			this.builder = this.factory.newDocumentBuilder();
-		} catch (ParserConfigurationException e) {
-			throw new Exception("failed to instanciate dependency resolver!", e);
-		}
+	public static record Dependency(String dependency, String[] configurations) {}
+
+	public static enum QueryMode {
+		CACHE_ONLY,
+		CACHE_AND_ONLINE,
+		ONLINE_ONLY;
 	}
 	
-	public File getCache() {
-		return cache;
+	public static final String[] DEPENDENCY_DEFAULT_CONFIGURATIONS = new String[] {"sources", "javadoc"};
+
+	private Logger logger;
+	protected final MavenResolver resolver;
+	protected final Map<Dependency, POM> dependencies = new HashMap<>();
+	protected final Map<Dependency, POM> transitives = new HashMap<>();
+	protected final Map<String, File> dependencyJarPaths = new HashMap<>();
+	
+	public DependencyResolver(File cache, Logger logger) throws Exception {
+		this.logger = logger;
+		this.resolver = new MavenResolver(cache, new TagLogger(logger, "maven"));
+	}
+	
+	public MavenResolver getResolver() {
+		return resolver;
+	}
+	
+	public Map<Dependency, POM> getDependencyPOMs() {
+		return dependencies;
+	}
+	
+	public Map<Dependency, POM> getTransitivePOMs() {
+		return transitives;
+	}
+	
+	public Map<String, File> getDependencyJarPaths() {
+		return dependencyJarPaths;
 	}
 	
 	public Logger logger() {
 		return this.logger;
 	}
 	
-	public static record MavenRepository(String id, String url, Credentials credentials) {
-		public static record Credentials(Supplier<String> username, Supplier<String> password, Supplier<String> token) {
+	public void addRepository(MavenRepository repo) {
+		this.resolver.addRepository(repo);
+	}
+	
+	public List<MavenRepository> getRepositories() {
+		return this.resolver.getRepositories();
+	}
+	
+	public Set<Dependency> getDependencies() {
+		return dependencies.keySet();
+	}
+	
+	public void addDependency(String dependency, String... configurations) {
+		if (configurations.length == 0) configurations = DEPENDENCY_DEFAULT_CONFIGURATIONS;
+		if (!MavenResolver.DEPENDENCY_STRING_PATTERN.matcher(dependency).find())
+			throw new IllegalArgumentException("Dependency invalid format: " + dependency);
+		this.dependencies.put(new Dependency(dependency, configurations), null);
+	}
+	
+	public void resolveDependencies(Predicate<Scope> resolveScope) {
+		resolveDependencies(resolveScope, QueryMode.CACHE_AND_ONLINE);
+	}
+	
+	public void resolveDependencies(Predicate<Scope> resolveScope, QueryMode mode) {
+		
+		Collection<Dependency> deps = this.dependencies.keySet();
+		
+		while (deps.size() > 0) {
 			
-			public Credentials(Supplier<String> username, Supplier<String> password) {
-				this(username, password, null);
-			}
+			for (Dependency dep : deps) {
 
-			public Credentials(Supplier<String> token) {
-				this(null, null, token);
-			}
-			
-			public Authenticator authenticator() {
-				return new Authenticator() {
-					@Override
-					protected PasswordAuthentication getPasswordAuthentication() {
-						return new PasswordAuthentication(Credentials.this.username.get(), Credentials.this.password.get().toCharArray());
-					}
-				};
-			}
-			
-			public String bearer() {
-				return this.token.get();
-			}
-			
-		}
-		
-		public URL getArtifactURL(String group, String artifact, String file) throws MalformedURLException, URISyntaxException {
-			return new URI(this.url + "/" + group.replace('.', '/') + "/" + artifact + "/" + file).toURL();
-		}
-		
-		public URL getVersionURL(String group, String artifact, String version, String file) throws MalformedURLException, URISyntaxException {
-			return new URI(this.url + "/" + group.replace('.', '/') + "/" + artifact + "/" + version + "/" + file).toURL();
-		}
-		
-	}
-	
-	private final List<MavenRepository> repositories = new ArrayList<>();
-	
-	public void addRepository(MavenRepository repository) {
-		this.repositories.add(repository);
-	}
-	
-	public static final Pattern DEPENDENCY_SEGMENT_PATTERN = Pattern.compile("[a-z0-9\\-\\._]+");
-	public static final Pattern DEPENDENCY_STRING_PATTERN = Pattern.compile("(?<group>[a-z0-9\\-\\._]+):(?<artifact>[a-z0-9\\-\\._]+):(?<version>[a-z0-9\\-\\._]+)");
-	
-	public Optional<POM> resolveStr(String str, String... configurations) {
-		Matcher m = DEPENDENCY_STRING_PATTERN.matcher(str);
-		if (!m.matches()) {
-			logger().warn("invalid dependency format: %s", str);
-			return Optional.empty();
-		}
-		return resolve(m.group("group"), m.group("artifact"), m.group("version"), configurations);
-	}
-	
-	public Optional<POM> resolve(String group, String artifact, String version, String... configurations) {
-		if (!DEPENDENCY_SEGMENT_PATTERN.matcher(group).matches()) {
-			logger().warn("invalid dependency group format: %s", group);
-			return Optional.empty();
-		}
-		if (!DEPENDENCY_SEGMENT_PATTERN.matcher(artifact).matches()) {
-			logger().warn("invalid dependency artifact format: %s", artifact);
-			return Optional.empty();
-		}
-		if (!DEPENDENCY_SEGMENT_PATTERN.matcher(version).matches()) {
-			logger().warn("invalid dependency version format: %s", version);
-			return Optional.empty();
-		}
-		
-		for (MavenRepository repository : this.repositories) {
-
-			logger().info("try resolving on [%s]: %s", repository.id, repository.url);
-			
-			Optional<POM> pom = tryResolve(repository, group, artifact, version, configurations);
-			if (pom.isPresent()) {
+				logger().info("resolve dependency: '%s'", dep.dependency());
 				
-				logger().info("-> found dependency: %s:%s:%s on [%s]", group, artifact, version, repository.id);
+				Optional<POM> pom = resolveDependency(dep, mode);
 				
-				return pom;
+				if (pom.isEmpty())
+					throw BuildException.msg("Unable to find dependency: %s", dep.dependency());
 				
-			}
-			
-		}
-		
-		return Optional.empty();
-	}
-	
-	protected Optional<InputStream> queryFile(URL url, File cache, Credentials credentials) throws IOException {
-		
-		logger().debug("request from url: %s", url);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod("GET");
-		connection.setReadTimeout((int) this.timeoutUnit.toMillis(this.timeout));
-		if (credentials != null) {
-			if (credentials.username() != null && credentials.password() != null)
-				connection.setAuthenticator(credentials.authenticator());
-			if (credentials.token() != null)
-				connection.setRequestProperty("Authorization", "Bearer "+credentials.bearer());
-		}
-		int rcode = connection.getResponseCode();
-		
-		if (rcode == 404) {
-			logger().debug("not found: 404 %s", connection.getResponseMessage());
-			connection.disconnect();
-			return Optional.empty();
-		}
-		
-		if (rcode != 200) {
-			logger().debug("failed: %d %s", rcode, connection.getResponseMessage());
-			connection.disconnect();
-			throw new IOException(String.format("unable to query http: %d %s : %s", rcode, connection.getResponseMessage(), url.toString()));
-		}
-		
-		InputStream stream = connection.getInputStream();
-		
-		if (cache != null) {
-			try {
-				if (!cache.getParentFile().isDirectory() && !cache.getParentFile().mkdirs())
-					throw new IOException("failed to create cache directory: %s" + cache.getParentFile());
-				OutputStream cstream = new FileOutputStream(cache);
-				cstream.write(stream.readAllBytes());
-				cstream.close();
-				stream = new FileInputStream(cache);
-			} catch (IOException e) {
-				throw new IOException("failed to write/read cache file: " + cache, e);
-			}
-		}
-		
-		return Optional.of(stream);
-		
-	}
-	
-	@FunctionalInterface
-	protected static interface ExceptionFunction<P, R, E extends Throwable> {
-		public R apply(P param) throws E;
-	}
-	
-	protected <T> Optional<T> verifyData(InputStream stream, Optional<InputStream> md5, Optional<InputStream> sha1, Optional<InputStream> sha256, Optional<InputStream> sha512, ExceptionFunction<InputStream, T, Exception> parser) throws IOException {
-		
-		byte[] data = stream.readAllBytes();
-		
-		do {
-			try {
-				if (sha512.isPresent()) {
-					MessageDigest alg = MessageDigest.getInstance("SHA512");
-					String hash = new String(sha512.get().readAllBytes()).toLowerCase();
-					ByteBuffer buf = ByteBuffer.wrap(alg.digest(data));
-					String dataHash = Stream.generate(buf::get).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-					
-					if (!hash.equals(dataHash)) return Optional.empty();
-					break;
+				if (this.dependencies.containsKey(dep)) {
+					this.dependencies.put(dep, pom.get());
+				} else {
+					this.transitives.put(dep, pom.get());
 				}
-			} catch (NoSuchAlgorithmException e) {}
-	
-			try {
-				if (sha256.isPresent()) {
-					MessageDigest alg = MessageDigest.getInstance("SHA256");
-					String hash = new String(sha256.get().readAllBytes()).toLowerCase();
-					ByteBuffer buf = ByteBuffer.wrap(alg.digest(data));
-					String dataHash = Stream.generate(buf::get).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-					
-					if (!hash.equals(dataHash)) return Optional.empty();
-					break;
-				}
-			} catch (NoSuchAlgorithmException e) {}
-	
-			try {
-				if (sha1.isPresent()) {
-					MessageDigest alg = MessageDigest.getInstance("SHA1");
-					String hash = new String(sha1.get().readAllBytes()).toLowerCase();
-					ByteBuffer buf = ByteBuffer.wrap(alg.digest(data));
-					String dataHash = Stream.generate(buf::get).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-					
-					if (!hash.equals(dataHash)) return Optional.empty();
-					break;
-				}
-			} catch (NoSuchAlgorithmException e) {}
-	
-			try {
-				if (md5.isPresent()) {
-					MessageDigest alg = MessageDigest.getInstance("MD5");
-					String hash = new String(md5.get().readAllBytes()).toLowerCase();
-					ByteBuffer buf = ByteBuffer.wrap(alg.digest(data));
-					String dataHash = Stream.generate(buf::get).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-					
-					if (!hash.equals(dataHash)) return Optional.empty();
-					break;
-				}
-			} catch (NoSuchAlgorithmException e) {}
-			
-		} while (false);
-		
-		try {
-			return Optional.ofNullable(parser.apply(new ByteArrayInputStream(data)));
-		} catch (Exception e) {
-			throw new IOException("invalid data!", e);
-		}
-		
-	}
-
-	protected static Node getNodeOpt(Node parent, String name) {
-		for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
-			if (parent.getChildNodes().item(i).getNodeName().equals(name)) return parent.getChildNodes().item(i);
-		}
-		return null;
-	}
-
-	protected static Node getNode(Node parent, String name) throws IOException {
-		for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
-			if (parent.getChildNodes().item(i).getNodeName().equals(name)) return parent.getChildNodes().item(i);
-		}
-		throw new IOException(String.format("no such node in XML: %s / %s", parent.getNodeName(), name));
-	}
-
-	protected static Stream<Node> getStream(Node parent) {
-		return IntStream.range(0, parent.getChildNodes().getLength()).mapToObj(i -> parent.getChildNodes().item(i));
-	}
-	
-	protected boolean checkVersions(MavenRepository repository, String group, String artifact, String version) {
-
-		try {
-			
-			Optional<InputStream> artifactMeta = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml"), null, repository.credentials());
-			if (artifactMeta.isEmpty()) return false;
-			Optional<InputStream> artifactMetaMD5 = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.md5"), null, repository.credentials());
-			Optional<InputStream> artifactMetaSHA1 = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.sha1"), null, repository.credentials());
-			Optional<InputStream> artifactMetaSHA256 = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.sha256"), null, repository.credentials());
-			Optional<InputStream> artifactMetaSHA512 = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.sha512"), null, repository.credentials());
-			
-			Optional<Document> artifactMetaDoc = verifyData(artifactMeta.get(), artifactMetaMD5, artifactMetaSHA1, artifactMetaSHA256, artifactMetaSHA512, this.builder::parse);
-			if (artifactMetaDoc.isEmpty()) {
-				logger().warn("invalid hash on repository artifact meta: [%s] %s %s:%s", repository.id, repository.url, group, artifact);
-				return false;
-			}
-			
-			Node metadata = getNode(artifactMetaDoc.get(), "metadata");
-			String groupNode = getNode(metadata, "groupId").getFirstChild().getNodeValue();
-			String artifactNode = getNode(metadata, "artifactId").getFirstChild().getNodeValue();
-			if (!groupNode.equals(group) || !artifactNode.equals(artifact)) {
-				logger().warn("repository artifact meta data reffers different groupID/artifactID: [%s] %s %s:%s -> %s:%s", repository.id, repository.url, group, artifact, groupNode, artifactNode);
-				return false;
-			}
-
-			Node versioningNode = getNode(metadata, "versioning");
-			boolean flag = false;
-			
-			if (version.equals("latest")) {
-				version = getNode(versioningNode, "latest").getFirstChild().getNodeValue();
-				flag = true;
-			} else if (version.equals("release")) {
-				version = getNode(versioningNode, "release").getFirstChild().getNodeValue();
-				flag = true;
-			}
-			
-			Node versionsNode = getNode(versioningNode, "versions");
-			List<String> versions = getStream(versionsNode).filter(n -> n.getNodeType() == 1).map(n -> n.getFirstChild().getNodeValue()).toList();
-
-			String fv = version;
-			if (versions.stream().filter(v -> v.equals(fv)).count() == 0) {
-				logger().debug("version not found in repository: [%s] %s", repository.id, version);
-				if (flag) logger().warn("repository artifact meta info reffers to invalid latest/release version: [%s] %s : %s", repository.id, repository.url, version);
-				return false;
-			}
-			
-			return true;
-			
-		} catch (Exception e) {
-			
-			logger().warn("failed to request or process meta data from repository: [%s] %s %s:%s", repository.id, repository.url, group, artifact, e);
-			return false;
-			
-		}
-		
-	}
-	
-	protected Optional<POM> tryResolve(MavenRepository repository, String group, String artifact, String version, String[] configurations) {
-		
-		if (!checkVersions(repository, group, artifact, version)) return Optional.empty();
-		
-		try {
-
-			File localCache = new File(this.cache, group + "/" + artifact + "/" + version);
-			String artifactName = artifact + "-" + version;
-			
-			Optional<InputStream> pomStream = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".pom"), new File(localCache, artifactName + ".pom"), repository.credentials);
-			if (pomStream.isEmpty()) return Optional.empty(); // version definitely not available
-			Optional<InputStream> pomStreamSHA512 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".pom.sha512"), new File(localCache, artifactName + ".pom.sha512"), repository.credentials);
-			Optional<InputStream> pomStreamSHA256 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".pom.sha256"), new File(localCache, artifactName + ".pom.sha256"), repository.credentials);
-			Optional<InputStream> pomStreamSHA1 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".pom.sha1"), new File(localCache, artifactName + ".pom.sha1"), repository.credentials);
-			Optional<InputStream> pomStreamMD5 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".pom.md5"), new File(localCache, artifactName + ".pom.md5"), repository.credentials);
-			Optional<Document> pomDoc = verifyData(pomStream.get(), pomStreamMD5, pomStreamSHA1, pomStreamSHA256, pomStreamSHA512, this.builder::parse);
-			
-			Optional<POM> pom = parsePOM(pomDoc.get(), repository, group, artifact, version);
-			
-			Optional<InputStream> jarStream = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".jar"), new File(localCache, artifactName + ".jar"), repository.credentials);
-			if (jarStream.isPresent()) {
-				Optional<InputStream> jarStreamSHA512 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".jar.sha512"), new File(localCache, artifactName + ".jar.sha512"), repository.credentials);
-				Optional<InputStream> jarStreamSHA256 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".jar.sha256"), new File(localCache, artifactName + ".jar.sha256"), repository.credentials);
-				Optional<InputStream> jarStreamSHA1 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".jar.sha1"), new File(localCache, artifactName + ".jar.sha1"), repository.credentials);
-				Optional<InputStream> jarStreamMD5 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + ".jar.md5"), new File(localCache, artifactName + ".jar.md5"), repository.credentials);
-				boolean result = verifyData(jarStream.get(), jarStreamMD5, jarStreamSHA1, jarStreamSHA256, jarStreamSHA512, s -> true).isPresent();
 				
-				if (!result) {
-					logger().warn("invalid hash for artifact: [%s] %s %s:%s:%s", repository.id, repository.url, group, artifact, version);
-					return Optional.empty();
+				// Resolve imports
+				Queue<ArtifactAbs> il = new ArrayDeque<>();
+				il.addAll(pom.get().imports());
+				while (il.size() > 0) {
+					ArtifactAbs imp = il.poll();
+					logger().debug("import POM: '%s:%s:%s'", imp.group(), imp.artifact(), imp.version());
+					Optional<POM> tpom = resolveDependency(new Dependency(String.format("%s:%s:%s", imp.group(), imp.artifact(), imp.version()), null), mode);
+					if (tpom.isEmpty())
+						throw BuildException.msg("POM import could not be resolved: '%s:%s:%s'", imp.group(), imp.artifact(), imp.version());
+					pom.get().importPOM(imp, tpom.get());
+					il.addAll(tpom.get().imports());
 				}
-			}
-			
-			for (String config : configurations) {
-				Optional<InputStream> jar2Stream = queryFile(repository.getVersionURL(group, artifact, version, artifactName + "-" + config + ".jar"), new File(localCache, artifactName + "-" + config + ".jar"), repository.credentials);
-				if (jarStream.isPresent()) {
-					Optional<InputStream> jarStreamSHA512 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + "-" + config + ".jar.sha512"), new File(localCache, artifactName + "-" + config + ".jar.sha512"), repository.credentials);
-					Optional<InputStream> jarStreamSHA256 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + "-" + config + ".jar.sha256"), new File(localCache, artifactName + "-" + config + ".jar.sha256"), repository.credentials);
-					Optional<InputStream> jarStreamSHA1 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + "-" + config + ".jar.sha1"), new File(localCache, artifactName + "-" + config + ".jar.sha1"), repository.credentials);
-					Optional<InputStream> jarStreamMD5 = queryFile(repository.getVersionURL(group, artifact, version, artifactName + "-" + config + ".jar.md5"), new File(localCache, artifactName + "-" + config + ".jar.md5"), repository.credentials);
-					boolean result = verifyData(jar2Stream.get(), jarStreamMD5, jarStreamSHA1, jarStreamSHA256, jarStreamSHA512, s -> true).isPresent();
-					
-					if (!result) {
-						logger().warn("invalid hash for artifact: [%s] %s %s:%s:%s '%s'", repository.id, repository.url, group, artifact, version, config);
-						return Optional.empty();
+				
+				// Add declared repositories
+				for (var repository : pom.get().repositorities()) {
+					this.resolver.addRepository(repository);
+				}
+				
+				// Resolve absolute transitive dependencies
+				for (var transitive : pom.get().dependenciesAbs()) {
+					if (resolveScope != null && !resolveScope.test(transitive.scope())) continue;
+					Dependency tdep = new Dependency(String.format("%s:%s:%s", transitive.group(), transitive.artifact(), transitive.version()), DEPENDENCY_DEFAULT_CONFIGURATIONS);
+					if (!this.transitives.containsKey(tdep) && !this.dependencies.containsKey(tdep)) {
+						this.transitives.put(tdep, null);
+						logger().info("transitive dependency: '%s:%s:%s'", transitive.group(), transitive.artifact(), transitive.version());
 					}
 				}
+				
+				// Resolve declared transitive dependencies
+				for (var transitive : pom.get().dependencies()) {
+					if (resolveScope != null && !resolveScope.test(transitive.scope())) continue;
+					Optional<String> versionDeclared = pom.get().declerations().stream()
+							.filter(d -> d.group().equals(transitive.group()) && d.artifact().equals(transitive.artifact()))
+							.map(d -> d.version())
+							.findFirst();
+					if (versionDeclared.isEmpty())
+						throw BuildException.msg("Dependency '%s' or one of its imports has undeclared transitive '%s:%s:<undefined>'!", dep.dependency(), transitive.group(), transitive.artifact());
+					Dependency tdep = new Dependency(String.format("%s:%s:%s", transitive.group(), transitive.artifact(), versionDeclared.get()), DEPENDENCY_DEFAULT_CONFIGURATIONS);
+					if (!this.transitives.containsKey(tdep) && !this.dependencies.containsKey(tdep)) {
+						this.transitives.put(tdep, null);
+						logger().info("transitive dependency: '%s:%s:%s'", transitive.group(), transitive.artifact(), versionDeclared.get());
+					}
+				}
+				
 			}
 			
+			// Resolve transitive of transitive
+			deps = this.transitives.entrySet().stream().filter(e -> e.getValue() == null).map(Entry::getKey).toList();
+			
+		}
+		
+	}
+	
+	protected Optional<POM> resolveDependency(Dependency dependency, QueryMode mode) {
+		
+		Matcher m = MavenResolver.DEPENDENCY_STRING_PATTERN.matcher(dependency.dependency());
+		if (!m.find())
+			throw BuildException.msg("Invalid dependency syntax: %s", dependency.dependency());
+		String group = m.group("group");
+		String artifact = m.group("artifact");
+		String version = m.group("version");
+		File cache = new File(this.resolver.getCache(), String.format("%s/%s/%s", group, artifact, version));
+		File pomFile = new File(cache, String.format("%s-%s.pom", artifact, version));
+
+		if (!pomFile.isFile() || mode == QueryMode.ONLINE_ONLY) {
+			if (mode == QueryMode.CACHE_ONLY) return Optional.empty();
+			Optional<POM> pom = this.resolver.resolve(group, artifact, version, dependency.configurations());
+			if (pomFile.isFile() && pom.isPresent()) this.dependencyJarPaths.put(dependency.dependency(), cache);
 			return pom;
-			
-		} catch (Exception e) {
-			logger().warn("unexpected error while trying to request dependency: [%s] %s %s:%s:%s", repository.id, repository.url, group, artifact, version, e);
-			return Optional.empty();
 		}
-		
-	}
 
-	public static record POM(MavenRepository sourceRepository, ArtifactAbs source, List<ArtifactAbs> dependenciesAbs, List<Artifact> dependencies, List<ArtifactAbs> declerations, List<ArtifactAbs> imports, List<MavenRepository> repositorities) {
-		public POM(MavenRepository sourceRepository, ArtifactAbs source) {
-			this(sourceRepository, source, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-		}
-		
-		public static enum Scope {
-			IMPORT,
-			COMPILE,
-			PROVIDE,
-			RUNTIME,
-			TEST,
-			SYSTEM;
-		}
-		public static record Artifact(Scope scope, String group, String artifact) { }
-		public static record ArtifactAbs(Scope scope, String group, String artifact, String version) { }
-	}
-	
-	protected Optional<POM> parsePOM(Document pom, MavenRepository repository, String group, String artifact, String version) {
-		
 		try {
-			
-			POM pomObj = new POM(repository, new POM.ArtifactAbs(Scope.COMPILE, group, artifact, version));
-			
-			Node project = getNode(pom, "project");
-			
-			// Parse parent POM import
-			Node parent = getNodeOpt(project, "parent");
-			if (parent != null) {
-				String pgroup = getNode(parent, "groupId").getFirstChild().getNodeValue();
-				String partifact = getNode(parent, "artifactId").getFirstChild().getNodeValue();
-				String pversion = getNode(parent, "version").getFirstChild().getNodeValue();
-				pomObj.imports().add(new POM.ArtifactAbs(Scope.IMPORT, pgroup, partifact, pversion));
-			}
-			
-			// Parse other imports
-			Node dependencyManagement = getNodeOpt(project, "dependencyManagement");
-			if (dependencyManagement != null) {
-				Node dependencies = getNodeOpt(dependencyManagement, "dependencies");
-				if (dependencies != null) {
-					for (Node dependency : getStream(dependencies).filter(n -> n.getNodeName().equals("dependency")).toList()) {
-						String dgroup = getNode(dependency, "groupId").getFirstChild().getNodeValue();
-						String dartifact = getNode(dependency, "groupId").getFirstChild().getNodeValue();
-						String dversion = getNode(dependency, "version").getFirstChild().getNodeValue();
-						
-						Node scope = getNodeOpt(dependency, "scope");
-						Scope dscope = scope != null ? Scope.valueOf(scope.getFirstChild().getNodeValue().toUpperCase()) : Scope.COMPILE;
-						Node type = getNodeOpt(dependency, "type");
-						String dtype = type != null ? type.getFirstChild().getNodeValue() : "jar";
-						
-						if (dtype.equalsIgnoreCase("pom") && dscope == Scope.IMPORT) {
-							pomObj.imports().add(new POM.ArtifactAbs(dscope, dgroup, dartifact, dversion));
-						} else if (!dtype.equalsIgnoreCase("pom") && dscope != Scope.IMPORT) {
-							pomObj.declerations().add(new POM.ArtifactAbs(dscope, dgroup, dartifact, dversion));
-						} else {
-							logger().warn("invalid dependency management configuration: %s:%s:%s scope %s type %s", dgroup, dartifact, dversion, dscope, dtype);;
-						}
-						
-					}
-				}
-			}
-			
-			// Parse actual dependencies
-			Node dependencies = getNodeOpt(project, "dependencies");
-			if (dependencies != null) {
-				for (Node dependency : getStream(dependencies).filter(n -> n.getNodeName().equals("dependency")).toList()) {
-					String dgroup = getNode(dependency, "groupId").getFirstChild().getNodeValue();
-					String dartifact = getNode(dependency, "groupId").getFirstChild().getNodeValue();
-					Node versionN = getNodeOpt(dependency, "version");
-
-					Node scope = getNodeOpt(dependency, "scope");
-					Scope dscope = scope != null ? Scope.valueOf(scope.getFirstChild().getNodeValue().toUpperCase()) : Scope.COMPILE;
-					
-					if (versionN != null) {
-						pomObj.dependenciesAbs().add(new POM.ArtifactAbs(dscope, dgroup, dartifact, versionN.getFirstChild().getNodeValue()));
-					} else {
-						pomObj.dependencies().add(new POM.Artifact(dscope, dgroup, dartifact));
-					}
-				}
-			}
-			
-			// Parse additional repositorities to search in
-			Node repositorities = getNodeOpt(project, "repositorities");
-			if (repositorities != null) {
-				for (Node repositority : getStream(repositorities).filter(n -> n.getNodeName().equals("repositority")).toList()) {
-					String name = getNode(repositority, "name").getFirstChild().getNodeValue();
-					String url = getNode(repositority, "url").getFirstChild().getNodeValue();
-					
-					pomObj.repositorities().add(new MavenRepository(name, url, null));
-				}
-			}
-			
-			return Optional.of(pomObj);
-			
+			Document doc = this.resolver.getXMLParser().parse(pomFile);
+			Optional<POM> pom = this.resolver.parsePOM(doc, group, artifact, version);
+			if (pom.isPresent()) this.dependencyJarPaths.put(dependency.dependency(), cache);
+			return pom;
 		} catch (IOException e) {
-			logger().warn("failed to parse POM! ", e);
-			return Optional.empty();
+			throw BuildException.msg(e, "Failed to access dependency POM: %s", dependency.dependency());
+		} catch (SAXException e) {
+			throw BuildException.msg(e, "Failed to parse dependency POM: %s", dependency.dependency());
 		}
-		
 		
 	}
 	

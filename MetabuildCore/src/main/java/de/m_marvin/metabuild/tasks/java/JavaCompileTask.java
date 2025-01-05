@@ -40,13 +40,13 @@ import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.tasks.BuildTask;
-import de.m_marvin.metabuild.tasks.BuildTask.TaskState;
 
 public class JavaCompileTask extends BuildTask {
 
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
 	public final List<String> options = new ArrayList<>();
+	public File classpath = null;
 	public File stateCache = null; // if not set, will be set by prepare
 	
 	public static record SourceMetaData(File[] classFiles, FileTime timestamp) { }
@@ -255,6 +255,24 @@ public class JavaCompileTask extends BuildTask {
 		// Add output directory to compiler options
 		this.options.add("-d");
 		this.options.add(classPath.getAbsolutePath());
+		
+		// Add classpath file content to options if set
+		if (this.classpath != null) {
+			File classpathFile = FileUtility.absolute(this.classpath);
+			if (!classpathFile.isFile()) {
+				logger().warnt(logTag(), "classpath file not found: %s", this.classpath);
+			} else {
+				try {
+					InputStream is = new FileInputStream(classpathFile);
+					String classpath = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+					is.close();
+					this.options.add("-classpath");
+					this.options.add(classpath);
+				} catch (IOException e) {
+					throw BuildException.msg(e, "could not access classpath file: %s", this.classpath);
+				}
+			}
+		}
 		
 		// Compile outdated files
 		for (File sourceFile : this.toCompile) {

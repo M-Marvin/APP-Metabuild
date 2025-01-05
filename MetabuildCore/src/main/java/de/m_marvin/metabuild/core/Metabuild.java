@@ -62,6 +62,7 @@ public final class Metabuild {
 	private Logger logger;
 	private int taskThreads;
 	private OutputStream logStream;
+	private boolean refreshDependencies = false;
 	private IStatusCallback statusCallback;
 	private BuildScript buildscript;
 	private Map<BuildTask, TaskNode> task2node = new HashMap<>();
@@ -122,6 +123,18 @@ public final class Metabuild {
 	 */
 	public void setLogFile(File logFile) {
 		this.logFile = FileUtility.absolute(logFile);
+	}
+	
+	/**
+	 * If set to true, re-query all dependencies
+	 * @param refreshDependencies
+	 */
+	public void setRefreshDependencies(boolean refreshDependencies) {
+		this.refreshDependencies = refreshDependencies;
+	}
+	
+	public boolean isRefreshDependencies() {
+		return refreshDependencies;
 	}
 	
 	/**

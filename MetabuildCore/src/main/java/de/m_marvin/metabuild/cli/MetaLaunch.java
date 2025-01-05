@@ -7,6 +7,7 @@ import java.util.List;
 
 import de.m_marvin.commandlineparser.CommandLineParser;
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.maven.MavenResolver;
 
 public class MetaLaunch {
 	
@@ -26,6 +27,9 @@ public class MetaLaunch {
 		parser.addOption("cache-dir", Metabuild.DEFAULT_CACHE_DIRECTORY, "directory to save all cache data");
 		parser.addOption("log", Metabuild.DEFAULT_BUILD_LOG_NAME, "file to write build log to");
 		parser.addOption("threads", Integer.toString(Metabuild.DEFAULT_TASK_THREADS), "number of threads to utilize for executing build tasks");
+		parser.addOption("strict-maven-meta", MavenResolver.strictMavenMeta, "if set, only download artifacts registered in repo maven-meta");
+		parser.addOption("strict-maven-hash", MavenResolver.strictHashVerify, "if set, only download artifacts with valid (or no existing) hash signatures");
+		parser.addOption("refresh-dependencies", false, "if set, re-download all dependencies and replace current cache");
 		
 		// Parse and check arguments
 		parser.parseInput(Arrays.copyOfRange(args, taskRunList.size(), args.length));
@@ -56,6 +60,12 @@ public class MetaLaunch {
 			mb.setLogFile(new File(args.getOption("log")));
 		if (args.getOption("cache-dir") != null)
 			mb.setCacheDirectory(new File(args.getOption("cache-dir")));
+		if (args.getFlag("strict-maven-meta"))
+			MavenResolver.strictMavenMeta = true;
+		if (args.getFlag("strict-maven-hash"))
+			MavenResolver.strictHashVerify = true;
+		if (args.getFlag("refresh-dependencies"))
+			mb.setRefreshDependencies(true);
 		
 		// Load build file
 		File buildFile = new File(Metabuild.DEFAULT_BUILD_FILE_NAME);

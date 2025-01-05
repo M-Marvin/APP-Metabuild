@@ -7,6 +7,9 @@ import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.script.JavaBuildScript;
 import de.m_marvin.metabuild.tasks.java.JavaCompileTask;
 import de.m_marvin.metabuild.tasks.java.JarTask;
+import de.m_marvin.metabuild.tasks.java.MavenDependTask;
+import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository;
+import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository.Credentials;
 
 public class Buildfile extends JavaBuildScript {
 	
@@ -17,6 +20,25 @@ public class Buildfile extends JavaBuildScript {
 		super.init();
 		
 		withSourcesJar();
+		
+	}
+	
+	public void repositories() {
+		
+		implementation.repository(new MavenRepository(
+			"GitHub Pkg UnifiedVectors", 
+			"https://maven.pkg.github.com/m-marvin/library-unifiedvectors", 
+			new Credentials(
+					() -> System.getenv("GITHUB_ACTOR"), 
+					() -> System.getenv("GITHUB_TOKEN")
+			)
+		));
+		
+	}
+	
+	public void dependencies() {
+		
+		implementation.add("de.m_marvin.univec:univec:1.6");
 		
 	}
 	

@@ -1,8 +1,0 @@
-09.12.2024_17:01:03: [ INFO] Metabuild: #########################################
-09.12.2024_17:01:03: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
-09.12.2024_17:01:03: [ INFO] Metabuild: #########################################
-09.12.2024_17:01:03: [ INFO] Metabuild: buildfile: build.meta
-09.12.2024_17:01:03: [ INFO] Metabuild: begin build init phase
-09.12.2024_17:01:03: [ INFO] Metabuild: begin build run phase
-09.12.2024_17:01:03: [ INFO] Metabuild: nothing to do
-09.12.2024_17:01:03: [ INFO] Metabuild: TASKS: 4  UP_TO_DATE: 4  FAILED: 0

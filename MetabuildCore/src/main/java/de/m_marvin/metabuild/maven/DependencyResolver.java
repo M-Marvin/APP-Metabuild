@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.Optional;
 import java.util.Queue;
@@ -90,8 +91,12 @@ public class DependencyResolver {
 	public void resolveDependencies(Predicate<Scope> resolveScope) {
 		resolveDependencies(resolveScope, QueryMode.CACHE_AND_ONLINE);
 	}
-	
+
 	public void resolveDependencies(Predicate<Scope> resolveScope, QueryMode mode) {
+		resolveDependencies(resolveScope, artifact -> mode);
+	}
+	
+	public void resolveDependencies(Predicate<Scope> resolveScope, Function<String, QueryMode> mode) {
 		
 		Collection<Dependency> deps = this.dependencies.keySet();
 		
@@ -101,7 +106,7 @@ public class DependencyResolver {
 
 				logger().info("resolve dependency: '%s'", dep.dependency());
 				
-				Optional<POM> pom = resolveDependency(dep, mode);
+				Optional<POM> pom = resolveDependency(dep, mode.apply(dep.dependency()));
 				
 				if (pom.isEmpty())
 					throw BuildException.msg("Unable to find dependency: %s", dep.dependency());
@@ -118,7 +123,8 @@ public class DependencyResolver {
 				while (il.size() > 0) {
 					ArtifactAbs imp = il.poll();
 					logger().debug("import POM: '%s:%s:%s'", imp.group(), imp.artifact(), imp.version());
-					Optional<POM> tpom = resolveDependency(new Dependency(String.format("%s:%s:%s", imp.group(), imp.artifact(), imp.version()), null), mode);
+					String artifactName = String.format("%s:%s:%s", imp.group(), imp.artifact(), imp.version());
+					Optional<POM> tpom = resolveDependency(new Dependency(artifactName, null), mode.apply(artifactName));
 					if (tpom.isEmpty())
 						throw BuildException.msg("POM import could not be resolved: '%s:%s:%s'", imp.group(), imp.artifact(), imp.version());
 					pom.get().importPOM(imp, tpom.get());

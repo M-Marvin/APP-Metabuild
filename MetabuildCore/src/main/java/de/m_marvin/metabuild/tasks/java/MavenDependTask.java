@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -103,9 +105,24 @@ public class MavenDependTask extends BuildTask {
 		return TaskState.UPTODATE;
 	}
 	
+	protected static Set<String> refreshedArtifacts = new HashSet<>();
+	
+	protected static QueryMode verifyNeedsRefresh(String artifact) {
+		if (!refreshedArtifacts.contains(artifact)) {
+			refreshedArtifacts.add(artifact);
+			return QueryMode.ONLINE_ONLY;
+		}
+		return QueryMode.CACHE_ONLY;
+	}
+	
+	@Override
+	protected void cleanup() {
+		refreshedArtifacts.clear();
+	}
+	
 	@Override
 	protected boolean run() {
-		this.resolver.resolveDependencies(this.scope, Metabuild.get().isRefreshDependencies() ? QueryMode.ONLINE_ONLY : QueryMode.CACHE_AND_ONLINE);
+		this.resolver.resolveDependencies(this.scope, Metabuild.get().isRefreshDependencies() ? MavenDependTask::verifyNeedsRefresh : artifact -> QueryMode.CACHE_AND_ONLINE);
 		
 		File classpathFile = FileUtility.absolute(this.classpath);
 		if (!classpathFile.getParentFile().isDirectory() && !classpathFile.getParentFile().mkdirs()) {

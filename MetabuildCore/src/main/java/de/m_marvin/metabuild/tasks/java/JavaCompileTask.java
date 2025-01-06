@@ -117,7 +117,7 @@ public class JavaCompileTask extends BuildTask {
 		loadMetadata();
 
 		// Check for changed classpath file
-		Optional<SourceMetaData> oldest = this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst();
+		Optional<SourceMetaData> oldest = this.sourceMetadata.size() > 0 ? this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst() : Optional.empty();
 		Optional<FileTime> classpath = FileUtility.timestamp(FileUtility.absolute(this.classpath));
 		if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0)
 			this.sourceMetadata.clear(); // clearing the metadata causes all files to be recompiled

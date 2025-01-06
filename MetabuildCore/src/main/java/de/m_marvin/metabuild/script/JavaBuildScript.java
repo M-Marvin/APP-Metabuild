@@ -5,6 +5,7 @@ import java.io.File;
 import de.m_marvin.metabuild.tasks.BuildTask;
 import de.m_marvin.metabuild.tasks.java.JarTask;
 import de.m_marvin.metabuild.tasks.java.JavaCompileTask;
+import de.m_marvin.metabuild.tasks.java.JavaRunClasspathTask;
 import de.m_marvin.metabuild.tasks.java.MavenDependTask;
 
 public class JavaBuildScript extends BuildScript {
@@ -31,11 +32,11 @@ public class JavaBuildScript extends BuildScript {
 		var compileJava = new JavaCompileTask("compileJava");
 		compileJava.sourcesDir = new File("src/main/java");
 		compileJava.classesDir = new File("build/classes/main/java");
-		compileJava.classpath = new File("build/implementation.classpath");
+		compileJava.classpath = this.implementation.classpath;
 		compileJava.dependsOn(this.implementation);
 		
 		var jar = new JarTask("jar");
-		jar.entries.put(new File("build/classes/main/java/"), "");
+		jar.entries.put(compileJava.classesDir, "");
 		jar.entries.put(new File("src/main/resource"), "");
 		jar.archive = new File(String.format("build/libs/%s.jar", this.projectName));
 		jar.dependsOn(compileJava);
@@ -44,6 +45,13 @@ public class JavaBuildScript extends BuildScript {
 		build.dependsOn(jar);
 		
 		manifest(jar);
+		
+		var runJava = new JavaRunClasspathTask("run");
+		runJava.classpath = this.runtime.classpath;
+		runJava.classesDir = compileJava.classesDir;
+		runJava.mainClass = jar.metainfo.get("Main-Class");
+		runJava.dependsOn(jar);
+		runJava.dependsOn(this.runtime);
 		
 	}
 	

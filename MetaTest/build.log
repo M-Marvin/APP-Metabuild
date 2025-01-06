@@ -1,10 +1,27 @@
-05.01.2025_18:23:18: [ INFO] Metabuild: #########################################
-05.01.2025_18:23:18: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
-05.01.2025_18:23:18: [ INFO] Metabuild: #########################################
-05.01.2025_18:23:18: [ INFO] Metabuild: buildfile: build.meta
-05.01.2025_18:23:18: [ INFO] Metabuild: begin build init phase
-05.01.2025_18:23:18: [ INFO] java_dependency/javaDependRun: resolve dependency: 'de.m_marvin.univec:univec:1.6'
-05.01.2025_18:23:18: [ INFO] Metabuild: begin build run phase
-05.01.2025_18:23:18: [ INFO] Metabuild: nothing to do
-05.01.2025_18:23:18: [ INFO] java_dependency/javaDependImpl: resolve dependency: 'de.m_marvin.univec:univec:1.6'
-05.01.2025_18:23:18: [ INFO] Metabuild: TASKS: 6  UP_TO_DATE: 6  FAILED: 0
+06.01.2025_00:25:32: [ INFO] Metabuild: #########################################
+06.01.2025_00:25:32: [ INFO] Metabuild:       MetabuildCore ver0.1_build0
+06.01.2025_00:25:32: [ INFO] Metabuild: #########################################
+06.01.2025_00:25:32: [ INFO] Metabuild: buildfile: build.meta
+06.01.2025_00:25:32: [ INFO] Metabuild: begin build init phase
+06.01.2025_00:25:32: [ INFO] Metabuild: begin build run phase
+06.01.2025_00:25:32: [ INFO] java_dependency/javaDependRun: resolve dependency: 'de.m_marvin.univec:univec:1.6'
+06.01.2025_00:25:32: [ INFO] java_dependency/javaDependRun/maven: try resolving on [GitHub Pkg UnifiedVectors]: https://maven.pkg.github.com/m-marvin/library-unifiedvectors
+06.01.2025_00:25:32: [DEBUG] java_dependency/javaDependRun/maven: request from url: https://maven.pkg.github.com/m-marvin/library-unifiedvectors/de/m_marvin/univec/univec/maven-metadata.xml
+06.01.2025_00:25:33: [DEBUG] java_dependency/javaDependRun/maven: request from url: https://maven.pkg.github.com/m-marvin/library-unifiedvectors/de/m_marvin/univec/univec/1.6/univec-1.6.pom
+06.01.2025_00:25:34: [DEBUG] java_dependency/javaDependRun/maven: request from url: https://maven.pkg.github.com/m-marvin/library-unifiedvectors/de/m_marvin/univec/univec/1.6/univec-1.6.jar
+06.01.2025_00:25:34: [DEBUG] java_dependency/javaDependRun/maven: request from url: https://maven.pkg.github.com/m-marvin/library-unifiedvectors/de/m_marvin/univec/univec/1.6/univec-1.6-sources.jar
+06.01.2025_00:25:35: [DEBUG] java_dependency/javaDependRun/maven: request from url: https://maven.pkg.github.com/m-marvin/library-unifiedvectors/de/m_marvin/univec/univec/1.6/univec-1.6-javadoc.jar
+06.01.2025_00:25:35: [DEBUG] java_dependency/javaDependRun/maven: not found: 404 Not Found
+06.01.2025_00:25:35: [ INFO] java_dependency/javaDependRun/maven: -> found dependency: de.m_marvin.univec:univec:1.6 on [GitHub Pkg UnifiedVectors]
+06.01.2025_00:25:35: [ INFO] java_dependency/javaDependImpl: resolve dependency: 'de.m_marvin.univec:univec:1.6'
+06.01.2025_00:25:35: [DEBUG] java_compile/compileJava: compiling source file: de\test\Test.java
+06.01.2025_00:25:36: [ INFO] make_archive/jar: make archive from files: build\libs\Test-Project.jar
+06.01.2025_00:25:36: [DEBUG] make_archive/jar: archive manifest
+06.01.2025_00:25:36: [DEBUG] make_archive/jar: archive file: de/test/Test$RRR.class
+06.01.2025_00:25:36: [DEBUG] make_archive/jar: archive file: de/test/Test.class
+06.01.2025_00:25:36: [DEBUG] make_archive/jar: archive file: test.txt
+06.01.2025_00:25:36: [ WARN] java_run/run: starting process: de.test.Test
+06.01.2025_00:25:36: [ WARN] java_run/run: process terminated, exit code: 0
+06.01.2025_00:25:36: [ INFO] Metabuild: build completed
+06.01.2025_00:25:36: [ INFO] Metabuild: build run phase finished, shuting down
+06.01.2025_00:25:36: [ INFO] Metabuild: TASKS: 7  UP_TO_DATE: 6  FAILED: 0

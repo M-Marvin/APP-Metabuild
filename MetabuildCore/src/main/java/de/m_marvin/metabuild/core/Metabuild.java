@@ -56,23 +56,39 @@ public final class Metabuild {
 	
 	private static Metabuild instance;
 	
+	/* Working directory of metabuild, normally the project root */
 	private final File workingDirectory;
+	/* Cache directory for metadata and downloaded files, normall user directory */
 	private File cacheDirectory;
+	/* Log file to store logging output */
 	private File logFile;
-	private Logger logger;
-	private int taskThreads;
+	/* OutputStream to the log file */
 	private OutputStream logStream;
+	/* Root logger, all loggers end up here */
+	private Logger logger;
+	/* Number of allowed tasks to spawn for processing tasks in parallel */
+	private int taskThreads;
+	/* Set to true if the next build process should re-download all external dependencies */
 	private boolean refreshDependencies = false;
-	private IStatusCallback statusCallback;
+	/* Currently loaded build script instance */
 	private BuildScript buildscript;
+	/* Task to TaskNode map, nodes combine one BuildTask and its dependent tasks */
 	private Map<BuildTask, TaskNode> task2node = new HashMap<>();
+	/* Root TaskNode for the current build task tree */
 	private TaskNode taskTree;
+	/* Queue of build tasks currently executed by the task threads */
 	private BlockingQueue<Runnable> taskQueue;
+	/* Executor for build tasks */
 	private ThreadPoolExecutor taskExecutor;
-	
+	/* Compiler for loading and instantiating build script */
 	private final ScriptCompiler buildCompiler;
+	/* Map of registered tasks of the current build script */
 	private final Map<String, BuildTask> registeredTasks = new HashMap<>();
+	/* Map of registered task dependencies of current build script */
 	private final Map<String, Set<String>> taskDependencies = new HashMap<>();
+
+	// TODO CLIUI
+	private IStatusCallback statusCallback;
 	
 	/**
 	 * Instanziates a new metabuild instance.<br>
@@ -126,8 +142,9 @@ public final class Metabuild {
 	}
 	
 	/**
-	 * If set to true, re-query all dependencies
-	 * @param refreshDependencies
+	 * If set to true, re-query all dependencies from online<br>
+	 * This will only be active for the next build cycle, and be reset to false after that.
+	 * @param refreshDependencies true to re-query all dependencies
 	 */
 	public void setRefreshDependencies(boolean refreshDependencies) {
 		this.refreshDependencies = refreshDependencies;
@@ -145,7 +162,7 @@ public final class Metabuild {
 		this.taskThreads = taskThreads;
 	}
 	
-	// TODO
+	// TODO CLIUI
 	public void setStatusCallback(IStatusCallback statusCallback) {
 		this.statusCallback = statusCallback;
 	}
@@ -481,6 +498,8 @@ public final class Metabuild {
 		
 		logger().infot(LOG_TAG, "build run phase finished, shuting down");
 		
+		this.registeredTasks.values().forEach(BuildTask::cleanupTask);
+		
 		try {
 			if (!this.taskExecutor.shutdownNow().isEmpty()) {
 				logger().warnt(LOG_TAG, "tasks still runing after build, this indicates sirious problems with the build file!");
@@ -492,7 +511,6 @@ public final class Metabuild {
 			this.taskQueue.clear();
 		} catch (InterruptedException e) {}
 		
-		// Disable refresh, only active for one execution
 		this.refreshDependencies = false;
 		
 		printStatus();

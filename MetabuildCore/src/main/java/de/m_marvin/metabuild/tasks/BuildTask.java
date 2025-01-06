@@ -124,6 +124,19 @@ public class BuildTask {
 	}
 	
 	/**
+	 * Run on each task after an build has completed, no matter if this task did run or not.
+	 */
+	protected void cleanup() {}
+	
+	public void cleanupTask() {
+		try {
+			cleanup();
+		} catch (Exception e) {
+			logger().errort(logTag() + "/cleanup", "task cleanup did throw an exception, this should not happen!");
+		}
+	}
+	
+	/**
 	 * The different states a task can have before and after execution
 	 */
 	public static enum TaskState {

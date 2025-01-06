@@ -36,9 +36,9 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import de.m_marvin.metabuild.core.util.SkipOptional;
 import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository.Credentials;
 import de.m_marvin.metabuild.maven.MavenResolver.POM.Scope;
-import de.m_marvin.metabuild.util.SkipOptional;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class MavenResolver {

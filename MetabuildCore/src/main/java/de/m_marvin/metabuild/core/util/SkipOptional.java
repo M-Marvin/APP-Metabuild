@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.util;
+package de.m_marvin.metabuild.core.util;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;

@@ -1,13 +1,16 @@
 package de.m_marvin.metabuild.cli;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import de.m_marvin.commandlineparser.CommandLineParser;
-import de.m_marvin.metabuild.core.IStatusCallback;
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.Metabuild.IStatusCallback;
 import de.m_marvin.metabuild.maven.MavenResolver;
 
 public class MetaLaunch {
@@ -52,28 +55,68 @@ public class MetaLaunch {
 		
 	}
 	
+	private static int tasksCount = 0;
+	private static int tasksCompleted = 0;
+	private static Map<String, String> taskStates = new HashMap<>();
+	private static TerminalLogger terminal;
+	
+	public static void setupCLIUI(Metabuild mb) {
+		
+		terminal = new TerminalLogger();
+		mb.setConsoleLogger(terminal);
+		
+		mb.setStatusCallback(new IStatusCallback() {
+			
+			@Override
+			public void taskStatus(String task, String status) {
+				taskStates.put(task, status);
+				printStatusUI(terminal);
+			}
+			
+			@Override
+			public void taskCount(int taskCount) {
+				tasksCount = taskCount;
+				printStatusUI(terminal);
+			}
+			
+			@Override
+			public void taskCompleted(String task) {
+				taskStates.remove(task);
+				if (!task.equals("root")) tasksCompleted++;
+				printStatusUI(terminal);
+			}
+			
+		});
+		
+	}
+	
+	public static void printStatusUI(TerminalLogger logger) {
+		
+		PrintStream printer = logger.getNewPrinter();
+		
+		float progress = tasksCompleted / (float) tasksCount;
+		
+		int p = Math.round(progress * 50);
+		printer.print("[");
+		for (int i = 0; i < 50; i++) printer.print(i < p ? "=" : "-");
+		printer.println("]");
+		printer.println("Progress: " + progress * 100);
+		
+		printer.println("");
+		
+		for (var e : taskStates.entrySet()) {
+			printer.println(e.getKey() + "\t" + e.getValue());
+		}
+		
+		logger.printUI(false);
+		
+	}
+	
 	public static int launchMetabuild(File workingDir, List<String> taskList, CommandLineParser args) {
 		
 		Metabuild mb = new Metabuild(workingDir);
 		
-		// TODO initialize CLI-UI output
-//		mb.setStatusCallback(new IStatusCallback() {
-//			
-//			@Override
-//			public void taskStatus(String task, String status) {
-//				System.out.println(task + "\t" + status);
-//			}
-//			
-//			@Override
-//			public void taskCount(int taskCount) {
-//				System.out.println("Tasks total: " + taskCount);
-//			}
-//			
-//			@Override
-//			public void taskCompleted(String task) {
-//				System.out.println("Completed: " + task);
-//			}
-//		});
+		setupCLIUI(mb);
 		
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
@@ -103,6 +146,7 @@ public class MetaLaunch {
 		}
 		
 		Metabuild.terminate();
+		terminal.printUI(true);
 		return 0;
 		
 	}

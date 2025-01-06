@@ -45,6 +45,14 @@ import de.m_marvin.simplelogging.impl.SystemLogger;
  * Main class of the metabuild system
  */
 public final class Metabuild {
+	
+	public interface IStatusCallback {
+		
+		public void taskCount(int taskCount);
+		public void taskStatus(String task, String status);
+		public void taskCompleted(String task);
+		
+	}
 
 	public static final String LOG_TAG = "Metabuild";
 	
@@ -66,6 +74,8 @@ public final class Metabuild {
 	private File logFile;
 	/* OutputStream to the log file */
 	private OutputStream logStream;
+	/* Console logger, receives log data from the root logger */
+	private Logger consoleLogger = new SystemLogger();
 	/* Root logger, all loggers end up here */
 	private Logger logger;
 	/* Number of allowed tasks to spawn for processing tasks in parallel */
@@ -140,6 +150,14 @@ public final class Metabuild {
 	 */
 	public void setLogFile(File logFile) {
 		this.logFile = FileUtility.absolute(logFile);
+	}
+	
+	/**
+	 * Sets the logger that receives log data from the root logger to print it to the console.
+	 * @param consoleLogger
+	 */
+	public void setConsoleLogger(Logger consoleLogger) {
+		this.consoleLogger = consoleLogger;
 	}
 	
 	/**
@@ -236,7 +254,7 @@ public final class Metabuild {
 			try {
 				this.logStream = new FileOutputStream(this.logFile);
 				
-				this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), new SystemLogger()));
+				this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), consoleLogger));
 			} catch (FileNotFoundException e) {
 				logger().warnt(LOG_TAG, "failed to create log file: " + e.getMessage());
 				return false;

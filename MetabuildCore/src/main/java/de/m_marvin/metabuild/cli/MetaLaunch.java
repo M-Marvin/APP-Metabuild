@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.m_marvin.commandlineparser.CommandLineParser;
+import de.m_marvin.metabuild.core.IStatusCallback;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.maven.MavenResolver;
 
@@ -56,6 +57,24 @@ public class MetaLaunch {
 		Metabuild mb = new Metabuild(workingDir);
 		
 		// TODO initialize CLI-UI output
+//		mb.setStatusCallback(new IStatusCallback() {
+//			
+//			@Override
+//			public void taskStatus(String task, String status) {
+//				System.out.println(task + "\t" + status);
+//			}
+//			
+//			@Override
+//			public void taskCount(int taskCount) {
+//				System.out.println("Tasks total: " + taskCount);
+//			}
+//			
+//			@Override
+//			public void taskCompleted(String task) {
+//				System.out.println("Completed: " + task);
+//			}
+//		});
+		
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
 		if (args.getOption("cache-dir") != null)

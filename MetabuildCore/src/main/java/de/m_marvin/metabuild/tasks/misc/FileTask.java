@@ -5,6 +5,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.Optional;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.tasks.BuildTask;
 
@@ -36,6 +37,7 @@ public class FileTask extends BuildTask {
 	
 	public FileTask(String name) {
 		super(name);
+		this.type = TaskType.named("files");
 	}
 	
 	@Override
@@ -59,9 +61,9 @@ public class FileTask extends BuildTask {
 						return lasttime.isEmpty() || timestamp.isEmpty() || lasttime.get().compareTo(timestamp.get()) < 0;
 					})
 					.count();
-			return toReplace > 0 ? TaskState.UPTODATE : TaskState.OUTDATED;
+			return toReplace == 0 ? TaskState.UPTODATE : TaskState.OUTDATED;
 		} else {
-			return targetFile.exists() ? TaskState.UPTODATE : TaskState.OUTDATED;
+			return !targetFile.exists() ? TaskState.UPTODATE : TaskState.OUTDATED;
 		}
 		
 	}

@@ -86,7 +86,7 @@ public class MavenDependTask extends BuildTask {
 
 		// Test if dependencies are missing in cache
 		try {
-			this.resolver.resolveDependencies(this.scope, QueryMode.CACHE_ONLY);
+			this.resolver.resolveDependencies(this.scope, QueryMode.CACHE_ONLY, null);
 		} catch (MetaScriptException e) {
 			return TaskState.OUTDATED;
 		}
@@ -122,7 +122,10 @@ public class MavenDependTask extends BuildTask {
 	
 	@Override
 	protected boolean run() {
-		this.resolver.resolveDependencies(this.scope, Metabuild.get().isRefreshDependencies() ? MavenDependTask::verifyNeedsRefresh : artifact -> QueryMode.CACHE_AND_ONLINE);
+		this.resolver.resolveDependencies(
+				this.scope, 
+				Metabuild.get().isRefreshDependencies() ? MavenDependTask::verifyNeedsRefresh : artifact -> QueryMode.CACHE_AND_ONLINE,
+				dep -> status("resolving > " + dep));
 		
 		File classpathFile = FileUtility.absolute(this.classpath);
 		if (!classpathFile.getParentFile().isDirectory() && !classpathFile.getParentFile().mkdirs()) {

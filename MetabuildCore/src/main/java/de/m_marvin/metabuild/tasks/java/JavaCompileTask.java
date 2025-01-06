@@ -282,6 +282,8 @@ public class JavaCompileTask extends BuildTask {
 		
 		// Compile outdated files
 		for (File sourceFile : this.toCompile) {
+
+			status("compiling > " + sourceFile.getPath());
 			
 			logger().debugt(logTag(), "compiling source file: %s", sourceFile);
 			

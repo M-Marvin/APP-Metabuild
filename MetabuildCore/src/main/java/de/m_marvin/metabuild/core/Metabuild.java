@@ -18,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -86,8 +88,7 @@ public final class Metabuild {
 	private final Map<String, BuildTask> registeredTasks = new HashMap<>();
 	/* Map of registered task dependencies of current build script */
 	private final Map<String, Set<String>> taskDependencies = new HashMap<>();
-
-	// TODO CLIUI
+	/* Status callback to report back build progress */
 	private IStatusCallback statusCallback;
 	
 	/**
@@ -162,7 +163,6 @@ public final class Metabuild {
 		this.taskThreads = taskThreads;
 	}
 	
-	// TODO CLIUI
 	public void setStatusCallback(IStatusCallback statusCallback) {
 		this.statusCallback = statusCallback;
 	}
@@ -401,9 +401,9 @@ public final class Metabuild {
 	 * @param node The node in the task tree to run
 	 * @return true if and only if all the tasks from the node upward have completed successfully
 	 */
-	protected CompletableFuture<Void> runTaskTree(TaskNode node) {
+	protected CompletableFuture<Void> runTaskTree(TaskNode node, Consumer<String> completitionCallback, BiConsumer<String, String> statusCallback) {
 		return CompletableFuture.runAsync(() -> {
-			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn)));
+			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn, completitionCallback, statusCallback)));
 			try {
 				CompletableFuture.allOf(tasks.values().toArray(CompletableFuture[]::new)).join();
 			} catch (Exception ea) {
@@ -424,7 +424,10 @@ public final class Metabuild {
 			}
 		}).thenAcceptAsync(v -> {
 			if (node.task().isEmpty()) return;
-			if (!node.task().get().runTask()) {
+			boolean result = node.task().get().runTask(
+					statusCallback != null ? status -> statusCallback.accept(node.task().get().name, status) : null);
+			if (completitionCallback != null) completitionCallback.accept(node.task().get().name);
+			if (!result) {
 				throw BuildException.msg("task '%s' failed!", node.task().get().name);
 			}
 		}, this.taskExecutor);
@@ -471,6 +474,8 @@ public final class Metabuild {
 			return false;
 		}
 		
+		if (this.statusCallback != null) this.statusCallback.taskCount(this.task2node.size());
+		
 		logger().infot(LOG_TAG, "begin build run phase");
 		
 		if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
@@ -484,7 +489,10 @@ public final class Metabuild {
 		
 		boolean success = false;
 		try {
-			runTaskTree(this.taskTree).join();
+			runTaskTree(this.taskTree, 
+					this.statusCallback != null ? this.statusCallback::taskCompleted : null,
+					this.statusCallback != null ? this.statusCallback::taskStatus : null
+			).join();
 			logger().infot(LOG_TAG, "build completed");
 			success = true;
 		} catch (CompletionException e)  {
@@ -516,6 +524,10 @@ public final class Metabuild {
 		printStatus();
 		
 		return success;
+		
+	}
+	
+	public void statusCallback(int tasksTotal, int tasksCompleted) {
 		
 	}
 	

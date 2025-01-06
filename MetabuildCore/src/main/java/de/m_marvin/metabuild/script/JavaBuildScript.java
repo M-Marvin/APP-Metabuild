@@ -7,6 +7,8 @@ import de.m_marvin.metabuild.tasks.java.JarTask;
 import de.m_marvin.metabuild.tasks.java.JavaCompileTask;
 import de.m_marvin.metabuild.tasks.java.JavaRunClasspathTask;
 import de.m_marvin.metabuild.tasks.java.MavenDependTask;
+import de.m_marvin.metabuild.tasks.misc.FileTask;
+import de.m_marvin.metabuild.tasks.misc.FileTask.Action;
 
 public class JavaBuildScript extends BuildScript {
 	
@@ -52,6 +54,8 @@ public class JavaBuildScript extends BuildScript {
 		runJava.mainClass = jar.metainfo.get("Main-Class");
 		runJava.dependsOn(jar);
 		runJava.dependsOn(this.runtime);
+		
+		new FileTask("clean", Action.DELETE, new File("build"));
 		
 	}
 	

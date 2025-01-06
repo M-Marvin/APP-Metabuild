@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.Optional;
@@ -88,22 +89,24 @@ public class DependencyResolver {
 		this.dependencies.put(new Dependency(dependency, configurations), null);
 	}
 	
-	public void resolveDependencies(Predicate<Scope> resolveScope) {
-		resolveDependencies(resolveScope, QueryMode.CACHE_AND_ONLINE);
+	public void resolveDependencies(Predicate<Scope> resolveScope, Consumer<String> resolveCallback) {
+		resolveDependencies(resolveScope, QueryMode.CACHE_AND_ONLINE, resolveCallback);
 	}
 
-	public void resolveDependencies(Predicate<Scope> resolveScope, QueryMode mode) {
-		resolveDependencies(resolveScope, artifact -> mode);
+	public void resolveDependencies(Predicate<Scope> resolveScope, QueryMode mode, Consumer<String> resolveCallback) {
+		resolveDependencies(resolveScope, artifact -> mode, resolveCallback);
 	}
 	
-	public void resolveDependencies(Predicate<Scope> resolveScope, Function<String, QueryMode> mode) {
+	public void resolveDependencies(Predicate<Scope> resolveScope, Function<String, QueryMode> mode, Consumer<String> resolveCallback) {
 		
 		Collection<Dependency> deps = this.dependencies.keySet();
 		
 		while (deps.size() > 0) {
 			
 			for (Dependency dep : deps) {
-
+				
+				if (resolveCallback != null) resolveCallback.accept(dep.dependency());
+				
 				logger().info("resolve dependency: '%s'", dep.dependency());
 				
 				Optional<POM> pom = resolveDependency(dep, mode.apply(dep.dependency()));

@@ -1,5 +1,6 @@
 package de.m_marvin.metabuild.tasks;
 
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
@@ -13,9 +14,11 @@ import de.m_marvin.simplelogging.api.Logger;
  */
 public class BuildTask {
 	
-	public TaskType type;
+	public TaskType type = TaskType.named("undefined");
 	public String name;
 	public TaskState state;
+	
+	private Consumer<String> statusCallback;
 	
 	/**
 	 * Create and register a new task
@@ -100,11 +103,13 @@ public class BuildTask {
 	 * Runs a preparation and if neccessary, then runs this task.
 	 * @return true if and only if the task completed successfully
 	 */
-	public boolean runTask() {
+	public boolean runTask(Consumer<String> statusCallback) {
+		this.statusCallback = statusCallback;
 		if (!prepare().requiresBuild()) {
 			this.state = TaskState.UPTODATE;
 			return true;
 		}
+		if (this.statusCallback != null) statusCallback.accept("running");
 		if (run()) {
 			this.state = TaskState.UPTODATE;
 			return true;
@@ -112,6 +117,14 @@ public class BuildTask {
 			this.state = TaskState.FAILED;
 			return false;
 		}
+	}
+	
+	/**
+	 * Can be used to report information about the current progress of this task to the user.
+	 * @param status Status message to display
+	 */
+	protected void status(String status) {
+		if (this.statusCallback != null) this.statusCallback.accept(status);
 	}
 	
 	/**

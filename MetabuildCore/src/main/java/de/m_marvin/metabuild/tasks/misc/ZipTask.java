@@ -55,6 +55,7 @@ public class ZipTask extends BuildTask {
 	protected boolean archiveFiles(ZipOutputStream zstream) {
 		for (var entry : this.toArchive.entrySet()) {
 			try {
+				status("archive > " + entry.getValue());
 				logger().debugt(logTag(), "archive file: %s", entry.getValue());
 				if (!archiveFile(zstream, entry.getValue(), entry.getKey())) {
 					logger().errort(logTag(), "failed to archive file: %s", entry.getValue());

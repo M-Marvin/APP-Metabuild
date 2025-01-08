@@ -11,6 +11,15 @@
          </run>
       </runtime>
    </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            class="de.m_marvin.eclipsemeta.TaskView"
+            id="de.m_marvin.eclipsemeta.taskView"
+            name="Meta Tasks"
+            restorable="true">
+      </view>
+   </extension>
 
 
 </plugin>

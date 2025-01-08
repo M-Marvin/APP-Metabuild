@@ -48,6 +48,8 @@ public class JavaCompileTask extends BuildTask {
 	public final List<String> options = new ArrayList<>();
 	public File classpath = null;
 	public File stateCache = null; // if not set, will be set by prepare
+	public String sourceCompatibility = null;
+	public String targetCompatibility = null;
 	
 	public static record SourceMetaData(File[] classFiles, FileTime timestamp) { }
 	
@@ -261,6 +263,16 @@ public class JavaCompileTask extends BuildTask {
 		// Add output directory to compiler options
 		this.options.add("-d");
 		this.options.add(classPath.getAbsolutePath());
+		
+		// Add compatibility options
+		if (this.sourceCompatibility != null) {
+			this.options.add("-source");
+			this.options.add(this.sourceCompatibility);
+		}
+		if (this.targetCompatibility != null) {
+			this.options.add("-target");
+			this.options.add(this.targetCompatibility);	
+		}
 		
 		// Add classpath file content to options if set
 		if (this.classpath != null) {

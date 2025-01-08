@@ -1,1 +1,1 @@
-java -jar %~dp0meta/metabuild.jar %*
+java -jar %~dp0meta/meta_wrapper.jar %*

@@ -10,14 +10,21 @@ plugins {
 }
 
 apply plugin: 'java-library'
+apply plugin: 'maven-publish'
 
 version = '0.1_build0'
 
 repositories {
 	mavenCentral()
-	maven { url 'https://jitpack.io' }
 	maven {
 		url 'https://maven.pkg.github.com/m-marvin/app-javarun'
+		credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+	}
+	maven {
+		url 'https://maven.pkg.github.com/m-marvin/library-commandlineparser'
 		credentials {
             username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
             password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
@@ -26,17 +33,13 @@ repositories {
 	mavenLocal()
 }
 
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-}
-
 dependencies {
 	
 	// CommandLineParser
-	implementation 'com.github.M-Marvin:LIBRARY-CommandLineParser:v1.1'
+	implementation 'de.m_marvin.commandlineparser:commandlineparser:1.1'
 	
 	// GSON
-	implementation "com.google.code.gson:gson:2.9.1"
+	//implementation "com.google.code.gson:gson:2.9.1"
 	
 	// SimpleLogging
 	implementation 'de.m_marvin.simplelogging:simplelogging:2.1.3'
@@ -45,7 +48,7 @@ dependencies {
 	implementation 'de.m_marvin.javarun:javarun:1.2'
 	
 	// ConsoleMode
-	implementation 'de.m_marvin.cmode:cmode:0.1_build1'
+	//implementation 'de.m_marvin.cmode:cmode:0.1_build1'
 	
 }
 
@@ -64,25 +67,34 @@ jar {
     }
 }
 
-task assembleTest() {
-	description "Copies metabuild instance into MetaTest project"
-	group = "build"
-	
-	doLast {
-		ant.copy(file:'build/libs/MetabuildCore-' + version + '-all.jar', tofile:'../MetaTest/meta/metabuild.jar')
-	}
-}
-
-assembleTest.dependsOn(shadowJar)
-
 task assembleBin() {
-	description "Copies all required files into the output installation folder"
-	group = 'build'
+	description "Copies metabuild instance into bin folder"
+	group = "build"
 	
 	doLast {
 		ant.copy(file:'build/libs/MetabuildCore-' + version + '-all.jar', tofile:'run/metabuild.jar')
 	}
 }
-
 assembleBin.dependsOn(shadowJar)
-build.dependsOn(assembleBin)
+
+task makeTest() {
+	description "Copies metabuild files into MetaTest project"
+	group = "build"
+	
+	doLast {
+		ant.copy(file:'run/metabuild.jar', tofile: System.properties['user.home'] + '/.meta/meta-' + version + '/metabuild.jar')
+	}
+}
+
+makeTest.dependsOn(assembleBin)
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'de.m_marvin.metabuild'
+        	artifactId = "metacore"
+        
+			from components.java
+        }
+    }
+}

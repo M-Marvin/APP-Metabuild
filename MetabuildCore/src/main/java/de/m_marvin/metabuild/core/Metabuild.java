@@ -5,7 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -53,6 +57,10 @@ public final class Metabuild {
 		
 	}
 
+	public static final String META_VERSION_PROPERTY = "meta.version";
+	public static final String META_TITLE_PROPERTY = "meta.title";
+	public static final String META_HOME_PROPERTY = "meta.home";
+	
 	public static final String LOG_TAG = "Metabuild";
 	
 	public static final String DEFAULT_BUILD_FILE_NAME = "build.meta";
@@ -101,8 +109,8 @@ public final class Metabuild {
 	private IStatusCallback statusCallback;
 	
 	/**
-	 * Instanziates a new metabuild instance.<br>
-	 * Only one instance can be crated in the runtime environment at a time
+	 * Instantiates a new metabuild instance.<br>
+	 * Only one instance can be created in the runtime environment at a time
 	 * @param workingDirectory The working directory of the instance, usual the directory containing the projects build file
 	 */
 	public Metabuild(File workingDirectory) {
@@ -114,6 +122,20 @@ public final class Metabuild {
 		setTaskThreads(DEFAULT_TASK_THREADS);
 		
 		this.buildCompiler = new ScriptCompiler(this);
+		
+		// Set meta properties
+		String titleInfo = Metabuild.class.getPackage().getImplementationTitle();
+		String versionInfo = Metabuild.class.getPackage().getImplementationVersion();
+		System.setProperty(META_TITLE_PROPERTY, titleInfo);
+		System.setProperty(META_VERSION_PROPERTY, versionInfo);
+		
+		// Set meta bin directory
+		try {
+			String metaHome = Metabuild.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			System.setProperty(META_HOME_PROPERTY, new File(metaHome).getParent());
+		} catch (URISyntaxException e) {
+			logger().error("failed to access meta home directory!", e);
+		}
 	}
 	
 	/**
@@ -259,12 +281,9 @@ public final class Metabuild {
 			}
 			
 			// Print version info to log
-			String titleInfo = Metabuild.class.getPackage().getImplementationTitle();
-			String versionInfo = Metabuild.class.getPackage().getImplementationVersion();
-			logger().infot(LOG_TAG, "#########################################");
-			logger().infot(LOG_TAG, "      %s ver%s", titleInfo, versionInfo);
-			logger().infot(LOG_TAG, "#########################################");
-			
+			logger().debug("JVM runtime: %s", System.getProperty("java.version"));
+			logger().debug("Meta runtime: %s", System.getProperty(META_VERSION_PROPERTY));
+			logger().debug("Meta home: %s", System.getProperty(META_HOME_PROPERTY));
 		}
 		return true;
 	}

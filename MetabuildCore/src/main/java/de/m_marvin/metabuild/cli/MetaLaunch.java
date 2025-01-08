@@ -3,13 +3,10 @@ package de.m_marvin.metabuild.cli;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import de.m_marvin.commandlineparser.CommandLineParser;
 import de.m_marvin.metabuild.core.Metabuild;
-import de.m_marvin.metabuild.core.Metabuild.IStatusCallback;
 import de.m_marvin.metabuild.maven.MavenResolver;
 
 public class MetaLaunch {
@@ -33,6 +30,7 @@ public class MetaLaunch {
 		parser.addOption("strict-maven-meta", MavenResolver.strictMavenMeta, "if set, only download artifacts registered in repo maven-meta");
 		parser.addOption("strict-maven-hash", MavenResolver.strictHashVerify, "if set, only download artifacts with valid (or no existing) hash signatures");
 		parser.addOption("refresh-dependencies", false, "if set, re-download all dependencies and replace current cache");
+		parser.addOption("info", false, "Print additional log information to the terminal during build process");
 		
 		// Parse and check arguments
 		parser.parseInput(Arrays.copyOfRange(args, taskRunList.size(), args.length));
@@ -54,89 +52,9 @@ public class MetaLaunch {
 		
 	}
 	
-	private static int tasksCount = 0;
-	private static int tasksCompleted = 0;
-	private static Map<String, String> taskStates = new HashMap<>();
-	
-	public static void setupCLIUI(Metabuild mb, boolean printUI) {
-		
-		mb.setTerminalOutput(false);
-		
-		mb.setStatusCallback(new IStatusCallback() {
-			
-			@Override
-			public void taskStatus(String task, String status) {
-				if (printUI) cleanStatusUI();
-				taskStates.put(task, status);
-				if (printUI) printStatusUI();
-			}
-			
-			@Override
-			public void taskCount(int taskCount) {
-				tasksCount = taskCount;
-				if (printUI) printStatusUI();
-			}
-			
-			@Override
-			public void taskStarted(String task) {
-				if (!task.equals("root")) {
-					tasksCompleted++;
-					if (printUI) {
-						cleanStatusUI();
-						printStatusUI();
-					} else {
-						printTaskSeperator(task, tasksCompleted, tasksCount);
-					}
-				}
-			}
-			
-			@Override
-			public void taskCompleted(String task) {
-				if (printUI) cleanStatusUI();
-				taskStates.remove(task);
-				if (printUI) printStatusUI();
-			}
-			
-		});
-		
-	}
-
-	public static void printFinish(boolean successfull) {
-		if (successfull) {
-			System.out.print("\n \033[38;5;255mStatus: <\033[38;5;46mSUCCESSFULL\033[38;5;255m>\033[0m\n");
-		} else {
-			System.out.print("\n \033[38;5;255mStatus: <\033[38;5;196mFAILED\033[38;5;255m>\033[0m\n");
-		}
-	}
-	
-	public static void printTaskSeperator(String task, int nr, int total) {
-		System.out.println(String.format("\n \033[38;5;255m[%02d/%02d] > %s\033[0m\n", nr, total, task));
-	}
-	
-	public static void cleanStatusUI() {
-		System.out.print(String.format("\033[%dA\033[0J", 2 + taskStates.size()));
-	}
-	
-	public static void printStatusUI() {
-		
-		float progress = tasksCompleted / (float) tasksCount;
-		
-		int p = Math.round(progress * 50);
-		System.out.print("\033[38;5;190m[");
-		for (int i = 0; i < 50; i++) System.out.print(i < p ? "\033[38;5;46m=" : "\033[38;5;8m-");
-		System.out.println(String.format("\033[38;5;190m]\033[38;5;231m %d%%\n", Math.round(progress * 100)));
-		
-		for (var e : taskStates.entrySet()) {
-			System.out.println(String.format("\033[38;5;231m%s > %s\033[0m", e.getKey(), e.getValue()));
-		}
-		
-	}
-	
 	public static int launchMetabuild(File workingDir, List<String> taskList, CommandLineParser args) {
 		
 		Metabuild mb = new Metabuild(workingDir);
-		
-		setupCLIUI(mb, false); // FIXEME CLIUI not working with log output (run task)
 		
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
@@ -148,6 +66,9 @@ public class MetaLaunch {
 			MavenResolver.strictHashVerify = true;
 		if (args.getFlag("refresh-dependencies"))
 			mb.setRefreshDependencies(true);
+		boolean printLogs = args.getFlag("info");
+		
+		OutputHandler.setupCLIUI(mb, !printLogs);
 		
 		// Load build file
 		File buildFile = new File(Metabuild.DEFAULT_BUILD_FILE_NAME);
@@ -162,7 +83,7 @@ public class MetaLaunch {
 		// Run tasks
 		boolean buildState = mb.runTasks(taskList);
 		
-		printFinish(buildState);
+		OutputHandler.printFinish(buildState);
 
 		Metabuild.terminate();
 		return buildState ? 0 : -1;

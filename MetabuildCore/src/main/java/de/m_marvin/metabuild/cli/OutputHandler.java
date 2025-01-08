@@ -3,8 +3,8 @@ package de.m_marvin.metabuild.cli;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.m_marvin.metabuild.core.Metabuild;
-import de.m_marvin.metabuild.core.Metabuild.IStatusCallback;
+import de.m_marvin.metabuild.api.core.IMeta;
+import de.m_marvin.metabuild.api.core.IMeta.IStatusCallback;
 
 // FIXME cli ui with log output
 public class OutputHandler {
@@ -13,7 +13,7 @@ public class OutputHandler {
 	private static int tasksCompleted = 0;
 	private static Map<String, String> taskStates = new HashMap<>();
 	
-	public static void setupCLIUI(Metabuild mb, boolean printUI) {
+	public static void setupCLIUI(IMeta mb, boolean printUI) {
 		
 		mb.setTerminalOutput(!printUI);
 		
@@ -109,9 +109,9 @@ public class OutputHandler {
 		float progress = tasksCompleted / (float) tasksCount;
 		
 		int p = Math.round(progress * 50);
-		System.out.print("\033[38;5;190m[");
+		System.out.print("\n\033[38;5;190m[");
 		for (int i = 0; i < 50; i++) System.out.print(i < p ? "\033[38;5;46m=" : "\033[38;5;8m-");
-		System.out.println(String.format("\033[38;5;190m]\033[38;5;231m %d%%\n", Math.round(progress * 100)));
+		System.out.print(String.format("\033[38;5;190m]\033[38;5;231m %d%%\n", Math.round(progress * 100)));
 		
 		for (var e : taskStates.entrySet()) {
 			System.out.println(String.format("\033[38;5;231m%s > %s\033[0m", e.getKey(), e.getValue()));

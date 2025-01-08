@@ -3,9 +3,14 @@ Bundle-ManifestVersion: 2
 Bundle-Name: EclipseMeta
 Bundle-SymbolicName: EclipseMeta;singleton:=true
 Bundle-Version: 1.0.0.qualifier
+Export-Package: de.m_marvin.metabuild.wrapper
 Bundle-Vendor: M_Marvin
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.resources,
  org.eclipse.core.runtime
 Automatic-Module-Name: EclipseMeta
+Bundle-ClassPath: libs/MetaWrapper-0.1_build0.jar,
+ libs/MetaWrapper-0.1_build0-all.jar,
+ libs/MetaWrapper-0.1_build0-sources.jar,
+ .
 Bundle-RequiredExecutionEnvironment: JavaSE-17

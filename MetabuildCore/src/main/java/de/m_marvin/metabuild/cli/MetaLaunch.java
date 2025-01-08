@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.m_marvin.commandlineparser.CommandLineParser;
+import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.maven.MavenResolver;
 
@@ -54,7 +55,15 @@ public class MetaLaunch {
 	
 	public static int launchMetabuild(File workingDir, List<String> taskList, CommandLineParser args) {
 		
-		Metabuild mb = new Metabuild(workingDir);
+		IMeta mb;
+		try {
+			mb = IMeta.instantiateMeta(MetaLaunch.class.getClassLoader());
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+			return -1;
+		}
+		
+		mb.setWorkingDirectory(workingDir);
 		
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
@@ -85,7 +94,7 @@ public class MetaLaunch {
 		
 		OutputHandler.printFinish(buildState);
 
-		Metabuild.terminate();
+		mb.terminate();
 		return buildState ? 0 : -1;
 		
 	}

@@ -5,10 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +18,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.Manifest;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaInitError;
@@ -46,35 +42,14 @@ import de.m_marvin.simplelogging.impl.SystemLogger;
 /**
  * Main class of the metabuild system
  */
-public final class Metabuild {
-	
-	public interface IStatusCallback {
-		
-		public void taskCount(int taskCount);
-		public void taskStarted(String task);
-		public void taskStatus(String task, String status);
-		public void taskCompleted(String task);
-		
-	}
-
-	public static final String META_VERSION_PROPERTY = "meta.version";
-	public static final String META_TITLE_PROPERTY = "meta.title";
-	public static final String META_HOME_PROPERTY = "meta.home";
+public final class Metabuild implements IMeta {
 	
 	public static final String LOG_TAG = "Metabuild";
-	
-	public static final String DEFAULT_BUILD_FILE_NAME = "build.meta";
-	public static final String DEFAULT_BUILD_LOG_NAME = "build.log";
-	public static final String DEFAULT_CACHE_DIRECTORY = System.getProperty("user.home") + "/.meta";
-	public static final int DEFAULT_TASK_THREADS = 8;
-	
-	public static final String BUILD_SCRIPT_CLASS_NAME = "Buildfile";
-	public static final Pattern TASK_NAME_FILTER = Pattern.compile("[\\d\\w]+");
 	
 	private static Metabuild instance;
 	
 	/* Working directory of metabuild, normally the project root */
-	private final File workingDirectory;
+	private File workingDirectory;
 	/* Cache directory for metadata and downloaded files, normall user directory */
 	private File cacheDirectory;
 	/* Log file to store logging output */
@@ -113,13 +88,14 @@ public final class Metabuild {
 	 * Only one instance can be created in the runtime environment at a time
 	 * @param workingDirectory The working directory of the instance, usual the directory containing the projects build file
 	 */
-	public Metabuild(File workingDirectory) {
+	public Metabuild() {
 		if (instance != null) throw MetaInitError.msg("can't instantiate multiple metabuild instances in same VM!");
 		instance = this;
 		
-		this.workingDirectory = workingDirectory;
+		setWorkingDirectory(new File(DEFAULT_CACHE_DIRECTORY));
 		setCacheDirectory(new File(DEFAULT_CACHE_DIRECTORY));
 		setTaskThreads(DEFAULT_TASK_THREADS);
+		setLogFile(new File(DEFAULT_BUILD_LOG_NAME));
 		
 		this.buildCompiler = new ScriptCompiler(this);
 		
@@ -131,16 +107,14 @@ public final class Metabuild {
 		
 		// Set meta bin directory
 		try {
-			String metaHome = Metabuild.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			String metaHome = Metabuild.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 			System.setProperty(META_HOME_PROPERTY, new File(metaHome).getParent());
-		} catch (URISyntaxException e) {
+		} catch (NullPointerException e) {
 			logger().error("failed to access meta home directory!", e);
 		}
 	}
 	
-	/**
-	 * Closes the metabuild instance, but does not release the static instance variable (still no new instance can be created after closing)
-	 */
+	@Override
 	public void close() {
 		if (this.logStream != null) {
 			try {
@@ -148,20 +122,23 @@ public final class Metabuild {
 			} catch (IOException e) {}
 			this.logFile = null;
 		}
+		this.task2node.clear();
+		this.taskDependencies.clear();
+		this.taskTree = null;
+		this.buildscript = null;
 	}
 	
-	/**
-	 * Closes and releases the metabuild instance, after that, a new instance can be created.
-	 */
-	public static void terminate() {
-		if (instance != null)
+	@Override
+	public void terminate() {
+		if (instance != null) {
+			if (instance != this)
+				throw MetaInitError.msg("termination call on non active instance of metabuild!");
 			instance.close();
+		}
 		instance = null;
 	}
 
-	/**
-	 * @param cacheDirectory The directory to store cache files, such as downloaded dependencies
-	 */
+	@Override
 	public void setCacheDirectory(File cacheDirectory) {
 		this.cacheDirectory = FileUtility.absolute(cacheDirectory);
 	}
@@ -169,15 +146,12 @@ public final class Metabuild {
 	/**
 	 * @param logFile The log file to write to
 	 */
+	@Override
 	public void setLogFile(File logFile) {
 		this.logFile = FileUtility.absolute(logFile);
 	}
 	
-	/**
-	 * If set to true, re-query all dependencies from online<br>
-	 * This will only be active for the next build cycle, and be reset to false after that.
-	 * @param refreshDependencies true to re-query all dependencies
-	 */
+	@Override
 	public void setRefreshDependencies(boolean refreshDependencies) {
 		this.refreshDependencies = refreshDependencies;
 	}
@@ -186,18 +160,18 @@ public final class Metabuild {
 		return refreshDependencies;
 	}
 	
-	/**
-	 * @param taskThreads The max. number of threads to use in parallel to run the build tasks
-	 */
+	@Override
 	public void setTaskThreads(int taskThreads) {
 		if (taskThreads <= 0) throw new IllegalArgumentException("number of threads must be >= 1!");
 		this.taskThreads = taskThreads;
 	}
-	
+
+	@Override
 	public void setStatusCallback(IStatusCallback statusCallback) {
 		this.statusCallback = statusCallback;
 	}
-	
+
+	@Override
 	public void setTerminalOutput(boolean output) {
 		this.terminalOutput = output;
 	}
@@ -209,7 +183,8 @@ public final class Metabuild {
 		if (instance == null) throw MetaInitError.msg("metabuild instance not yet created in this VM!");
 		return instance;
 	}
-	
+
+	@Override
 	public Logger logger() {
 		return this.logger != null ? this.logger : Log.defaultLogger();
 	}
@@ -263,6 +238,7 @@ public final class Metabuild {
 	 * @return true if and only if all necessary directories and files could be created
 	 */
 	public boolean initDirectories() {
+		close();
 		if (!this.cacheDirectory.isDirectory() && !this.cacheDirectory.mkdir()) {
 			logger().errort(LOG_TAG, "could not create cache directory: %s", this.cacheDirectory.getPath());
 			return false;
@@ -288,16 +264,17 @@ public final class Metabuild {
 		return true;
 	}
 	
-	/**
-	 * @return The working directory of the current metabuild instance
-	 */
+	@Override
+	public void setWorkingDirectory(File workingDirectory) {
+		this.workingDirectory = workingDirectory;
+	}
+	
+	@Override
 	public File workingDir() {
 		return this.workingDirectory;
 	}
 
-	/**
-	 * @return The cache directory of the current metabuild instance
-	 */
+	@Override
 	public File cacheDir() {
 		return this.cacheDirectory;
 	}
@@ -309,22 +286,12 @@ public final class Metabuild {
 		return buildCompiler;
 	}
 	
-	/**
-	 * Attempts to initialize using the build file at the default location.
-	 * @return true if and only if the init phase did complete successfully.
-	 */
-	public boolean initBuild() {
-		return initBuild(new File(DEFAULT_BUILD_FILE_NAME));
-	}
-
-	/**
-	 * Attempts to initialize using the build file at specified location.
-	 * @return true if and only if the init phase did complete successfully.
-	 */
+	@Override
 	public boolean initBuild(File buildFile) {
 		if (!initDirectories()) return false;
 		this.registeredTasks.clear();
-
+		
+		buildFile = FileUtility.absolute(buildFile);
 		this.buildscript = this.buildCompiler.loadBuildFile(buildFile);
 		if (this.buildscript == null) {
 			logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
@@ -468,12 +435,8 @@ public final class Metabuild {
 			}
 		}, this.taskExecutor);
 	}
-
-	/**
-	 * Prepares all requested tasks and their dependencies for execution and executes them.
-	 * @param tasks The tasks to run
-	 * @return true if and only if all tasks where prepared and executed successfully
-	 */
+	
+	@Override
 	public boolean runTasks(String... tasks) {
 		return runTasks(Arrays.asList(tasks));
 	}
@@ -494,11 +457,7 @@ public final class Metabuild {
 		
 	}
 	
-	/**
-	 * Prepares all requested tasks and their dependencies for execution and executes them.
-	 * @param tasks The tasks to run
-	 * @return true if and only if all tasks where prepared and executed successfully
-	 */
+	@Override
 	public boolean runTasks(List<String> tasks) {
 
 		for (BuildTask task : this.registeredTasks.values()) task.reset();

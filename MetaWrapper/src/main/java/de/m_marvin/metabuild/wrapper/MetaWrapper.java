@@ -2,7 +2,9 @@ package de.m_marvin.metabuild.wrapper;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -10,9 +12,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.jar.Manifest;
 
+import de.m_marvin.metabuild.api.core.IMeta;
+
 public class MetaWrapper {
 	
-	public static final String META_VERSION_ATTRIBUTE = "Implementation-Version";
+	protected static final String META_VERSION_ATTRIBUTE = "Implementation-Version";
 	public static final String META_INSTALL_VARIABLE = "META_HOME";
 	public static final String DEFAULT_INSTALL_DIRECTORY = System.getProperty("user.home") + "/.meta";
 	public static final String META_JAR = "metabuild.jar";
@@ -41,30 +45,34 @@ public class MetaWrapper {
 	 */
 	public static boolean prepareMetabuild() {
 
-		try {
-			Enumeration<URL> manifests = MetaWrapper.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
-			while (manifests.hasMoreElements()) {
-				URL url = manifests.nextElement();
-				try {
-					Manifest manifest = new Manifest(url.openStream());
-					metaVersion = manifest.getMainAttributes().getValue("Meta-Version");
-					if (metaVersion != null) break;
-				} catch (IOException e) {
-					System.err.println("\033[31mfailed to read manigest file: " + url);
-					e.printStackTrace();
-					System.err.print("\033[0m");
-				}
-			}
-		} catch (IOException e) {
-			System.err.println("\033[31mfailed to get manifest resources!");
-			e.printStackTrace();
-			System.err.print("\033[0m");
-			return false;
-		}
-		
 		if (metaVersion == null) {
-			System.err.println("\033[31mno meta version declared in wrapper manifest!\033[0m");
-			return false;
+			
+			try {
+				Enumeration<URL> manifests = MetaWrapper.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
+				while (manifests.hasMoreElements()) {
+					URL url = manifests.nextElement();
+					try {
+						Manifest manifest = new Manifest(url.openStream());
+						metaVersion = manifest.getMainAttributes().getValue("Meta-Version");
+						if (metaVersion != null) break;
+					} catch (IOException e) {
+						System.err.println("\033[31mfailed to read manigest file: " + url);
+						e.printStackTrace();
+						System.err.print("\033[0m");
+					}
+				}
+			} catch (IOException e) {
+				System.err.println("\033[31mfailed to get manifest resources!");
+				e.printStackTrace();
+				System.err.print("\033[0m");
+				return false;
+			}
+
+			if (metaVersion == null) {
+				System.err.println("\033[31mno meta version declared in wrapper manifest!\033[0m");
+				return false;
+			}
+			
 		}
 		
 		metaDirectory = System.getenv(META_INSTALL_VARIABLE);
@@ -74,7 +82,7 @@ public class MetaWrapper {
 			System.err.println("\033[31mcould not install metabuild system!\033[0m");
 			return false;
 		}
-
+		
 		metaJar = new File(metaDirectory, String.format(META_INSTAL_NAME, metaVersion) + "/" + META_JAR);
 		
 		return true;
@@ -93,6 +101,22 @@ public class MetaWrapper {
 		
 		return false;
 		
+	}
+	
+	/**
+	 * Tries to dynamically load an metabuild instance from the resolved installation jar file.
+	 * @return
+	 */
+	public static IMeta getMetabuild() {
+		try {
+			ClassLoader loader = new URLClassLoader(new URL[] { 
+					new URL(String.format("jar:file:%s!/", metaJar.getAbsolutePath()))
+			}, MetaWrapper.class.getClassLoader());
+			
+			return IMeta.instantiateMeta(loader);
+		} catch (MalformedURLException | InstantiationException e) {
+			throw new LayerInstantiationException("could not get metabuild instance!", e);
+		}
 	}
 	
 	/**

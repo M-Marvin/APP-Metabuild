@@ -44,6 +44,9 @@ dependencies {
 	// JavaRun
 	implementation 'de.m_marvin.javarun:javarun:1.2'
 	
+	// ConsoleMode
+	implementation 'de.m_marvin.cmode:cmode:0.1_build1'
+	
 }
 
 java {

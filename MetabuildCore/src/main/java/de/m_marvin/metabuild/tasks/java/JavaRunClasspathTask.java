@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.ProcessBuilder.Redirect;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,10 +81,7 @@ public class JavaRunClasspathTask extends BuildTask {
 		commandLine.addAll(this.arguments.stream().filter(a -> a != null).toList());
 		
 		ProcessBuilder processBuilder = new ProcessBuilder(commandLine);
-		// TODO redirect output
-		//processBuilder.inheritIO();
-		
-		
+		processBuilder.inheritIO();
 		
 		try {
 			logger().warnt(logTag(), "starting process: %s", this.mainClass);

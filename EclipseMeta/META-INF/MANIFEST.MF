@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: EclipseMeta
+Bundle-SymbolicName: EclipseMeta;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: M_Marvin
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.resources,
+ org.eclipse.core.runtime
+Automatic-Module-Name: EclipseMeta
+Bundle-RequiredExecutionEnvironment: JavaSE-17

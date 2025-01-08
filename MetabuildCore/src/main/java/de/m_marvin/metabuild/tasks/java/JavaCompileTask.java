@@ -279,6 +279,8 @@ public class JavaCompileTask extends BuildTask {
 				}
 			}
 		}
+
+		logger().infot(logTag(), "compiling source files in: %s", this.sourcesDir);
 		
 		// Compile outdated files
 		for (File sourceFile : this.toCompile) {

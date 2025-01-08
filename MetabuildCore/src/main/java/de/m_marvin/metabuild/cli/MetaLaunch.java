@@ -1,7 +1,6 @@
 package de.m_marvin.metabuild.cli;
 
 import java.io.File;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -58,57 +57,78 @@ public class MetaLaunch {
 	private static int tasksCount = 0;
 	private static int tasksCompleted = 0;
 	private static Map<String, String> taskStates = new HashMap<>();
-	private static TerminalLogger terminal;
 	
-	public static void setupCLIUI(Metabuild mb) {
+	public static void setupCLIUI(Metabuild mb, boolean printUI) {
 		
-		terminal = new TerminalLogger();
-		mb.setConsoleLogger(terminal);
+		mb.setTerminalOutput(false);
 		
 		mb.setStatusCallback(new IStatusCallback() {
 			
 			@Override
 			public void taskStatus(String task, String status) {
+				if (printUI) cleanStatusUI();
 				taskStates.put(task, status);
-				printStatusUI(terminal);
+				if (printUI) printStatusUI();
 			}
 			
 			@Override
 			public void taskCount(int taskCount) {
 				tasksCount = taskCount;
-				printStatusUI(terminal);
+				if (printUI) printStatusUI();
+			}
+			
+			@Override
+			public void taskStarted(String task) {
+				if (!task.equals("root")) {
+					tasksCompleted++;
+					if (printUI) {
+						cleanStatusUI();
+						printStatusUI();
+					} else {
+						printTaskSeperator(task, tasksCompleted, tasksCount);
+					}
+				}
 			}
 			
 			@Override
 			public void taskCompleted(String task) {
+				if (printUI) cleanStatusUI();
 				taskStates.remove(task);
-				if (!task.equals("root")) tasksCompleted++;
-				printStatusUI(terminal);
+				if (printUI) printStatusUI();
 			}
 			
 		});
 		
 	}
+
+	public static void printFinish(boolean successfull) {
+		if (successfull) {
+			System.out.print("\n \033[38;5;255mStatus: <\033[38;5;46mSUCCESSFULL\033[38;5;255m>\033[0m\n");
+		} else {
+			System.out.print("\n \033[38;5;255mStatus: <\033[38;5;196mFAILED\033[38;5;255m>\033[0m\n");
+		}
+	}
 	
-	public static void printStatusUI(TerminalLogger logger) {
-		
-		PrintStream printer = logger.getNewPrinter();
+	public static void printTaskSeperator(String task, int nr, int total) {
+		System.out.println(String.format("\n \033[38;5;255m[%02d/%02d] > %s\033[0m\n", nr, total, task));
+	}
+	
+	public static void cleanStatusUI() {
+		System.out.print(String.format("\033[%dA\033[0J", 2 + taskStates.size()));
+	}
+	
+	public static void printStatusUI() {
 		
 		float progress = tasksCompleted / (float) tasksCount;
 		
 		int p = Math.round(progress * 50);
-		printer.print("[");
-		for (int i = 0; i < 50; i++) printer.print(i < p ? "=" : "-");
-		printer.println("]");
-		printer.println("Progress: " + progress * 100);
-		
-		printer.println("");
+		System.out.print("\033[38;5;190m[");
+		for (int i = 0; i < 50; i++) System.out.print(i < p ? "\033[38;5;46m=" : "\033[38;5;8m-");
+		System.out.println(String.format("\033[38;5;190m]\033[38;5;231m %d%%\n", Math.round(progress * 100)));
 		
 		for (var e : taskStates.entrySet()) {
-			printer.println(e.getKey() + "\t" + e.getValue());
+			System.out.println(String.format("\033[38;5;231m%s > %s\033[0m", e.getKey(), e.getValue()));
 		}
-		
-		logger.printUI(false);
 		
 	}
 	
@@ -116,7 +136,7 @@ public class MetaLaunch {
 		
 		Metabuild mb = new Metabuild(workingDir);
 		
-		setupCLIUI(mb);
+		setupCLIUI(mb, false); // FIXEME CLIUI not working with log output (run task)
 		
 		if (args.getOption("log") != null)
 			mb.setLogFile(new File(args.getOption("log")));
@@ -140,14 +160,12 @@ public class MetaLaunch {
 			mb.setTaskThreads(Integer.parseInt(args.getOption("threads")));
 		
 		// Run tasks
-		if (!mb.runTasks(taskList)) {
-			Metabuild.terminate();
-			return -1;
-		}
+		boolean buildState = mb.runTasks(taskList);
 		
+		printFinish(buildState);
+
 		Metabuild.terminate();
-		terminal.printUI(true);
-		return 0;
+		return buildState ? 0 : -1;
 		
 	}
 	

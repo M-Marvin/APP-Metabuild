@@ -18,8 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,6 +47,7 @@ public final class Metabuild {
 	public interface IStatusCallback {
 		
 		public void taskCount(int taskCount);
+		public void taskStarted(String task);
 		public void taskStatus(String task, String status);
 		public void taskCompleted(String task);
 		
@@ -74,10 +73,10 @@ public final class Metabuild {
 	private File logFile;
 	/* OutputStream to the log file */
 	private OutputStream logStream;
-	/* Console logger, receives log data from the root logger */
-	private Logger consoleLogger = new SystemLogger();
 	/* Root logger, all loggers end up here */
 	private Logger logger;
+	/* If the logger output is printed to the terminal */
+	private boolean terminalOutput = true;
 	/* Number of allowed tasks to spawn for processing tasks in parallel */
 	private int taskThreads;
 	/* Set to true if the next build process should re-download all external dependencies */
@@ -153,14 +152,6 @@ public final class Metabuild {
 	}
 	
 	/**
-	 * Sets the logger that receives log data from the root logger to print it to the console.
-	 * @param consoleLogger
-	 */
-	public void setConsoleLogger(Logger consoleLogger) {
-		this.consoleLogger = consoleLogger;
-	}
-	
-	/**
 	 * If set to true, re-query all dependencies from online<br>
 	 * This will only be active for the next build cycle, and be reset to false after that.
 	 * @param refreshDependencies true to re-query all dependencies
@@ -183,6 +174,10 @@ public final class Metabuild {
 	
 	public void setStatusCallback(IStatusCallback statusCallback) {
 		this.statusCallback = statusCallback;
+	}
+	
+	public void setTerminalOutput(boolean output) {
+		this.terminalOutput = output;
 	}
 	
 	/**
@@ -253,8 +248,11 @@ public final class Metabuild {
 		if (this.logger == null) {
 			try {
 				this.logStream = new FileOutputStream(this.logFile);
-				
-				this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), consoleLogger));
+				if (this.terminalOutput) {
+					this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), new SystemLogger()));
+				} else {
+					this.logger = new StacktraceLogger(new StreamLogger(logStream));
+				}
 			} catch (FileNotFoundException e) {
 				logger().warnt(LOG_TAG, "failed to create log file: " + e.getMessage());
 				return false;
@@ -419,9 +417,9 @@ public final class Metabuild {
 	 * @param node The node in the task tree to run
 	 * @return true if and only if all the tasks from the node upward have completed successfully
 	 */
-	protected CompletableFuture<Void> runTaskTree(TaskNode node, Consumer<String> completitionCallback, BiConsumer<String, String> statusCallback) {
+	protected CompletableFuture<Void> runTaskTree(TaskNode node) {
 		return CompletableFuture.runAsync(() -> {
-			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn, completitionCallback, statusCallback)));
+			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn)));
 			try {
 				CompletableFuture.allOf(tasks.values().toArray(CompletableFuture[]::new)).join();
 			} catch (Exception ea) {
@@ -442,9 +440,10 @@ public final class Metabuild {
 			}
 		}).thenAcceptAsync(v -> {
 			if (node.task().isEmpty()) return;
+			if (this.statusCallback != null) this.statusCallback.taskStarted(node.task().get().name);
 			boolean result = node.task().get().runTask(
-					statusCallback != null ? status -> statusCallback.accept(node.task().get().name, status) : null);
-			if (completitionCallback != null) completitionCallback.accept(node.task().get().name);
+					this.statusCallback != null ? status -> statusCallback.taskStatus(node.task().get().name, status) : null);
+			if (this.statusCallback != null) this.statusCallback.taskCompleted(node.task().get().name);
 			if (!result) {
 				throw BuildException.msg("task '%s' failed!", node.task().get().name);
 			}
@@ -507,10 +506,7 @@ public final class Metabuild {
 		
 		boolean success = false;
 		try {
-			runTaskTree(this.taskTree, 
-					this.statusCallback != null ? this.statusCallback::taskCompleted : null,
-					this.statusCallback != null ? this.statusCallback::taskStatus : null
-			).join();
+			runTaskTree(this.taskTree).join();
 			logger().infot(LOG_TAG, "build completed");
 			success = true;
 		} catch (CompletionException e)  {
@@ -542,10 +538,6 @@ public final class Metabuild {
 		printStatus();
 		
 		return success;
-		
-	}
-	
-	public void statusCallback(int tasksTotal, int tasksCompleted) {
 		
 	}
 	

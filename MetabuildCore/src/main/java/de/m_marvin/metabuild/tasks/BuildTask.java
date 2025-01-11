@@ -16,6 +16,7 @@ public class BuildTask {
 	
 	public TaskType type = TaskType.named("undefined");
 	public String name;
+	public String group;
 	public TaskState state;
 	
 	private Consumer<String> statusCallback;

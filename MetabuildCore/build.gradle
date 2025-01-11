@@ -52,10 +52,13 @@ dependencies {
 	
 }
 
-java {
-	sourceCompatibility = "1.17"
-	targetCompatibility = "1.17"
-    withSourcesJar()
+tasks.register('apiJar', Jar) {
+	description "Assembles the jar containing the api classes"
+	group = "build"
+	
+    from sourceSets.main.output
+    include 'de/m_marvin/metabuild/api/**'
+    archiveClassifier  = 'api'
 }
 
 jar {
@@ -67,32 +70,38 @@ jar {
     }
 }
 
-task assembleBin() {
-	description "Copies metabuild instance into bin folder"
-	group = "build"
-	
-	doLast {
-		ant.copy(file:'build/libs/MetabuildCore-' + version + '-all.jar', tofile:'run/metabuild.jar')
-	}
-}
-assembleBin.dependsOn(shadowJar)
-
-task makeTest() {
-	description "Copies metabuild files into MetaTest project"
-	group = "build"
-	
-	doLast {
-		ant.copy(file:'run/metabuild.jar', tofile: System.properties['user.home'] + '/.meta/meta-' + version + '/metabuild.jar')
-	}
+apiJar {
+    manifest {
+        attributes 'Implementation-Version': version
+        attributes 'Implementation-Title': project.name + '-API'
+        attributes 'Implementation-Vendor-Id': 'de.m_marvin'
+    }
 }
 
-makeTest.dependsOn(assembleBin)
+assemble.dependsOn(apiJar)
+
+java {
+	sourceCompatibility = "1.17"
+	targetCompatibility = "1.17"
+    withSourcesJar()
+}
+
+task makeBin() {
+	description "Copies bineries into output folder"
+	group = "output"
+	
+	doLast {
+		ant.copy(file:'build/libs/' + project.name + '-' + version + '-all.jar', tofile:'../Bin/metabuild-core.jar')
+	}
+}
+makeBin.dependsOn(shadowJar)
+build.dependsOn(makeBin)
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'de.m_marvin.metabuild'
-        	artifactId = "metacore"
+        	artifactId = project.name
         
 			from components.java
         }

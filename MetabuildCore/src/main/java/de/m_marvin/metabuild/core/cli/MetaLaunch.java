@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.cli;
+package de.m_marvin.metabuild.core.cli;
 
 import java.io.File;
 import java.util.ArrayList;

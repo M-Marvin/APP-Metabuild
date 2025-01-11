@@ -10,6 +10,7 @@ plugins {
 }
 
 apply plugin: 'java-library'
+apply plugin: 'maven-publish'
 
 version = '0.1_build0'
 
@@ -35,8 +36,8 @@ dependencies {
 	// CommandLineParser
 	shade 'de.m_marvin.commandlineparser:commandlineparser:1.1'
 	
-	// ConsoleMode
-	implementation 'de.m_marvin.metabuild:metacore:0.1_build0'
+	// Metabuild API
+	api 'de.m_marvin.metabuild:metabuild-core:0.1_build1-api'
 	
 }
 

@@ -2,10 +2,9 @@ package de.m_marvin.metabuild.api.core;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
-
-import de.m_marvin.simplelogging.api.Logger;
 
 /**
  * Base API of meta build system.
@@ -87,8 +86,6 @@ public interface IMeta {
 	
 	public void setTerminalOutput(boolean output);
 	
-	public Logger logger();
-	
 	/**
 	 * @return The working directory of the current metabuild instance
 	 */
@@ -113,6 +110,16 @@ public interface IMeta {
 		return initBuild(new File(DEFAULT_BUILD_FILE_NAME));
 	}
 
+	/**
+	 * Returns a list of all tasks
+	 */
+	public Collection<String> getTasks();
+	
+	/**
+	 * Returns a list of all tasks with groups in the format group/task
+	 */
+	public Collection<String> getTaskGroups();
+	
 	/**
 	 * Attempts to initialize using the build file at specified location.
 	 * @return true if and only if the init phase did complete successfully.

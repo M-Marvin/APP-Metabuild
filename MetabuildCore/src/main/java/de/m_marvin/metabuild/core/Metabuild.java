@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -183,8 +184,7 @@ public final class Metabuild implements IMeta {
 		if (instance == null) throw MetaInitError.msg("metabuild instance not yet created in this VM!");
 		return instance;
 	}
-
-	@Override
+	
 	public Logger logger() {
 		return this.logger != null ? this.logger : Log.defaultLogger();
 	}
@@ -231,6 +231,18 @@ public final class Metabuild implements IMeta {
 		Set<String> dep = this.taskDependencies.get(task.name);
 		if (dep == null) this.taskDependencies.put(task.name, dep = new HashSet<>());
 		dep.addAll(Stream.of(dependencies).filter(t -> t != null).map(t -> t.name).toList());
+	}
+	
+	@Override
+	public Collection<String> getTasks() {
+		return this.registeredTasks.keySet();
+	}
+	
+	@Override
+	public Collection<String> getTaskGroups() {
+		return this.registeredTasks.values().stream()
+				.map(b -> b.group + "/" + b.name)
+				.toList();
 	}
 	
 	/**

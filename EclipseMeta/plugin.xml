@@ -7,14 +7,14 @@
          point="org.eclipse.core.resources.natures">
       <runtime>
          <run
-               class="de.m_marvin.eclipsemeta.MetaProjectNature">
+               class="de.m_marvin.eclipsemeta.natures.MetaProjectNature">
          </run>
       </runtime>
    </extension>
    <extension
          point="org.eclipse.ui.views">
       <view
-            class="de.m_marvin.eclipsemeta.TaskView"
+            class="de.m_marvin.eclipsemeta.viewers.TaskView"
             id="de.m_marvin.eclipsemeta.taskView"
             name="Meta Tasks"
             restorable="true">
@@ -23,7 +23,7 @@
    <extension
          point="org.eclipse.ui.startup">
       <startup
-            class="de.m_marvin.eclipsemeta.ActiveProjectHelper">
+            class="de.m_marvin.eclipsemeta.MetaProjects">
       </startup>
    </extension>
 

@@ -21,9 +21,11 @@ public class JavaBuildScript extends BuildScript {
 	public void init() {
 		
 		this.implementation = new MavenDependTask("javaDependImpl");
+		this.implementation.group = "depend";
 		this.implementation.classpath = new File("build/implementation.classpath");
 		
 		this.runtime = new MavenDependTask("javaDependRun");
+		this.runtime.group = "depend";
 		this.runtime.classpath = new File("build/runtime.classpath");
 		
 		repositories();
@@ -32,23 +34,27 @@ public class JavaBuildScript extends BuildScript {
 		this.runtime.extendsFrom(this.implementation);
 		
 		var compileJava = new JavaCompileTask("compileJava");
+		compileJava.group = "build";
 		compileJava.sourcesDir = new File("src/main/java");
 		compileJava.classesDir = new File("build/classes/main/java");
 		compileJava.classpath = this.implementation.classpath;
 		compileJava.dependsOn(this.implementation);
 		
 		var jar = new JarTask("jar");
+		jar.group = "build";
 		jar.entries.put(compileJava.classesDir, "");
 		jar.entries.put(new File("src/main/resource"), "");
 		jar.archive = new File(String.format("build/libs/%s.jar", this.projectName));
 		jar.dependsOn(compileJava);
 		
 		var build = new BuildTask("build");
+		build.group = "build";
 		build.dependsOn(jar);
 		
 		manifest(jar);
 		
 		var runJava = new JavaRunClasspathTask("run");
+		runJava.group = "run";
 		runJava.classpath = this.runtime.classpath;
 		runJava.classesDir = compileJava.classesDir;
 		runJava.mainClass = jar.metainfo.get("Main-Class");
@@ -70,6 +76,7 @@ public class JavaBuildScript extends BuildScript {
 	public void withSourcesJar() {
 
 		var sourcesJar = new JarTask("sourcesJar");
+		sourcesJar.group = "build";
 		sourcesJar.entries.put(new File("src/main/java"), "");
 		sourcesJar.archive = new File(String.format("build/libs/%s-sources.jar", this.projectName));
 		sourcesJar.dependencyOf("build");

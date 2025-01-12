@@ -2,7 +2,6 @@ package de.m_marvin.metabuild.api.core;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -111,9 +110,9 @@ public interface IMeta {
 	}
 
 	/**
-	 * Returns a list of all tasks register in the current build file
+	 * Returns a list of all tasks and groups registered by the current build file
 	 */
-	public Collection<MetaTask> getTasks();
+	public <T> void getTasks(T ref, List<MetaGroup<T>> groups, List<MetaTask<T>> tasks);
 	
 	/**
 	 * Attempts to initialize using the build file at specified location.

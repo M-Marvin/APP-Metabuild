@@ -21,6 +21,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
+import de.m_marvin.eclipsemeta.viewers.MetaTaskView;
 
 public class MetaProjects implements IStartup {
 	
@@ -69,7 +70,6 @@ public class MetaProjects implements IStartup {
 		 							}
 		 							activeProject = resource.getProject();
 		 							activeItem = resource.getFullPath();
-		 							refreshMetaProject(activeProject);
 		 						}
 		 						
 		 					}
@@ -87,15 +87,28 @@ public class MetaProjects implements IStartup {
 	}
 	
 	// TODO only for testing
-	public void refreshMetaProject(IProject project) {
+	public static void refreshMetaProject(MetaProjectNature project) {
 		try {
-			if (!project.hasNature(MetaProjectNature.NATURE_ID)) return;
 			
-			MetaProjectNature nature = (MetaProjectNature) project.getNature(MetaProjectNature.NATURE_ID);
-			nature.refreshProject();
+			project.refreshProject();
+			
+			MetaTaskView taskView = (MetaTaskView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findView(MetaTaskView.VIEW_ID);
+			taskView.refreshProjects();
+
+			if (!project.getProject().isOpen()) return;
+			if (!project.getProject().hasNature(MetaProjectNature.NATURE_ID)) return;
+			
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public static void runMetaTask(MetaProjectNature project, String task) {
+		
+		project.runTask(task);
+		
+		// TODO
+		
 	}
 	
 	public static Collection<IProject> getAllMetaProjects() {

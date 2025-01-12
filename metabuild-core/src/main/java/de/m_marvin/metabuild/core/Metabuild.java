@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.api.core.IMeta;
+import de.m_marvin.metabuild.api.core.MetaGroup;
 import de.m_marvin.metabuild.api.core.MetaTask;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
@@ -233,10 +233,19 @@ public final class Metabuild implements IMeta {
 	}
 	
 	@Override
-	public Collection<MetaTask> getTasks() {
-		return this.registeredTasks.values().stream()
-				.map(b -> new MetaTask(this, b.group, b.name))
-				.toList();
+	public <T> void getTasks(T ref, List<MetaGroup<T>> groups, List<MetaTask<T>> tasks) {
+		this.registeredTasks.values().forEach(t -> {
+			if (t.group != null) {
+				Optional<MetaGroup<T>> group = groups.stream().filter(g -> g.group().equals(t.group)).findAny();
+				if (group.isEmpty()) {
+					group = Optional.of(new MetaGroup<>(ref, t.group));
+					groups.add(group.get());
+				}
+				tasks.add(new MetaTask<>(ref, group, t.name));
+			} else {
+				tasks.add(new MetaTask<>(ref, Optional.empty(), t.name));
+			}
+		});
 	}
 	
 	/**

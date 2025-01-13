@@ -32,7 +32,7 @@ public class MetaWrapper {
 	public static final String META_INSTALL_VARIABLE = "META_HOME";
 	public static final String DEFAULT_INSTALL_DIRECTORY = System.getProperty("user.home") + "/.meta";
 	public static final String META_JAR = "metabuild-core.jar";
-	public static final String META_INSTAL_NAME = "meta-%s";
+	public static final String META_INSTAL_NAME = "versions/meta-%s";
 	
 	public static String metaVersion = null;
 	public static String metaDirectory = null;

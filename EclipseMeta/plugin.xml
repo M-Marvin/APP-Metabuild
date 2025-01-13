@@ -14,7 +14,7 @@
    <extension
          point="org.eclipse.ui.views">
       <view
-            class="de.m_marvin.eclipsemeta.viewers.MetaTaskView"
+            class="de.m_marvin.eclipsemeta.ui.views.MetaTaskView"
             id="de.m_marvin.eclipsemeta.taskView"
             name="Meta Tasks"
             restorable="true">
@@ -23,7 +23,7 @@
    <extension
          point="org.eclipse.ui.startup">
       <startup
-            class="de.m_marvin.eclipsemeta.MetaProjects">
+            class="de.m_marvin.eclipsemeta.misc.MetaProjects">
       </startup>
    </extension>
 

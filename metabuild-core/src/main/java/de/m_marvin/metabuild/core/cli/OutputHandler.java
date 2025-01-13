@@ -15,7 +15,7 @@ public class OutputHandler {
 	
 	public static void setupCLIUI(IMeta mb, boolean printUI) {
 		
-		mb.setTerminalOutput(!printUI);
+		if (printUI) mb.setTerminalOutput(null);
 		
 		if (printUI) {
 

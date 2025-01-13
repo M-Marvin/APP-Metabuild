@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,7 +62,7 @@ public final class Metabuild implements IMeta {
 	/* Root logger, all loggers end up here */
 	private Logger logger;
 	/* If the logger output is printed to the terminal */
-	private boolean terminalOutput = true;
+	private Logger terminalLogger = new SystemLogger();
 	/* Number of allowed tasks to spawn for processing tasks in parallel */
 	private int taskThreads;
 	/* Set to true if the next build process should re-download all external dependencies */
@@ -148,7 +149,10 @@ public final class Metabuild implements IMeta {
 	@Override
 	public void setLogFile(File logFile) {
 		this.logFile = FileUtility.absolute(logFile);
-		System.out.println(logFile + " > "  + this.logFile);
+	}
+	
+	public File getLogFile() {
+		return logFile;
 	}
 	
 	@Override
@@ -172,8 +176,16 @@ public final class Metabuild implements IMeta {
 	}
 
 	@Override
-	public void setTerminalOutput(boolean output) {
-		this.terminalOutput = output;
+	public void setTerminalOutput(Object output) {
+		if (output instanceof OutputStream logStream) {
+			this.terminalLogger = new StreamLogger(logStream, StandardCharsets.UTF_8, true);
+		} else if (output instanceof Logger logger) {
+			this.terminalLogger = logger;
+		} else if (output == null) {
+			this.terminalLogger = null;
+		} else {
+			throw new IllegalArgumentException("Terminal logger must be null or a subclass of either OutputStream or Logger!");
+		}
 	}
 	
 	/**
@@ -265,16 +277,23 @@ public final class Metabuild implements IMeta {
 		}
 		if (this.logger == null) {
 			try {
-				this.logStream = new FileOutputStream(this.logFile);
-				if (this.terminalOutput) {
-					this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), new SystemLogger()));
+				if (!this.logFile.getParentFile().isDirectory() && !this.logFile.getParentFile().mkdirs()) {
+					logger().warnt(LOG_TAG, "failed to create log file directory!");
+					if (this.terminalLogger != null) this.logger = new StacktraceLogger(this.terminalLogger);
 				} else {
-					this.logger = new StacktraceLogger(new StreamLogger(logStream));
+					this.logStream = new FileOutputStream(this.logFile);
+					if (this.terminalLogger != null) {
+						this.logger = new StacktraceLogger(new MultiLogger(new StreamLogger(logStream), this.terminalLogger));
+					} else {
+						this.logger = new StacktraceLogger(new StreamLogger(logStream));
+					}
 				}
 			} catch (FileNotFoundException e) {
 				logger().warnt(LOG_TAG, "failed to create log file: " + e.getMessage());
-				return false;
+				this.logger = new StacktraceLogger(this.terminalLogger);
 			}
+			
+			if (this.logger == null) this.logger = new StreamLogger(OutputStream.nullOutputStream());
 			
 			// Print version info to log
 			logger().debug("JVM runtime: %s", System.getProperty("java.version"));

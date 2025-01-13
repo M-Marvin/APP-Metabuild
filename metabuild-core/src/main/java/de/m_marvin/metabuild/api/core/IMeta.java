@@ -26,7 +26,7 @@ public interface IMeta {
 	public static final String META_HOME_PROPERTY = "meta.home";
 	
 	public static final String DEFAULT_BUILD_FILE_NAME = "build.meta";
-	public static final String DEFAULT_BUILD_LOG_NAME = "build/build.log";
+	public static final String DEFAULT_BUILD_LOG_NAME = "build.log";
 	public static final String DEFAULT_CACHE_DIRECTORY = System.getProperty("user.home") + "/.meta";
 	public static final int DEFAULT_TASK_THREADS = 8;
 	
@@ -83,7 +83,11 @@ public interface IMeta {
 	
 	public void setStatusCallback(IStatusCallback statusCallback);
 	
-	public void setTerminalOutput(boolean output);
+	/**
+	 * Sets the destination of the log output.<br>
+	 * Can either be an OutputStream or an Logger instance
+	 */
+	public void setTerminalOutput(Object output);
 	
 	/**
 	 * @return The working directory of the current metabuild instance

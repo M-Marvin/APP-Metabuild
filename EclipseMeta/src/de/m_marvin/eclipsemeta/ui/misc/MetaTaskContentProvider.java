@@ -1,4 +1,4 @@
-package de.m_marvin.eclipsemeta.viewers.misc;
+package de.m_marvin.eclipsemeta.ui.misc;
 
 import org.eclipse.jface.viewers.ITreePathContentProvider;
 import org.eclipse.jface.viewers.TreePath;

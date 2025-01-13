@@ -1,4 +1,4 @@
-package de.m_marvin.eclipsemeta.viewers;
+package de.m_marvin.eclipsemeta.ui.views;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
@@ -14,9 +14,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
-import de.m_marvin.eclipsemeta.MetaProjects;
+import de.m_marvin.eclipsemeta.misc.MetaProjects;
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
-import de.m_marvin.eclipsemeta.viewers.misc.MetaTaskContentProvider;
+import de.m_marvin.eclipsemeta.ui.misc.MetaTaskContentProvider;
 import de.m_marvin.metabuild.api.core.MetaGroup;
 import de.m_marvin.metabuild.api.core.MetaTask;
 
@@ -29,6 +29,7 @@ public class MetaTaskView extends ViewPart {
 	protected IAction reloadProjects;
 	
 	public void refreshProjects() {
+		
 		viewer.setInput(MetaProjects.getAllMetaProjectNatures().toArray(MetaProjectNature[]::new));
 	}
 	
@@ -39,7 +40,7 @@ public class MetaTaskView extends ViewPart {
 			@Override
 			public void run() {
 				// TODO
-				refreshProjects();
+				MetaProjects.refreshMetaProjects();
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(reloadProjects);
@@ -76,7 +77,7 @@ public class MetaTaskView extends ViewPart {
 							MetaProjects.runMetaTask(project, task.name());
 						}
 					} else if (ts.getFirstElement() instanceof MetaProjectNature project) {
-						MetaProjects.refreshMetaProject(project);
+						project.refreshProject();
 					}
 				}
 			}

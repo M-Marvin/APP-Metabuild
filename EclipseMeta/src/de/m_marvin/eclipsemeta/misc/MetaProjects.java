@@ -1,4 +1,4 @@
-package de.m_marvin.eclipsemeta;
+package de.m_marvin.eclipsemeta.misc;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -21,7 +21,6 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
-import de.m_marvin.eclipsemeta.viewers.MetaTaskView;
 
 public class MetaProjects implements IStartup {
 	
@@ -86,21 +85,9 @@ public class MetaProjects implements IStartup {
 		
 	}
 	
-	// TODO only for testing
-	public static void refreshMetaProject(MetaProjectNature project) {
-		try {
-			
+	public static void refreshMetaProjects() {
+		for (var project : MetaProjects.getAllMetaProjectNatures())
 			project.refreshProject();
-			
-			MetaTaskView taskView = (MetaTaskView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findView(MetaTaskView.VIEW_ID);
-			taskView.refreshProjects();
-
-			if (!project.getProject().isOpen()) return;
-			if (!project.getProject().hasNature(MetaProjectNature.NATURE_ID)) return;
-			
-		} catch (CoreException e) {
-			e.printStackTrace();
-		}
 	}
 	
 	public static void runMetaTask(MetaProjectNature project, String task) {

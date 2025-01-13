@@ -1,5 +1,6 @@
 package de.m_marvin.eclipsemeta.natures;
 
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -9,12 +10,11 @@ import org.eclipse.core.resources.IProjectNature;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jface.dialogs.ErrorDialog;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.ui.PlatformUI;
 
 import de.m_marvin.eclipsemeta.MetaManager;
+import de.m_marvin.eclipsemeta.ui.MetaUI;
 import de.m_marvin.metabuild.api.core.IMeta;
+import de.m_marvin.metabuild.api.core.IMeta.IStatusCallback;
 import de.m_marvin.metabuild.api.core.MetaGroup;
 import de.m_marvin.metabuild.api.core.MetaTask;
 
@@ -74,8 +74,8 @@ public class MetaProjectNature implements IProjectNature {
 	}
 	
 	protected boolean setupBuildsystem() {
+		meta.setTerminalOutput((OutputStream) MetaUI.newConsoleStream());
 		meta.setWorkingDirectory(this.project.getLocation().toFile());
-		// TODO setup console output
 		return meta.initBuild();
 	}
 
@@ -86,28 +86,35 @@ public class MetaProjectNature implements IProjectNature {
 			monitor.beginTask("Meta Project reload", 3);
 			
 			try {
+				
 				monitor.subTask("Claiming Meta Instance ...");
 				
 				monitor.setBlocked(MultiStatus.info("Meta currently busy ..."));
 				if (!claimMeta()) {
 					MetaProjectNature.this.state = MetaState.ERROR;
 					monitor.setBlocked(MultiStatus.error("Failed to claim Meta instance"));
-					MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), 
-							"Meta claim Error", "Could not claim metabuld instance, Meta-Job could not be executed!");
+					MetaUI.openError("Meta claim Error", "Could not claim metabuld instance, Meta-Job could not be executed!");
 					return;
 				}
 				monitor.clearBlocked();
 				
 				monitor.worked(1);
+				if (monitor.isCanceled()) {
+					freeMeta();
+					return;
+				}
 				monitor.subTask("Initializing Project Buildfile ...");
 				
 				if (!setupBuildsystem()) {
 					MetaProjectNature.this.state = MetaState.ERROR;
-					MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), 
-							"Meta Build", "Failed to initialize build file!");
+					MetaUI.openError("Meta Build", "Failed to initialize build file!");
 				}
-
+				
 				monitor.worked(1);
+				if (monitor.isCanceled()) {
+					freeMeta();
+					return;
+				}
 				monitor.subTask("Loading Meta Tasks ...");
 				
 				this.tasks.clear();
@@ -116,24 +123,92 @@ public class MetaProjectNature implements IProjectNature {
 				MetaProjectNature.this.state = MetaState.LOADED;
 				
 				monitor.worked(1);
+				
 			} catch (Throwable e) {
 				MetaProjectNature.this.state = MetaState.ERROR;
-				ErrorDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), 
-						"Meta Build", "Error while trying to execute meta process!", 
-						MultiStatus.error(e.getLocalizedMessage(), e));
+				MetaUI.openError(
+					"Meta Build", "Error while trying to execute meta process!", 
+					MultiStatus.error(e.getLocalizedMessage(), e));
 			}
 			
 			freeMeta();
+
+			MetaUI.refreshViewers();
 			
 		}).schedule();
 		
 	}
 	
-	public void runTask(String task) {
+	public void runTask(String... tasks) {
 		
 		Job.create("Meta", monitor -> {
+
+			try {
+				
+				monitor.subTask("Claiming Meta Instance ...");
+				
+				monitor.setBlocked(MultiStatus.info("Meta currently busy ..."));
+				if (!claimMeta()) {
+					MetaProjectNature.this.state = MetaState.ERROR;
+					monitor.setBlocked(MultiStatus.error("Failed to claim Meta instance"));
+					MetaUI.openError("Meta claim Error", "Could not claim metabuld instance, Meta-Job could not be executed!");
+					return;
+				}
+				monitor.clearBlocked();
+				
+				if (monitor.isCanceled()) {
+					freeMeta();
+					return;
+				}
+				monitor.subTask("Initializing Project Buildfile ...");
+				
+				if (!setupBuildsystem()) {
+					MetaProjectNature.this.state = MetaState.ERROR;
+					MetaUI.openError("Meta Build", "Failed to initialize build file!");
+				}
+				
+				this.meta.setStatusCallback(new IStatusCallback() {
+					
+					@Override
+					public void taskStatus(String task, String status) {
+						monitor.subTask(task + " > " + status);
+					}
+					
+					@Override
+					public void taskStarted(String task) {
+						monitor.subTask(task + " > running");
+					}
+					
+					@Override
+					public void taskCount(int taskCount) {
+						monitor.beginTask("Meta Build", taskCount);
+					}
+					
+					@Override
+					public void taskCompleted(String task) {
+						monitor.worked(1);
+					}
+				});
+
+				if (monitor.isCanceled()) {
+					freeMeta();
+					return;
+				}
+				monitor.subTask("Execute Tasks ...");
+				
+				this.meta.runTasks(tasks);
+				MetaProjectNature.this.state = MetaState.LOADED;
+				
+			} catch (Throwable e) {
+				MetaProjectNature.this.state = MetaState.ERROR;
+				MetaUI.openError(
+					"Meta Build", "Error while trying to execute meta process!", 
+					MultiStatus.error(e.getLocalizedMessage(), e));
+			}
 			
-			// TODO task execution not implemented
+			freeMeta();
+
+			MetaUI.refreshViewers();
 			
 		}).schedule();
 		

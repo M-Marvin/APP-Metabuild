@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks.java;
+package de.m_marvin.metabuild.java.tasks;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,8 +11,8 @@ import java.util.Optional;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.tasks.BuildTask;
 
 public class JavaRunClasspathTask extends BuildTask {
 

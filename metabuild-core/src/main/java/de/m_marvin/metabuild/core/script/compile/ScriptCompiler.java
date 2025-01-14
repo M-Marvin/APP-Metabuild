@@ -22,8 +22,8 @@ import javax.tools.ToolProvider;
 import de.m_marvin.javarun.compile.SourceCompiler;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.MetaInitError;
+import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.script.BuildScript;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class ScriptCompiler {
@@ -113,6 +113,9 @@ public class ScriptCompiler {
 			return null;
 		} catch (IOException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
 			logger().errort(LOG_TAG, "unknown error while instantiating buildfile class:", e);
+			return null;
+		} catch (NoClassDefFoundError e) {
+			logger().errort(LOG_TAG, "class not found error in buildfile: %s", e.getMessage());
 			return null;
 		}
 	}

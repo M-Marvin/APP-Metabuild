@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks.misc;
+package de.m_marvin.metabuild.core.tasks;
 
 import java.io.File;
 import java.nio.file.attribute.FileTime;
@@ -7,7 +7,6 @@ import java.util.Optional;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.tasks.BuildTask;
 
 public class FileTask extends BuildTask {
 	

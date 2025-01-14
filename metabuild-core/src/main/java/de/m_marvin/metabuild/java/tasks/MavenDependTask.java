@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks.java;
+package de.m_marvin.metabuild.java.tasks;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,12 +18,12 @@ import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.maven.DependencyResolver;
-import de.m_marvin.metabuild.maven.DependencyResolver.QueryMode;
-import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository;
-import de.m_marvin.metabuild.maven.MavenResolver.POM.Scope;
-import de.m_marvin.metabuild.tasks.BuildTask;
+import de.m_marvin.metabuild.java.maven.DependencyResolver;
+import de.m_marvin.metabuild.java.maven.DependencyResolver.QueryMode;
+import de.m_marvin.metabuild.java.maven.MavenResolver.MavenRepository;
+import de.m_marvin.metabuild.java.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.impl.TagLogger;
 
 public class MavenDependTask extends BuildTask {

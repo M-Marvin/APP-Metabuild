@@ -1,5 +1,6 @@
 package de.m_marvin.eclipsemeta.natures;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,10 @@ import de.m_marvin.eclipsemeta.MetaManager;
 import de.m_marvin.eclipsemeta.ui.MetaUI;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.api.core.IMeta.IStatusCallback;
-import de.m_marvin.metabuild.api.core.MetaGroup;
-import de.m_marvin.metabuild.api.core.MetaTask;
+import de.m_marvin.metabuild.api.core.devenv.IJavaSourceIncludes;
+import de.m_marvin.metabuild.api.core.devenv.ISourceIncludes;
+import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
+import de.m_marvin.metabuild.api.core.tasks.MetaTask;
 
 public class MetaProjectNature implements IProjectNature {
 
@@ -122,6 +125,8 @@ public class MetaProjectNature implements IProjectNature {
 				this.meta.getTasks(this, this.groups, this.tasks);
 				MetaProjectNature.this.state = MetaState.LOADED;
 				
+				// TODO dependency loading
+				
 				monitor.worked(1);
 				
 			} catch (Throwable e) {
@@ -129,6 +134,7 @@ public class MetaProjectNature implements IProjectNature {
 				MetaUI.openError(
 					"Meta Build", "Error while trying to execute meta process!", 
 					MultiStatus.error(e.getLocalizedMessage(), e));
+				e.printStackTrace();
 			}
 			
 			freeMeta();
@@ -161,12 +167,7 @@ public class MetaProjectNature implements IProjectNature {
 					return;
 				}
 				monitor.subTask("Initializing Project Buildfile ...");
-				
-				if (!setupBuildsystem()) {
-					MetaProjectNature.this.state = MetaState.ERROR;
-					MetaUI.openError("Meta Build", "Failed to initialize build file!");
-				}
-				
+
 				this.meta.setStatusCallback(new IStatusCallback() {
 					
 					@Override
@@ -188,8 +189,19 @@ public class MetaProjectNature implements IProjectNature {
 					public void taskCompleted(String task) {
 						monitor.worked(1);
 					}
+					
+					@Override
+					public void sourceIncludes(ISourceIncludes include) {
+						updateIncludes(include);
+					}
+					
 				});
-
+				
+				if (!setupBuildsystem()) {
+					MetaProjectNature.this.state = MetaState.ERROR;
+					MetaUI.openError("Meta Build", "Failed to initialize build file!");
+				}
+				
 				if (monitor.isCanceled()) {
 					freeMeta();
 					return;
@@ -204,6 +216,7 @@ public class MetaProjectNature implements IProjectNature {
 				MetaUI.openError(
 					"Meta Build", "Error while trying to execute meta process!", 
 					MultiStatus.error(e.getLocalizedMessage(), e));
+				e.printStackTrace();
 			}
 			
 			freeMeta();
@@ -225,6 +238,19 @@ public class MetaProjectNature implements IProjectNature {
 
 	public List<MetaGroup<MetaProjectNature>> getMetaGroups() {
 		return groups;
+	}
+	
+	protected void updateIncludes(ISourceIncludes includes) {
+		
+		System.out.println("UPDATE DEPENDENCIES");
+		System.out.println(includes.languageId());
+		
+		if (includes instanceof IJavaSourceIncludes javaIncludes) {
+			for (File dep : javaIncludes.getSourceJars()) {
+				System.out.println(dep);
+			}
+		}
+		
 	}
 	
 }

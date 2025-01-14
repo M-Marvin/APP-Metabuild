@@ -5,6 +5,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import de.m_marvin.metabuild.api.core.devenv.ISourceIncludes;
+import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
+import de.m_marvin.metabuild.api.core.tasks.MetaTask;
+
 /**
  * Base API of meta build system.
  */
@@ -16,6 +20,8 @@ public interface IMeta {
 		public void taskStarted(String task);
 		public void taskStatus(String task, String status);
 		public void taskCompleted(String task);
+		
+		public default void sourceIncludes(ISourceIncludes includes) {};
 		
 	}
 	
@@ -81,6 +87,9 @@ public interface IMeta {
 	 */
 	public void setTaskThreads(int taskThreads);
 	
+	/**
+	 * @param statusCallback A callback to receive status updates about the running tasks
+	 */
 	public void setStatusCallback(IStatusCallback statusCallback);
 	
 	/**

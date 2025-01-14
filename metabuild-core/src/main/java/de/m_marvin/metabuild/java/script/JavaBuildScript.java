@@ -1,14 +1,16 @@
-package de.m_marvin.metabuild.script;
+package de.m_marvin.metabuild.java.script;
 
 import java.io.File;
 
-import de.m_marvin.metabuild.tasks.BuildTask;
-import de.m_marvin.metabuild.tasks.java.JarTask;
-import de.m_marvin.metabuild.tasks.java.JavaCompileTask;
-import de.m_marvin.metabuild.tasks.java.JavaRunClasspathTask;
-import de.m_marvin.metabuild.tasks.java.MavenDependTask;
-import de.m_marvin.metabuild.tasks.misc.FileTask;
-import de.m_marvin.metabuild.tasks.misc.FileTask.Action;
+import de.m_marvin.metabuild.core.script.BuildScript;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.FileTask;
+import de.m_marvin.metabuild.core.tasks.FileTask.Action;
+import de.m_marvin.metabuild.java.devenv.JavaSourceIncludes;
+import de.m_marvin.metabuild.java.tasks.JarTask;
+import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
+import de.m_marvin.metabuild.java.tasks.JavaRunClasspathTask;
+import de.m_marvin.metabuild.java.tasks.MavenDependTask;
 
 public class JavaBuildScript extends BuildScript {
 	
@@ -17,8 +19,12 @@ public class JavaBuildScript extends BuildScript {
 	public MavenDependTask implementation;
 	public MavenDependTask runtime;
 	
+	public JavaSourceIncludes devenv;
+	
 	@Override
 	public void init() {
+		
+		this.devenv = new JavaSourceIncludes();
 		
 		this.implementation = new MavenDependTask("javaDependImpl");
 		this.implementation.group = "depend";
@@ -62,6 +68,13 @@ public class JavaBuildScript extends BuildScript {
 		runJava.dependsOn(this.runtime);
 		
 		new FileTask("clean", Action.DELETE, new File("build"));
+		
+	}
+	
+	@Override
+	public void finish() {
+		
+		this.devenv.sourceJars.addAll(this.implementation.getClasspathEntries());
 		
 	}
 	

@@ -8,7 +8,7 @@ import java.util.List;
 import de.m_marvin.commandlineparser.CommandLineParser;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.core.Metabuild;
-import de.m_marvin.metabuild.maven.MavenResolver;
+import de.m_marvin.metabuild.java.maven.MavenResolver;
 
 public class MetaLaunch {
 	

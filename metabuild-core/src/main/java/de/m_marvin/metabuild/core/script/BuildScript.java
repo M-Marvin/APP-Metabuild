@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.script;
+package de.m_marvin.metabuild.core.script;
 
 /**
  * The base class every build script has to extend from.<br>
@@ -11,5 +11,10 @@ public class BuildScript {
 	 * Creates and registers all tasks.
 	 */
 	public void init() {}
+	
+	/**
+	 * Called after all tasks that where started, finished successfully.
+	 */
+	public void finish() {}
 	
 }

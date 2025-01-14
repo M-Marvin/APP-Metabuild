@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.maven;
+package de.m_marvin.metabuild.java.maven;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -37,8 +37,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import de.m_marvin.metabuild.core.util.SkipOptional;
-import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository.Credentials;
-import de.m_marvin.metabuild.maven.MavenResolver.POM.Scope;
+import de.m_marvin.metabuild.java.maven.MavenResolver.MavenRepository.Credentials;
+import de.m_marvin.metabuild.java.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class MavenResolver {

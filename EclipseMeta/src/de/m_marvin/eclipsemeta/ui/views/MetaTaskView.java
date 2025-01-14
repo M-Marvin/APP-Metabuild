@@ -17,8 +17,8 @@ import org.eclipse.ui.part.ViewPart;
 import de.m_marvin.eclipsemeta.misc.MetaProjects;
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
 import de.m_marvin.eclipsemeta.ui.misc.MetaTaskContentProvider;
-import de.m_marvin.metabuild.api.core.MetaGroup;
-import de.m_marvin.metabuild.api.core.MetaTask;
+import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
+import de.m_marvin.metabuild.api.core.tasks.MetaTask;
 
 public class MetaTaskView extends ViewPart {
 

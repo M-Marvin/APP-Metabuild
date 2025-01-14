@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks;
+package de.m_marvin.metabuild.core.tasks;
 
 import java.util.function.Consumer;
 import java.util.stream.Stream;

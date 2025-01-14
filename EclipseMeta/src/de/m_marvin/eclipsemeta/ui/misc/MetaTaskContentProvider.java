@@ -4,8 +4,8 @@ import org.eclipse.jface.viewers.ITreePathContentProvider;
 import org.eclipse.jface.viewers.TreePath;
 
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
-import de.m_marvin.metabuild.api.core.MetaGroup;
-import de.m_marvin.metabuild.api.core.MetaTask;
+import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
+import de.m_marvin.metabuild.api.core.tasks.MetaTask;
 
 public class MetaTaskContentProvider implements ITreePathContentProvider {
 	

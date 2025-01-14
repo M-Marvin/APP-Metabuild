@@ -44,6 +44,8 @@ public class MetaWrapper {
 	 */
 	public static void main(String[] args) {
 		
+		// TODO uninstall flag
+		
 		// Search for wrapper argument
 		int vari = -1;
 		for (int i = 0; i < args.length - 1; i++) {

@@ -23,18 +23,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.api.core.IMeta;
-import de.m_marvin.metabuild.api.core.MetaGroup;
-import de.m_marvin.metabuild.api.core.MetaTask;
+import de.m_marvin.metabuild.api.core.devenv.ISourceIncludes;
+import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
+import de.m_marvin.metabuild.api.core.tasks.MetaTask;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaInitError;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
+import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.script.compile.ScriptCompiler;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.RootTask;
+import de.m_marvin.metabuild.core.tasks.BuildTask.TaskState;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.script.BuildScript;
-import de.m_marvin.metabuild.tasks.BuildTask;
-import de.m_marvin.metabuild.tasks.BuildTask.TaskState;
-import de.m_marvin.metabuild.tasks.RootTask;
 import de.m_marvin.simplelogging.Log;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.MultiLogger;
@@ -532,6 +533,19 @@ public final class Metabuild implements IMeta {
 				me.printStack(logger().errorPrinter(LOG_TAG));
 			} else {
 				logger().errort(LOG_TAG, "uncatched build task error:", e.getCause());
+			}
+		}
+		
+
+		if (success) {
+			try {
+				this.buildscript.finish();
+			} catch (BuildScriptException e) {
+				logger().errort(LOG_TAG, "buildfile finish phase failed!");
+				e.printStack(logger().errorPrinter(LOG_TAG));
+			} catch (Throwable e) {
+				logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
+				return false;
 			}
 		}
 		

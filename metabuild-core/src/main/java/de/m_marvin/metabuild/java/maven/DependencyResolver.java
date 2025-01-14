@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.maven;
+package de.m_marvin.metabuild.java.maven;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,10 +20,10 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.maven.MavenResolver.MavenRepository;
-import de.m_marvin.metabuild.maven.MavenResolver.POM;
-import de.m_marvin.metabuild.maven.MavenResolver.POM.ArtifactAbs;
-import de.m_marvin.metabuild.maven.MavenResolver.POM.Scope;
+import de.m_marvin.metabuild.java.maven.MavenResolver.MavenRepository;
+import de.m_marvin.metabuild.java.maven.MavenResolver.POM;
+import de.m_marvin.metabuild.java.maven.MavenResolver.POM.ArtifactAbs;
+import de.m_marvin.metabuild.java.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.TagLogger;
 

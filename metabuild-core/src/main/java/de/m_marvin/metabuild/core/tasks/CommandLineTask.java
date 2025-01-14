@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks.misc;
+package de.m_marvin.metabuild.core.tasks;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.tasks.BuildTask;
 
 public class CommandLineTask extends BuildTask {
 

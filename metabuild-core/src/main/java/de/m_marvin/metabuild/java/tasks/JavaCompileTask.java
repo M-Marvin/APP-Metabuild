@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.tasks.java;
+package de.m_marvin.metabuild.java.tasks;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,8 +38,8 @@ import javax.tools.ToolProvider;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.tasks.BuildTask;
 
 public class JavaCompileTask extends BuildTask {
 

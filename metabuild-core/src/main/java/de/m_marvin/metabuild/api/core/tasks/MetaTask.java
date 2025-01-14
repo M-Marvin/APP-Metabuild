@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.api.core;
+package de.m_marvin.metabuild.api.core.tasks;
 
 import java.util.Optional;
 

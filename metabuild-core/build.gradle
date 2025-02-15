@@ -12,7 +12,7 @@ plugins {
 apply plugin: 'java-library'
 apply plugin: 'maven-publish'
 
-version = '0.1_build0'
+version = '0.1_build1'
 
 repositories {
 	mavenCentral()
@@ -51,13 +51,13 @@ shadowJar {
 dependencies {
 	
 	// CommandLineParser
-	shade 'de.m_marvin.commandlineparser:commandlineparser:1.1'
+	shade 'de.m_marvin.commandlineparser:commandlineutility:2.0'
 	
 	// GSON
 	//implementation "com.google.code.gson:gson:2.9.1"
 	
 	// SimpleLogging
-	shade 'de.m_marvin.simplelogging:simplelogging:2.1.4'
+	shade 'de.m_marvin.simplelogging:simplelogging:2.3'
 	
 	// JavaRun
 	shade 'de.m_marvin.javarun:javarun:1.2'

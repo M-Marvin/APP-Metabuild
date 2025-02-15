@@ -125,7 +125,11 @@ public class ScriptCompiler {
 		SourceCompiler sourceCompiler = new SourceCompiler(this.compiler);
 		sourceCompiler.setOut(logger().errorPrinter(LOG_TAG));
 		
-		String classpath = System.getProperty("java.class.path");
+		String classpath = this.mb.getBuildfileClasspath().stream()
+				.map(File::getAbsolutePath)
+				.reduce((a, b) -> a + ";" + b)
+				.orElse("");
+		
 		if (!sourceCompiler.compile(Metabuild.BUILD_SCRIPT_CLASS_NAME, new String(source.readAllBytes()), classpath)) {
 			logger().errort(LOG_TAG, "java compiler error, build file compilation failed!");
 			return false;

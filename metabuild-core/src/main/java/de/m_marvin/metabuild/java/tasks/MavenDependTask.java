@@ -52,6 +52,12 @@ public class MavenDependTask extends BuildTask {
 					.filter(f2 -> FileUtility.getExtension(f2).equalsIgnoreCase("jar")))
 			.toList();
 	}
+
+	public List<File[]> getDependencyEntries() {
+		return this.resolver.getDependencyJarPaths().values().stream()
+			.map(f -> f.listFiles())
+			.toList();
+	}
 	
 	public String getClasspathString() {
 		StringBuffer buf = new StringBuffer();

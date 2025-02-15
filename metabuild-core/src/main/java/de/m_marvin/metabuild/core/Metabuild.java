@@ -4,9 +4,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +21,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -26,6 +31,7 @@ import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.api.core.devenv.ISourceIncludes;
 import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
 import de.m_marvin.metabuild.api.core.tasks.MetaTask;
+import de.m_marvin.metabuild.core.cli.OutputHandler;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaInitError;
@@ -33,8 +39,8 @@ import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.script.compile.ScriptCompiler;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
-import de.m_marvin.metabuild.core.tasks.RootTask;
 import de.m_marvin.metabuild.core.tasks.BuildTask.TaskState;
+import de.m_marvin.metabuild.core.tasks.RootTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.simplelogging.Log;
 import de.m_marvin.simplelogging.api.Logger;
@@ -54,12 +60,18 @@ public final class Metabuild implements IMeta {
 	
 	/* Working directory of metabuild, normally the project root */
 	private File workingDirectory;
+	/* Meta home directory */
+	private File metaHome;
 	/* Cache directory for metadata and downloaded files, normall user directory */
 	private File cacheDirectory;
 	/* Log file to store logging output */
 	private File logFile;
 	/* OutputStream to the log file */
 	private OutputStream logStream;
+	/* Handling of console input */
+	private OutputStream consoleStreamTarget = null;
+	private InputStream consoleStream = System.in;
+	private boolean consolePipeClosed = true;
 	/* Root logger, all loggers end up here */
 	private Logger logger;
 	/* If the logger output is printed to the terminal */
@@ -68,6 +80,8 @@ public final class Metabuild implements IMeta {
 	private int taskThreads;
 	/* Set to true if the next build process should re-download all external dependencies */
 	private boolean refreshDependencies = false;
+	/* If all tasks should be run even if they are up to date */
+	private boolean forceRunTasks = false;
 	/* Currently loaded build script instance */
 	private BuildScript buildscript;
 	/* Task to TaskNode map, nodes combine one BuildTask and its dependent tasks */
@@ -85,7 +99,11 @@ public final class Metabuild implements IMeta {
 	/* Map of registered task dependencies of current build script */
 	private final Map<String, Set<String>> taskDependencies = new HashMap<>();
 	/* Status callback to report back build progress */
-	private IStatusCallback statusCallback;
+	private Set<IStatusCallback> statusCallback = new HashSet<>();
+	/* List of includes for the developement environment */
+	private List<ISourceIncludes> sourceIncludes = new ArrayList<>();
+	/* An handler for printing the command line inteface, can be null if not configured */
+	private OutputHandler outputHandler = null;
 	
 	/**
 	 * Instantiates a new metabuild instance.<br>
@@ -125,6 +143,7 @@ public final class Metabuild implements IMeta {
 		}
 		this.task2node.clear();
 		this.taskDependencies.clear();
+		this.sourceIncludes.clear();
 		this.taskTree = null;
 		this.buildscript = null;
 	}
@@ -166,18 +185,57 @@ public final class Metabuild implements IMeta {
 	}
 	
 	@Override
+	public void setForceRunTasks(boolean forceRunTasks) {
+		this.forceRunTasks = forceRunTasks;
+	}
+	
+	public boolean isForceRunTasks() {
+		return forceRunTasks;
+	}
+	
+	@Override
 	public void setTaskThreads(int taskThreads) {
 		if (taskThreads <= 0) throw new IllegalArgumentException("number of threads must be >= 1!");
 		this.taskThreads = taskThreads;
 	}
 
 	@Override
-	public void setStatusCallback(IStatusCallback statusCallback) {
-		this.statusCallback = statusCallback;
+	public void addStatusCallback(IStatusCallback statusCallback) {
+		this.statusCallback.add(statusCallback);
 	}
 
 	@Override
-	public void setTerminalOutput(Object output) {
+	public void setTerminalOutput(PrintStream print, boolean printUI) {
+		if (this.outputHandler != null) return; // Can only be called once, the removal of the handler is not implemented
+		this.outputHandler = new OutputHandler(this, print, printUI);
+	}
+	
+	public void setConsoleInputTarget(OutputStream target) {
+		this.consoleStreamTarget = target;
+		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
+			ForkJoinPool.commonPool().execute(() -> {
+				try {
+					while (this.consoleStreamTarget != null) {
+						this.consoleStreamTarget.write(this.consoleStream.read());
+						this.consoleStreamTarget.flush();
+					}
+				} catch (Throwable e) {}
+				this.consolePipeClosed = true;
+			});
+		}
+	}
+
+	@Override
+	public void setConsoleStreamInput(InputStream input) {
+		if (input == null) {
+			this.consoleStream = InputStream.nullInputStream();
+		} else {
+			this.consoleStream = input;
+		}
+	}
+	
+	@Override
+	public void setLogStreamOutput(Object output) {
 		if (output instanceof OutputStream logStream) {
 			this.terminalLogger = new StreamLogger(logStream, StandardCharsets.UTF_8, true);
 		} else if (output instanceof Logger logger) {
@@ -221,6 +279,15 @@ public final class Metabuild implements IMeta {
 	}
 	
 	/**
+	 * Adds includes that define dependencies required for the development environment by the the current tasks.<br>
+	 * Mainly dependencies that are required to be present in the IDE.
+	 * @param includes The dependencies to add to the includes wrapped in an language specific class
+	 */
+	public void addSourceInclude(ISourceIncludes includes) {
+		this.sourceIncludes.add(includes);
+	}
+	
+	/**
 	 * Attempts to find and return the task with the requested name.
 	 * @param name The name of the task
 	 * @return The task with the name or null if none was found
@@ -246,7 +313,7 @@ public final class Metabuild implements IMeta {
 	}
 	
 	@Override
-	public <T> void getTasks(T ref, List<MetaGroup<T>> groups, List<MetaTask<T>> tasks) {
+	public <T> void getTasks(T ref, Collection<MetaGroup<T>> groups, Collection<MetaTask<T>> tasks) {
 		this.registeredTasks.values().forEach(t -> {
 			if (t.group != null) {
 				Optional<MetaGroup<T>> group = groups.stream().filter(g -> g.group().equals(t.group)).findAny();
@@ -261,6 +328,21 @@ public final class Metabuild implements IMeta {
 		});
 	}
 	
+	@Override
+	public void getSourceIncludes(Collection<ISourceIncludes> includes) {
+		includes.addAll(this.sourceIncludes);
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends ISourceIncludes> void getSourceIncludes(Collection<T> includes, String language) {
+		for (var source : this.sourceIncludes) {
+			if (source.languageId().equals(language)) {
+				includes.add((T) source);
+			}
+		}
+	}
+	
 	/**
 	 * Initialized directories and files such as the cache directory and the log file
 	 * @return true if and only if all necessary directories and files could be created
@@ -268,9 +350,9 @@ public final class Metabuild implements IMeta {
 	public boolean initDirectories() {
 		close();
 		
-		if (this.workingDirectory == null) setWorkingDirectory(new File(DEFAULT_CACHE_DIRECTORY));
-		if (this.cacheDirectory == null) setCacheDirectory(new File(DEFAULT_CACHE_DIRECTORY));
-		if (this.logFile == null) setLogFile(new File(DEFAULT_BUILD_LOG_NAME));
+		if (this.workingDirectory == null) setWorkingDirectory(DEFAULT_CACHE_DIRECTORY);
+		if (this.cacheDirectory == null) setCacheDirectory(DEFAULT_CACHE_DIRECTORY);
+		if (this.logFile == null) setLogFile(DEFAULT_BUILD_LOG_NAME);
 		
 		if (!this.cacheDirectory.isDirectory() && !this.cacheDirectory.mkdir()) {
 			logger().errort(LOG_TAG, "could not create cache directory: %s", this.cacheDirectory.getPath());
@@ -296,10 +378,12 @@ public final class Metabuild implements IMeta {
 			
 			if (this.logger == null) this.logger = new StreamLogger(OutputStream.nullOutputStream());
 			
+			this.metaHome = new File(System.getProperty(META_HOME_PROPERTY));
+			
 			// Print version info to log
 			logger().debug("JVM runtime: %s", System.getProperty("java.version"));
 			logger().debug("Meta runtime: %s", System.getProperty(META_VERSION_PROPERTY));
-			logger().debug("Meta home: %s", System.getProperty(META_HOME_PROPERTY));
+			logger().debug("Meta home: %s", this.metaHome);
 		}
 		return true;
 	}
@@ -309,9 +393,25 @@ public final class Metabuild implements IMeta {
 		this.workingDirectory = workingDirectory;
 	}
 	
+	public List<File> getBuildfileClasspath() {
+		List<File> classpathFiles = new ArrayList<File>();
+		Stream.of(this.metaHome.listFiles())
+			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
+			.forEach(classpathFiles::add);
+		Stream.of(new File(this.workingDirectory, META_PLUGIN_LOCATION).listFiles())
+			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
+			.forEach(classpathFiles::add);
+		return classpathFiles;
+	}
+	
 	@Override
 	public File workingDir() {
 		return this.workingDirectory;
+	}
+
+	@Override
+	public File metaHome() {
+		return this.metaHome;
 	}
 
 	@Override
@@ -387,7 +487,7 @@ public final class Metabuild implements IMeta {
 		}
 		
 		try {
-			if (!task.state().requiresBuild() && dependendNodes.isEmpty()) {
+			if (!task.state().requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
 				this.taskTree = new TaskNode(Optional.empty(), new HashSet<>());
 				return;
 			}
@@ -466,10 +566,10 @@ public final class Metabuild implements IMeta {
 			}
 		}).thenAcceptAsync(v -> {
 			if (node.task().isEmpty()) return;
-			if (this.statusCallback != null) this.statusCallback.taskStarted(node.task().get().name);
+			if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskStarted(node.task().get().name));
 			boolean result = node.task().get().runTask(
-					this.statusCallback != null ? status -> statusCallback.taskStatus(node.task().get().name, status) : null);
-			if (this.statusCallback != null) this.statusCallback.taskCompleted(node.task().get().name);
+					status -> statusCallback.forEach(s -> s.taskStatus(node.task().get().name, status)));
+			if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCompleted(node.task().get().name));
 			if (!result) {
 				throw BuildException.msg("task '%s' failed!", node.task().get().name);
 			}
@@ -499,8 +599,6 @@ public final class Metabuild implements IMeta {
 	
 	@Override
 	public boolean runTasks(List<String> tasks) {
-
-		for (BuildTask task : this.registeredTasks.values()) task.reset();
 		
 		logger().infot(LOG_TAG, "begin build init phase");
 		
@@ -509,13 +607,15 @@ public final class Metabuild implements IMeta {
 			return false;
 		}
 		
-		if (this.statusCallback != null) this.statusCallback.taskCount(this.task2node.size());
+		if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCount(this.task2node.size()));
 		
 		logger().infot(LOG_TAG, "begin build run phase");
 		
 		if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
 			logger().infot(LOG_TAG, "nothing to do");
 			printStatus();
+			
+			for (var s : this.statusCallback) s.buildCompleted(true);
 			return true;
 		}
 		
@@ -565,8 +665,11 @@ public final class Metabuild implements IMeta {
 		} catch (InterruptedException e) {}
 		
 		this.refreshDependencies = false;
+		this.forceRunTasks = false;
 		
 		printStatus();
+		
+		for (var s : this.statusCallback) s.buildCompleted(success);
 		
 		return success;
 		

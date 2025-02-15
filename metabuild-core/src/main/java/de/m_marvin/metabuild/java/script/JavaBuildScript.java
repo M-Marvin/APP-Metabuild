@@ -6,7 +6,7 @@ import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.FileTask;
 import de.m_marvin.metabuild.core.tasks.FileTask.Action;
-import de.m_marvin.metabuild.java.devenv.JavaSourceIncludes;
+import de.m_marvin.metabuild.java.JavaSourceIncludes;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
 import de.m_marvin.metabuild.java.tasks.JavaRunClasspathTask;
@@ -19,12 +19,8 @@ public class JavaBuildScript extends BuildScript {
 	public MavenDependTask implementation;
 	public MavenDependTask runtime;
 	
-	public JavaSourceIncludes devenv;
-	
 	@Override
 	public void init() {
-		
-		this.devenv = new JavaSourceIncludes();
 		
 		this.implementation = new MavenDependTask("javaDependImpl");
 		this.implementation.group = "depend";
@@ -74,7 +70,7 @@ public class JavaBuildScript extends BuildScript {
 	@Override
 	public void finish() {
 		
-		this.devenv.sourceJars.addAll(this.implementation.getClasspathEntries());
+		JavaSourceIncludes.include(this.implementation.getDependencyEntries());
 		
 	}
 	

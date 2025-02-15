@@ -13,7 +13,7 @@ public class BuildScript {
 	public void init() {}
 	
 	/**
-	 * Called after all tasks that where started, finished successfully.
+	 * Called after all tasks that where started finished successfully.
 	 */
 	public void finish() {}
 	

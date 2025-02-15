@@ -1,17 +1,19 @@
 package de.m_marvin.eclipsemeta;
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.ui.PlatformUI;
 
+import de.m_marvin.eclipsemeta.ui.MetaUI;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.wrapper.MetaWrapper;
 
 public class MetaManager {
 	
-	public static final String WRAPPER_PROJECT_LOCATION = "meta/meta_wraooer.jar";
+	public static final String WRAPPER_PROJECT_LOCATION = "meta/meta_wrapper.jar";
 	public static final String META_WRAPPER_CLASS = "MetaWrapper";
 	
 	protected static class ClaimLock {
@@ -20,7 +22,7 @@ public class MetaManager {
 	
 	protected static ClaimLock lock = new ClaimLock();
 	
-	public static Optional<IMeta> claimMeta() {
+	public static Optional<IMeta> claimMeta(IProject project) {
 
 		synchronized (lock) {
 			
@@ -31,11 +33,24 @@ public class MetaManager {
 				return Optional.empty();
 			}
 			
-			MetaWrapper.metaVersion = "0.1_build0"; // TODO version management
+			File projectRoot = project.getLocation().toFile();
+			File wrapperFile = new File(projectRoot, MetaWrapper.WRAPPER_PROJECT_LOCATION);
 			
-			if (!MetaWrapper.prepareMetabuild()) {
-				MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-						"Meta Launch", "Could not prepare meta installation for version: " + MetaWrapper.metaVersion);
+			if (!wrapperFile.isFile()) {
+				MetaUI.openError("Meta Launch", "Could not find meta wrapper in project: " + wrapperFile);
+				return Optional.empty();
+			}
+			
+			URL wrapperURL;
+			try {
+				wrapperURL = wrapperFile.toURI().toURL();
+			} catch (MalformedURLException e) {
+				MetaUI.openError("Meta Launch", "Could not construct path URL for wrapper: " + wrapperFile + "\n" + e.getMessage());
+				return Optional.empty();
+			}
+			
+			if (!MetaWrapper.prepareMetabuild(wrapperURL)) {
+				MetaUI.openError("Meta Launch", "Could not prepare meta installation for version: " + MetaWrapper.metaVersion);
 				return Optional.empty();
 			}
 			
@@ -44,8 +59,7 @@ public class MetaManager {
 				return Optional.of(MetaWrapper.getMetabuild());
 			} catch (Throwable e) {
 				lock.claimed = false;
-				MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-						"Meta Launch", e.getMessage());
+				MetaUI.openError("Meta Launch", e.getMessage());
 				e.printStackTrace();
 				return Optional.empty();
 			}

@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import de.m_marvin.commandlineparser.CommandLineParser;
+import de.m_marvin.cliutil.arguments.Arguments;
+import de.m_marvin.cliutil.arguments.CommandArgumentParser;
+import de.m_marvin.cliutil.exception.CommandArgumentException;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.java.maven.MavenResolver;
@@ -22,7 +24,7 @@ public class MetaLaunch {
 		}
 		
 		// Initialize argument parser
-		CommandLineParser parser = new CommandLineParser();
+		CommandArgumentParser parser = new CommandArgumentParser();
 		parser.addOption("help", false, "show command help");
 		parser.addOption("build-file", Metabuild.DEFAULT_BUILD_FILE_NAME, "build file to load and run tasks from");
 		parser.addOption("cache-dir", Metabuild.DEFAULT_CACHE_DIRECTORY, "directory to save all cache data");
@@ -32,28 +34,35 @@ public class MetaLaunch {
 		parser.addOption("strict-maven-hash", MavenResolver.strictHashVerify, "if set, only download artifacts with valid (or no existing) hash signatures");
 		parser.addOption("refresh-dependencies", false, "if set, re-download all dependencies and replace current cache");
 		parser.addOption("info", false, "Print additional log information to the terminal during build process");
+		parser.addOption("force", false, "if set, all tasks are run even if they are up to date");
 		
-		// Parse and check arguments
-		parser.parseInput(Arrays.copyOfRange(args, taskRunList.size(), args.length));
-		if (args.length == 0 || parser.getFlag("help")) {
-			System.out.println("meta < [tasks] ... > < options >");
-			System.out.println(parser.printHelp());
-			System.exit(1);
-		}
-
-		// Launch and run metabuild
 		try {
-			File workingDir = new File(System.getProperty("user.dir"));
-			int r = launchMetabuild(workingDir, taskRunList, parser);
-			System.exit(r);
-		} catch (Throwable e) {
-			e.printStackTrace();
-			System.exit(2);
+			
+			// Parse and check arguments
+			Arguments arguments = parser.parse(Arrays.copyOfRange(args, taskRunList.size(), args.length));
+			if (args.length == 0 || arguments.flag("help")) {
+				System.out.println("meta < [tasks] ... > < options >");
+				System.out.println(parser.printHelp());
+				System.exit(1);
+			}
+
+			// Launch and run metabuild
+			try {
+				File workingDir = new File(System.getProperty("user.dir"));
+				int r = launchMetabuild(workingDir, taskRunList, arguments);
+				System.exit(r);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				System.exit(2);
+			}
+			
+		} catch (CommandArgumentException e) {
+			System.err.println(e.getMessage());
 		}
 		
 	}
 	
-	public static int launchMetabuild(File workingDir, List<String> taskList, CommandLineParser args) {
+	public static int launchMetabuild(File workingDir, List<String> taskList, Arguments args) throws CommandArgumentException {
 		
 		IMeta mb;
 		try {
@@ -65,35 +74,37 @@ public class MetaLaunch {
 		
 		mb.setWorkingDirectory(workingDir);
 		
-		if (args.getOption("log") != null)
-			mb.setLogFile(new File(args.getOption("log")));
-		if (args.getOption("cache-dir") != null)
-			mb.setCacheDirectory(new File(args.getOption("cache-dir")));
-		if (args.getFlag("strict-maven-meta"))
+		if (args.get("log") != null)
+			mb.setLogFile(args.get("log"));
+		if (args.get("cache-dir") != null)
+			mb.setCacheDirectory(args.get("cache-dir"));
+		if (args.flag("strict-maven-meta"))
 			MavenResolver.strictMavenMeta = true;
-		if (args.getFlag("strict-maven-hash"))
+		if (args.flag("strict-maven-hash"))
 			MavenResolver.strictHashVerify = true;
-		if (args.getFlag("refresh-dependencies"))
+		if (args.flag("refresh-dependencies"))
 			mb.setRefreshDependencies(true);
-		boolean printLogs = args.getFlag("info");
+		if (args.flag("force"))
+			mb.setForceRunTasks(true);
+		boolean printLogs = args.get("info");
 		
-		OutputHandler.setupCLIUI(mb, !printLogs);
+		mb.setTerminalOutput(System.out, !printLogs);
+		
+		mb.setConsoleStreamInput(System.in);
 		
 		// Load build file
-		File buildFile = new File(Metabuild.DEFAULT_BUILD_FILE_NAME);
-		if (args.getOption("build-file") != null)
-			buildFile = new File(args.getOption("build-file"));
+		File buildFile = Metabuild.DEFAULT_BUILD_FILE_NAME;
+		if (args.get("build-file") != null)
+			buildFile = args.get("build-file");
 		if (!mb.initBuild(buildFile)) return -1;
 		
 		// Parse build threads
-		if (args.getOption("threads") != null)
-			mb.setTaskThreads(Integer.parseInt(args.getOption("threads")));
+		if (args.get("threads") != null)
+			mb.setTaskThreads(Integer.parseInt(args.get("threads")));
 		
 		// Run tasks
 		boolean buildState = mb.runTasks(taskList);
 		
-		OutputHandler.printFinish(buildState);
-
 		mb.terminate();
 		return buildState ? 0 : -1;
 		

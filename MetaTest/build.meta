@@ -38,7 +38,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	public void dependencies() {
 		
-		implementation.add("de.m_marvin.univec:univec:1.6");
+		implementation.add("de.m_marvin.univec:univec:1.6", "sources");
 		
 	}
 	

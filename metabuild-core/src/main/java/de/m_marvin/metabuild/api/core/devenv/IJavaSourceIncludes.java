@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.api.core.devenv;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 public interface IJavaSourceIncludes extends ISourceIncludes {
 
@@ -13,5 +14,7 @@ public interface IJavaSourceIncludes extends ISourceIncludes {
 	}
 	
 	public List<File> getSourceJars();
+	public Map<File, File> getSourceAttachments();
+	public Map<File, File> getJavadocAttachments();
 	
 }

@@ -34,17 +34,19 @@ public class MetaWrapper {
 	public static final String META_JAR = "metabuild-core.jar";
 	public static final String META_INSTAL_NAME = "versions/meta-%s";
 	
+	public static final String WRAPPER_PROJECT_LOCATION = "meta/metabuild-wrapper.jar";
+	
 	public static String metaVersion = null;
 	public static String metaDirectory = null;
 	public static File metaJar = null;
+	
+	private MetaWrapper() {}
 	
 	/**
 	 * Prepare metabuild installation and run with the supplied command arguments
 	 * @param args The command arguments to pass to meta
 	 */
 	public static void main(String[] args) {
-		
-		// TODO uninstall flag
 		
 		// Search for wrapper argument
 		int vari = -1;
@@ -64,7 +66,7 @@ public class MetaWrapper {
 			args = a;
 		}
 		
-		if (!prepareMetabuild())
+		if (!prepareMetabuild(MetaWrapper.class.getProtectionDomain().getCodeSource().getLocation()))
 			System.exit(-1);
 		
 		System.exit(runMetabuild(args));
@@ -73,14 +75,19 @@ public class MetaWrapper {
 	
 	/**
 	 * Prepare metabuild installation, check requirements and install if neccessary.
+	 * @param wrapperLoader The class loader to load the meta configuration from. Should give access to an valid warapper jar file.
 	 * @return true if the metabuild installation is ready
 	 */
-	public static boolean prepareMetabuild() {
+	@SuppressWarnings("resource")
+	public static boolean prepareMetabuild(URL wrapperURL) {
 
+		ClassLoader wrapperLoader = new URLClassLoader(new URL[] { wrapperURL });
+		
 		if (metaVersion == null) {
 			
 			try {
-				Enumeration<URL> manifests = MetaWrapper.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
+				
+				Enumeration<URL> manifests = wrapperLoader.getResources("META-INF/MANIFEST.MF");
 				while (manifests.hasMoreElements()) {
 					URL url = manifests.nextElement();
 					try {
@@ -110,7 +117,7 @@ public class MetaWrapper {
 		metaDirectory = System.getenv(META_INSTALL_VARIABLE);
 		if (metaDirectory == null) metaDirectory = DEFAULT_INSTALL_DIRECTORY;
 		
-		if (!makeInstall()) {
+		if (!makeInstall(wrapperLoader, wrapperURL)) {
 			System.err.println("\033[31mcould not install metabuild system!\033[0m");
 			return false;
 		}
@@ -121,17 +128,15 @@ public class MetaWrapper {
 		
 	}
 	
-	protected static URL searchVersion() {
+	protected static URL searchVersion(ClassLoader wrapperLoader, URL wrapperURL) {
 		try {
-			InputStream includedVersions = MetaWrapper.class.getClassLoader().getResourceAsStream(META_VERSIONS_CFG);
+			InputStream includedVersions = wrapperLoader.getResourceAsStream(META_VERSIONS_CFG);
 			if (includedVersions == null) {
 				System.err.println("\033[35mno versions configured in wrapper, unable to run installation!\033[0m");
 				return null;
 			}
 			String cfg = new String(includedVersions.readAllBytes(), StandardCharsets.UTF_8);
 			includedVersions.close();
-			
-			URL wrapperJarURL = MetaWrapper.class.getProtectionDomain().getCodeSource().getLocation();
 			
 			Matcher m = META_VERSIONS_CFG_PATTERN.matcher(cfg);
 			while (m.find()) {
@@ -141,7 +146,7 @@ public class MetaWrapper {
 				try {
 					URL url = new URL(
 							META_VERSION_URL_PATTERN.matcher(urlStr)
-								.replaceAll(m1 -> m1.group(1).equals("mwjar") ? wrapperJarURL.toString() : "null")
+								.replaceAll(m1 -> m1.group(1).equals("mwjar") ? wrapperURL.toString() : "null")
 							);
 					
 					System.out.println("\033[35mlocation entry for meta version: " + url + "\033[0m");
@@ -160,7 +165,7 @@ public class MetaWrapper {
 		}
 	}
 	
-	protected static boolean makeInstall() {
+	protected static boolean makeInstall(ClassLoader wrapperLoader, URL wrapperURL) {
 		
 		File installDir = new File(metaDirectory, String.format(META_INSTAL_NAME, metaVersion));
 		
@@ -168,10 +173,10 @@ public class MetaWrapper {
 		
 		System.out.println("required meta version: " + metaVersion);
 		
-		URL versionLocation = searchVersion();
+		URL versionLocation = searchVersion(wrapperLoader, wrapperURL);
 		if (versionLocation == null) return false;
 		
-		System.err.println("\033[35mdownloading and installing metabuild ...\033[0m");
+		System.out.println("\033[35mdownloading and installing metabuild ...\033[0m");
 		try {
 			ZipInputStream input = new ZipInputStream(versionLocation.openStream());
 			if (!installDir.mkdirs()) {

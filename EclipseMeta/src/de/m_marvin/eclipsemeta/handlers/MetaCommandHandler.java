@@ -11,6 +11,7 @@ import org.eclipse.ui.dialogs.PreferencesUtil;
 import org.osgi.service.prefs.BackingStoreException;
 
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
+import de.m_marvin.eclipsemeta.natures.MetaProjectNature.RefreshType;
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature.TaskConfiguration;
 import de.m_marvin.eclipsemeta.ui.MetaUI;
 import de.m_marvin.eclipsemeta.ui.properties.MetaNaturePropertiesPage;
@@ -18,6 +19,7 @@ import de.m_marvin.eclipsemeta.ui.properties.MetaNaturePropertiesPage;
 public class MetaCommandHandler extends AbstractHandler {
 	
 	public static final String REFRESH_COMMAND = "de.m_marvin.eclipsemeta.commands.refreshProject";
+	public static final String REFRESH_DEPENDENCIES_COMMAND = "de.m_marvin.eclipsemeta.commands.refreshDependencies";
 	public static final String CHANGE_CONFIG_COMMAND = "de.m_marvin.eclipsemeta.commands.changeProjectConfig";
 	public static final String MANAGE_CONFIGS_COMMAND = "de.m_marvin.eclipsemeta.commands.manageProjectConfigs";
 	
@@ -35,7 +37,10 @@ public class MetaCommandHandler extends AbstractHandler {
 		switch (cmd) {
 		
 		case REFRESH_COMMAND:
-			nature.refreshProject();
+			nature.refreshProject(RefreshType.REFRESH);
+			break;
+		case REFRESH_DEPENDENCIES_COMMAND:
+			nature.refreshProject(RefreshType.REFRESH_DEPENDENCIES);
 			break;
 		case CHANGE_CONFIG_COMMAND:
 			String configName = (String) event.getParameters().get("configSelection");

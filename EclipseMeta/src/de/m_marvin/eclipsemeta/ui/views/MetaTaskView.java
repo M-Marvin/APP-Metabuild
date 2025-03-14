@@ -12,6 +12,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
 import de.m_marvin.eclipsemeta.natures.MetaProjectNature;
+import de.m_marvin.eclipsemeta.natures.MetaProjectNature.RefreshType;
 import de.m_marvin.eclipsemeta.ui.misc.Icons;
 import de.m_marvin.eclipsemeta.ui.misc.MetaTaskContentProvider;
 import de.m_marvin.metabuild.api.core.tasks.MetaTask;
@@ -34,9 +35,10 @@ public class MetaTaskView extends ViewPart {
 		reloadProjects = new Action("Reload Tasks", Icons.REFRESH_ICON) {
 			@Override
 			public void run() {
-				MetaProjectNature.refreshAllMetaProjects();
+				MetaProjectNature.reloadAllMetaProjects();
 			}
 		};
+		reloadProjects.setToolTipText("Reloads all projects (runs config tasks in prepare phase only)");
 		getViewSite().getActionBars().getToolBarManager().add(reloadProjects);
 		
 		viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
@@ -58,7 +60,7 @@ public class MetaTaskView extends ViewPart {
 							project.runMetaTask(task.name());
 						}
 					} else if (ts.getFirstElement() instanceof MetaProjectNature project) {
-						project.refreshProject();
+						project.refreshProject(RefreshType.REFRESH);
 					}
 				}
 			}

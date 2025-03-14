@@ -58,6 +58,10 @@ public class MetaProjectNature implements IProjectNature {
 		OK,UNLOADED,ERROR;
 	}
 	
+	public static enum RefreshType {
+		RELOAD,REFRESH,REFRESH_DEPENDENCIES;
+	}
+	
 	public static class TaskConfiguration {
 		
 		private String name;
@@ -321,7 +325,7 @@ public class MetaProjectNature implements IProjectNature {
 		
 	}
 	
-	public void refreshProject() {
+	public void refreshProject(RefreshType mode) {
 		
 		List<String> refreshTasks = this.activeConfiguration == null ? Collections.emptyList() : this.activeConfiguration.getTasks().stream().map(MetaTask::name).toList();
 		
@@ -338,7 +342,8 @@ public class MetaProjectNature implements IProjectNature {
 			
 			monitor.subTask("Run Configuration Tasks ...");
 			
-			this.meta.setSkipTaskRun(true);
+			this.meta.setSkipTaskRun(mode == RefreshType.RELOAD);
+			this.meta.setRefreshDependencies(mode == RefreshType.REFRESH_DEPENDENCIES);
 			if (!this.meta.runTasks(refreshTasks)) {
 				MetaUI.openError("Update Meta Dependencies", "Failed to run dependency tasks!");
 				MetaProjectNature.this.changeState(MetaState.ERROR);
@@ -422,9 +427,9 @@ public class MetaProjectNature implements IProjectNature {
 		}
 	}
 	
-	public static void refreshAllMetaProjects() {
+	public static void reloadAllMetaProjects() {
 		for (var project : getAllMetaProjectNatures())
-			project.refreshProject();
+			project.refreshProject(RefreshType.RELOAD);
 	}
 	
 	public static Collection<IProject> getAllMetaProjects() {

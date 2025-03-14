@@ -12,39 +12,33 @@
       </runtime>
    </extension>
    <extension
-         point="org.eclipse.ui.views">
-      <view
-            category="de.m_marvin.eclipsemeta.categories.meta"
-            class="de.m_marvin.eclipsemeta.ui.views.MetaTaskView"
+         point="org.eclipse.ui.ide.projectNatureImages">
+      <image
             icon="icons/obj16/meta.png"
-            id="de.m_marvin.eclipsemeta.taskView"
-            name="MetaTaskView"
-            restorable="true">
-      </view>
-      <category
-            id="de.m_marvin.eclipsemeta.categories.meta"
-            name="Meta">
-      </category>
+            id="de.m_marvin.eclipsemeta.metaNatureImage"
+            natureId="de.m_marvin.eclipsemeta.metaNature">
+      </image>
    </extension>
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
             class="de.m_marvin.eclipsemeta.ui.properties.MetaNaturePropertiesPage"
+            icon="icons/obj16/meta.png"
             id="de.m_marvin.eclipsemeta.ui.properties.metaPage"
             name="Meta">
-            
-	     <filter
-	           name="nature"
-	           value="de.m_marvin.eclipsemeta.metaNature">
-	     </filter>
-	     <filter
-	           name="open"
-	           value="true">
-	     </filter>
-	     <enabledWhen>
-	        <adapt type="org.eclipse.core.resources.IProject" />
-	     </enabledWhen>
-
+         <filter
+               name="nature"
+               value="de.m_marvin.eclipsemeta.metaNature">
+         </filter>
+         <filter
+               name="open"
+               value="true">
+         </filter>
+         <enabledWhen>
+            <adapt
+                  type="org.eclipse.core.resources.IProject">
+            </adapt>
+         </enabledWhen>
       </page>
    </extension>
    <extension
@@ -58,7 +52,7 @@
             categoryId="de.m_marvin.eclipsemeta.category.meta"
             defaultHandler="de.m_marvin.eclipsemeta.handlers.MetaCommandHandler"
             id="de.m_marvin.eclipsemeta.commands.refreshProject"
-            name="Meta refresh">
+            name="Refresh Meta">
       </command>
       <command
             categoryId="de.m_marvin.eclipsemeta.category.meta"
@@ -77,6 +71,31 @@
             id="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
             name="Manage Configurations">
       </command>
+      <command
+            categoryId="de.m_marvin.eclipsemeta.category.meta"
+            defaultHandler="de.m_marvin.eclipsemeta.handlers.MetaCommandHandler"
+            id="de.m_marvin.eclipsemeta.commands.refreshDependencies"
+            name="Refresh Dependencies">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commandImages">
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.refreshProject"
+            icon="icons/obj16/refresh.png">
+      </image>
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.refreshDependencies"
+            icon="icons/obj16/refresh_dependencies.png">
+      </image>
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.changeProjectConfig"
+            icon="icons/obj16/task_configuration_active.png">
+      </image>
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
+            icon="icons/obj16/manage_configurations.png">
+      </image>
    </extension>
    <extension
          point="org.eclipse.ui.menus">
@@ -114,40 +133,73 @@
                   label="Refresh Meta Project"
                   style="push">
             </command>
+            <command
+                  commandId="de.m_marvin.eclipsemeta.commands.refreshDependencies"
+                  icon="icons/obj16/refresh_dependencies.png"
+                  id="de.m_marvin.eclipsemeta.menu.projectmenu.refreshDependencies"
+                  label="Refresh Meta Project Dependencies"
+                  style="push">
+            </command>
             <visibleWhen
                   checkEnabled="false">
-               <with 
-               	      variable="activeMenuSelection">
-	               <iterate
-	                     ifEmpty="false">
-	                  <adapt
-	                        type="org.eclipse.core.resources.IProject">
-	                     <test
-                            property="org.eclipse.core.resources.projectNature"
-                            value="de.m_marvin.eclipsemeta.metaNature">
-	                     </test>
-	                  </adapt>
-	               </iterate>
+               <with
+                     variable="activeMenuSelection">
+                  <iterate
+                        ifEmpty="false">
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                        <test
+                              property="org.eclipse.core.resources.projectNature"
+                              value="de.m_marvin.eclipsemeta.metaNature">
+                        </test>
+                     </adapt>
+                  </iterate>
                </with>
             </visibleWhen>
-   </menu>
+         </menu>
       </menuContribution>
    </extension>
    <extension
-         point="org.eclipse.ui.commandImages">
-      <image
-            commandId="de.m_marvin.eclipsemeta.commands.refreshProject"
-            disabledIcon="platform:/plugin/org.eclipse.jdt.ui/icons/full/elcl16/refresh.png"
-            icon="icons/obj16/refresh.png">
-      </image>
-      <image
-            commandId="de.m_marvin.eclipsemeta.commands.changeProjectConfig"
-            icon="icons/obj16/task_configuration_active.png">
-      </image>
-      <image
-            commandId="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
-            icon="icons/obj16/manage_configurations.png">
-      </image>
+         point="org.eclipse.ui.views">
+      <view
+            category="de.m_marvin.eclipsemeta.categories.meta"
+            class="de.m_marvin.eclipsemeta.ui.views.MetaTaskView"
+            icon="icons/obj16/meta.png"
+            id="de.m_marvin.eclipsemeta.taskView"
+            name="Meta Tasks"
+            restorable="true">
+      </view>
+      <category
+            id="de.m_marvin.eclipsemeta.categories.meta"
+            name="Meta">
+      </category>
+   </extension>
+   <extension
+         point="org.eclipse.core.contenttype.contentTypes">
+      <content-type
+            file-extensions="meta"
+            id="de.m_marvin.eclipsemeta.content.metaBuildscript"
+            name="Meta Buildscript"
+            priority="high">
+      </content-type>
+      <file-association
+            content-type="de.m_marvin.eclipsemeta.content.metaBuildscript"
+            file-extensions="meta">
+      </file-association>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="de.m_marvin.eclipsemeta.ui.editors.BuildscriptEditor"
+            default="true"
+            icon="icons/obj16/meta_file.png"
+            id="de.m_marvin.eclipsemeta.editor.metaBuildscriptEditor"
+            name="Meta Buildscript Editor">
+      </editor>
+      <editorContentTypeBinding
+            contentTypeId="de.m_marvin.eclipsemeta.content.metaBuildscript"
+            editorId="de.m_marvin.eclipsemeta.editor.metaBuildscriptEditor">
+      </editorContentTypeBinding>
    </extension>
 
 

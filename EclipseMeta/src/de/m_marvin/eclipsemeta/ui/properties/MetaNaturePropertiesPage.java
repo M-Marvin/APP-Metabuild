@@ -104,7 +104,7 @@ public class MetaNaturePropertiesPage extends PropertyPage implements IWorkbench
 		this.buildTasks.getTree().setLinesVisible(true);
 		
 		TreeViewerColumn list1 = new TreeViewerColumn(this.buildTasks, SWT.NONE);
-		list1.getColumn().setText("Config Meta Tasks");
+		list1.getColumn().setText("Configuration Meta Tasks");
 		list1.getColumn().setWidth(300);
 		list1.setLabelProvider(new MetaTaskContentProvider.LabelProvider());
 		
@@ -143,7 +143,7 @@ public class MetaNaturePropertiesPage extends PropertyPage implements IWorkbench
 		infoIcon.setImage(Icons.INFO_ICON.createImage());
 
 		Label infoText = new Label(info, SWT.NULL);
-		infoText.setText("The configured tasks will be run in the prepare phase only, when loading the project, to get information such as dependencies to include.\nThe tasks will be actualy executed when the meta project is refreshed.\nBoth only apply when the configuration is active while loading/refreshing the project.");
+		infoText.setText("The configured tasks will be run in \"prepare phase only\", when loading/reloading the project, to get information such as dependencies to include.\nThe tasks will be actualy executed when the meta project is refreshed.\nThe tasks are executed with the refresh dependencies flag, when calling refresh dependencies on the project.\nAll three only apply when the configuration is active while loading/refreshing the project.");
 		
 	}
 	
@@ -258,8 +258,8 @@ public class MetaNaturePropertiesPage extends PropertyPage implements IWorkbench
 		}
 		
 		var active = this.nature.getActiveConfiguration();
-		loadConfiguration(active);
 		updateConfigList();
+		loadConfiguration(active);
 		loadProjectMetaTasks();
 		
 		this.configuration.addModifyListener(new ModifyListener() {

@@ -39,6 +39,7 @@ public class MetaWrapper {
 	public static String metaVersion = null;
 	public static String metaDirectory = null;
 	public static File metaJar = null;
+	public static URLClassLoader metaLoader = null;
 	
 	private MetaWrapper() {}
 	
@@ -223,17 +224,29 @@ public class MetaWrapper {
 	
 	/**
 	 * Tries to dynamically load an metabuild instance from the resolved installation jar file.
-	 * @return
+	 * @return an newly constructed instance of the build system loaded from the external files.
 	 */
-	public static IMeta getMetabuild() {
+	public static IMeta loadMetabuild() {
 		try {
-			ClassLoader loader = new URLClassLoader(new URL[] { 
+			metaLoader = new URLClassLoader(new URL[] { 
 					new URL(String.format("jar:file:%s!/", metaJar.getAbsolutePath()))
 			}, MetaWrapper.class.getClassLoader());
 			
-			return IMeta.instantiateMeta(loader);
+			return IMeta.instantiateMeta(metaLoader);
 		} catch (MalformedURLException | InstantiationException e) {
 			throw new LayerInstantiationException("could not get metabuild instance!", e);
+		}
+	}
+	
+	/**
+	 * Tries to close the class loader that was used to laoad the metabuild instance, and free the external jar file.<br>
+	 * The previously loaded instance of the build system and its classes are not guaranteed to stay valid after calling this function and should be discarded!
+	 */
+	public static void freeMetaJar() {
+		try {
+			metaLoader.close();
+		} catch (IOException e) {
+			throw new RuntimeException("failed to close metabuild class loader!", e);
 		}
 	}
 	

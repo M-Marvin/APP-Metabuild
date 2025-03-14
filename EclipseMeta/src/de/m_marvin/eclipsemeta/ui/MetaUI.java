@@ -1,11 +1,12 @@
 package de.m_marvin.eclipsemeta.ui;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.console.ConsolePlugin;
@@ -44,18 +45,18 @@ public class MetaUI {
 		return console.getInputStream();
 	}
 	
-	public static void openError(String name, String message) {
+	public static void openError(String name, String message, Object... parameters) {
 		PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
-			MessageDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(), name, message);
+			String text = String.format(message, parameters);
+			if (parameters.length > 0 && parameters[parameters.length - 1] instanceof Throwable e) {
+				ByteArrayOutputStream ebuf =  new ByteArrayOutputStream();
+				e.printStackTrace(new PrintStream(ebuf));
+				text = text + "\n\n" + new String(ebuf.toByteArray(), StandardCharsets.UTF_8).replace("\r", "");
+			}
+			MessageDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(), name, text);
 		});
 	}
 
-	public static void openError(String name, String message, IStatus status) {
-		PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
-			ErrorDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(), name, message, status);
-		});
-	}
-	
 	public static void refreshViewers() {
 		PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
 			MetaTaskView taskView = (MetaTaskView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findView(MetaTaskView.VIEW_ID);

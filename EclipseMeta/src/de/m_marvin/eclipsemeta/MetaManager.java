@@ -37,7 +37,7 @@ public class MetaManager {
 			File wrapperFile = new File(projectRoot, MetaWrapper.WRAPPER_PROJECT_LOCATION);
 			
 			if (!wrapperFile.isFile()) {
-				MetaUI.openError("Meta Launch", "Could not find meta wrapper in project: " + wrapperFile);
+				MetaUI.openError("Meta Launch", "Could not find meta wrapper in project: %s", wrapperFile);
 				return Optional.empty();
 			}
 			
@@ -45,18 +45,18 @@ public class MetaManager {
 			try {
 				wrapperURL = wrapperFile.toURI().toURL();
 			} catch (MalformedURLException e) {
-				MetaUI.openError("Meta Launch", "Could not construct path URL for wrapper: " + wrapperFile + "\n" + e.getMessage());
+				MetaUI.openError("Meta Launch", "Could not construct path URL for wrapper: %s", wrapperFile, e);
 				return Optional.empty();
 			}
 			
 			if (!MetaWrapper.prepareMetabuild(wrapperURL)) {
-				MetaUI.openError("Meta Launch", "Could not prepare meta installation for version: " + MetaWrapper.metaVersion);
+				MetaUI.openError("Meta Launch", "Could not prepare meta installation for version: %s", MetaWrapper.metaVersion);
 				return Optional.empty();
 			}
 			
 			try {
 				lock.claimed = true;
-				return Optional.of(MetaWrapper.getMetabuild());
+				return Optional.of(MetaWrapper.loadMetabuild());
 			} catch (Throwable e) {
 				lock.claimed = false;
 				MetaUI.openError("Meta Launch", e.getMessage());
@@ -70,6 +70,8 @@ public class MetaManager {
 	public static void freeMeta(IProject project, IMeta meta) {
 		synchronized (lock) {
 			meta.terminate();
+			meta = null;
+			MetaWrapper.freeMetaJar();
 			lock.claimed = false;
 			lock.notify();
 		}

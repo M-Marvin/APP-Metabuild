@@ -1,0 +1,4 @@
+activeConfig=default
+eclipse.preferences.version=1
+metaTaskConfig/Test\ 2=compileCpp
+metaTaskConfig/default=compileCpp

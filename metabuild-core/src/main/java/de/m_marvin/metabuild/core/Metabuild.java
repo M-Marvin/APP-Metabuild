@@ -80,6 +80,8 @@ public final class Metabuild implements IMeta {
 	private int taskThreads;
 	/* Set to true if the next build process should re-download all external dependencies */
 	private boolean refreshDependencies = false;
+	/* Set to true if the next build process should skip the actual execution of tasks, and only run the prepare phase */
+	private boolean skipTaskRun = false;
 	/* If all tasks should be run even if they are up to date */
 	private boolean forceRunTasks = false;
 	/* Currently loaded build script instance */
@@ -182,6 +184,15 @@ public final class Metabuild implements IMeta {
 	
 	public boolean isRefreshDependencies() {
 		return refreshDependencies;
+	}
+	
+	@Override
+	public void setSkipTaskRun(boolean skipTaskRun) {
+		this.skipTaskRun = skipTaskRun;
+	}
+	
+	public boolean isSkipTaskRun() {
+		return skipTaskRun;
 	}
 	
 	@Override
@@ -395,12 +406,15 @@ public final class Metabuild implements IMeta {
 	
 	public List<File> getBuildfileClasspath() {
 		List<File> classpathFiles = new ArrayList<File>();
+		File[] pluginFiles = new File(this.workingDirectory, META_PLUGIN_LOCATION).listFiles();
 		Stream.of(this.metaHome.listFiles())
 			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
 			.forEach(classpathFiles::add);
-		Stream.of(new File(this.workingDirectory, META_PLUGIN_LOCATION).listFiles())
-			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
-			.forEach(classpathFiles::add);
+		if (pluginFiles != null) {
+			Stream.of(pluginFiles)
+				.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
+				.forEach(classpathFiles::add);
+		}
 		return classpathFiles;
 	}
 	
@@ -604,39 +618,47 @@ public final class Metabuild implements IMeta {
 		
 		if (!buildTaskTree(tasks)) {
 			logger().errort(LOG_TAG, "could not build task tree, abort build!");
+
+			this.refreshDependencies = false;
+			this.forceRunTasks = false;
+			this.skipTaskRun = false;
 			return false;
 		}
 		
 		if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCount(this.task2node.size()));
 		
-		logger().infot(LOG_TAG, "begin build run phase");
-		
-		if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
-			logger().infot(LOG_TAG, "nothing to do");
-			printStatus();
-			
-			for (var s : this.statusCallback) s.buildCompleted(true);
-			return true;
-		}
-		
-		this.taskQueue = new ArrayBlockingQueue<>(this.registeredTasks.size());
-		this.taskExecutor = new ThreadPoolExecutor(0, this.taskThreads, 10, TimeUnit.SECONDS, this.taskQueue);
-		
 		boolean success = false;
-		try {
-			runTaskTree(this.taskTree).join();
-			logger().infot(LOG_TAG, "build completed");
-			success = true;
-		} catch (CompletionException e)  {
-			if (e.getCause() instanceof MetaScriptException me) {
-				logger().errort(LOG_TAG, "build task error:");
-				me.printStack(logger().errorPrinter(LOG_TAG));
-			} else {
-				logger().errort(LOG_TAG, "uncatched build task error:", e.getCause());
+		if (!this.skipTaskRun) {
+
+			logger().infot(LOG_TAG, "begin build run phase");
+			
+			if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
+				logger().infot(LOG_TAG, "nothing to do");
+				printStatus();
+				success = true;
 			}
+			
+			this.taskQueue = new ArrayBlockingQueue<>(this.registeredTasks.size());
+			this.taskExecutor = new ThreadPoolExecutor(0, this.taskThreads, 10, TimeUnit.SECONDS, this.taskQueue);
+			
+			try {
+				runTaskTree(this.taskTree).join();
+				logger().infot(LOG_TAG, "build completed");
+				success = true;
+			} catch (CompletionException e)  {
+				if (e.getCause() instanceof MetaScriptException me) {
+					logger().errort(LOG_TAG, "build task error:");
+					me.printStack(logger().errorPrinter(LOG_TAG));
+				} else {
+					logger().errort(LOG_TAG, "uncatched build task error:", e.getCause());
+				}
+			}
+			
+		} else {
+			logger().infot(LOG_TAG, "skipping build run phase");
+			success = true;
 		}
 		
-
 		if (success) {
 			try {
 				this.buildscript.finish();
@@ -645,32 +667,40 @@ public final class Metabuild implements IMeta {
 				e.printStack(logger().errorPrinter(LOG_TAG));
 			} catch (Throwable e) {
 				logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
+
+				this.refreshDependencies = false;
+				this.forceRunTasks = false;
+				this.skipTaskRun = false;
 				return false;
 			}
 		}
 		
-		logger().infot(LOG_TAG, "build run phase finished, shuting down");
+		logger().infot(LOG_TAG, "build finished, shuting down");
 		
 		this.registeredTasks.values().forEach(BuildTask::cleanupTask);
 		
 		try {
-			if (!this.taskExecutor.shutdownNow().isEmpty()) {
-				logger().warnt(LOG_TAG, "tasks still runing after build, this indicates sirious problems with the build file!");
-				logger().warnt(LOG_TAG, "attempt force termination of remaining tasks ...");
+			if (this.taskExecutor != null) {
+				if (!this.taskExecutor.shutdownNow().isEmpty()) {
+					logger().warnt(LOG_TAG, "tasks still runing after build, this indicates sirious problems with the build file!");
+					logger().warnt(LOG_TAG, "attempt force termination of remaining tasks ...");
+				}
+				if (!this.taskExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+					logger().warnt(LOG_TAG, "failed to shutdown build tasks, executor not responding!");
+				}
+				this.taskQueue.clear();
+				this.taskExecutor = null;
+				this.taskQueue = null;
 			}
-			if (!this.taskExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-				logger().warnt(LOG_TAG, "failed to shutdown build tasks, executor not responding!");
-			}
-			this.taskQueue.clear();
 		} catch (InterruptedException e) {}
-		
-		this.refreshDependencies = false;
-		this.forceRunTasks = false;
 		
 		printStatus();
 		
 		for (var s : this.statusCallback) s.buildCompleted(success);
-		
+
+		this.refreshDependencies = false;
+		this.forceRunTasks = false;
+		this.skipTaskRun = false;
 		return success;
 		
 	}

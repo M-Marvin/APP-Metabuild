@@ -2,7 +2,7 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
-         id="de.m_marvin.eclipsemeta.projectNature"
+         id="de.m_marvin.eclipsemeta.metaNature"
          name="Meta Nature"
          point="org.eclipse.core.resources.natures">
       <runtime>
@@ -14,17 +14,140 @@
    <extension
          point="org.eclipse.ui.views">
       <view
+            category="de.m_marvin.eclipsemeta.categories.meta"
             class="de.m_marvin.eclipsemeta.ui.views.MetaTaskView"
+            icon="icons/obj16/meta.png"
             id="de.m_marvin.eclipsemeta.taskView"
-            name="Meta Tasks"
+            name="MetaTaskView"
             restorable="true">
       </view>
+      <category
+            id="de.m_marvin.eclipsemeta.categories.meta"
+            name="Meta">
+      </category>
    </extension>
    <extension
-         point="org.eclipse.ui.startup">
-      <startup
-            class="de.m_marvin.eclipsemeta.misc.MetaProjects">
-      </startup>
+         point="org.eclipse.ui.propertyPages">
+      <page
+            class="de.m_marvin.eclipsemeta.ui.properties.MetaNaturePropertiesPage"
+            id="de.m_marvin.eclipsemeta.ui.properties.metaPage"
+            name="Meta">
+            
+	     <filter
+	           name="nature"
+	           value="de.m_marvin.eclipsemeta.metaNature">
+	     </filter>
+	     <filter
+	           name="open"
+	           value="true">
+	     </filter>
+	     <enabledWhen>
+	        <adapt type="org.eclipse.core.resources.IProject" />
+	     </enabledWhen>
+
+      </page>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            description="Meta Commands"
+            id="de.m_marvin.eclipsemeta.category.meta"
+            name="Meta">
+      </category>
+      <command
+            categoryId="de.m_marvin.eclipsemeta.category.meta"
+            defaultHandler="de.m_marvin.eclipsemeta.handlers.MetaCommandHandler"
+            id="de.m_marvin.eclipsemeta.commands.refreshProject"
+            name="Meta refresh">
+      </command>
+      <command
+            categoryId="de.m_marvin.eclipsemeta.category.meta"
+            defaultHandler="de.m_marvin.eclipsemeta.handlers.MetaCommandHandler"
+            id="de.m_marvin.eclipsemeta.commands.changeProjectConfig"
+            name="Change Active Configuration">
+         <commandParameter
+               id="configSelection"
+               name="Configuration to set as active for the project"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="de.m_marvin.eclipsemeta.category.meta"
+            defaultHandler="de.m_marvin.eclipsemeta.handlers.MetaCommandHandler"
+            id="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
+            name="Manage Configurations">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="true"
+            locationURI="popup:org.eclipse.ui.popup.any?after=additions">
+         <menu
+               icon="icons/obj16/meta.png"
+               id="de.m_marvin.eclipsemeta.menu.projectmenu"
+               label="Meta">
+            <menu
+                  icon="icons/obj16/task_configurations.png"
+                  id="de.m_marvin.eclipsemeta.menu.projectmenu.activeconfig"
+                  label="Active Configuration ...">
+               <command
+                     commandId="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
+                     icon="icons/obj16/manage_configurations.png"
+                     id="de.m_marvin.eclipsemeta.menu.projectmenu.activeconfig.manageConfigurations"
+                     label="Manage Configurations ..."
+                     style="push">
+               </command>
+               <separator
+                     name="de.m_marvin.eclipsemeta.menu.seperatorEntries"
+                     visible="true">
+               </separator>
+               <dynamic
+                     class="de.m_marvin.eclipsemeta.handlers.ConfigMenuEntryHandler"
+                     id="de.m_marvin.eclipsemeta.menu.projectmenu.activeconfig.changeConfigEntries">
+               </dynamic>
+            </menu>
+            <command
+                  commandId="de.m_marvin.eclipsemeta.commands.refreshProject"
+                  icon="icons/obj16/refresh.png"
+                  id="de.m_marvin.eclipsemeta.menu.projectmenu.refreshProject"
+                  label="Refresh Meta Project"
+                  style="push">
+            </command>
+            <visibleWhen
+                  checkEnabled="false">
+               <with 
+               	      variable="activeMenuSelection">
+	               <iterate
+	                     ifEmpty="false">
+	                  <adapt
+	                        type="org.eclipse.core.resources.IProject">
+	                     <test
+                            property="org.eclipse.core.resources.projectNature"
+                            value="de.m_marvin.eclipsemeta.metaNature">
+	                     </test>
+	                  </adapt>
+	               </iterate>
+               </with>
+            </visibleWhen>
+   </menu>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commandImages">
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.refreshProject"
+            disabledIcon="platform:/plugin/org.eclipse.jdt.ui/icons/full/elcl16/refresh.png"
+            icon="icons/obj16/refresh.png">
+      </image>
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.changeProjectConfig"
+            icon="icons/obj16/task_configuration_active.png">
+      </image>
+      <image
+            commandId="de.m_marvin.eclipsemeta.commands.manageProjectConfigs"
+            icon="icons/obj16/manage_configurations.png">
+      </image>
    </extension>
 
 

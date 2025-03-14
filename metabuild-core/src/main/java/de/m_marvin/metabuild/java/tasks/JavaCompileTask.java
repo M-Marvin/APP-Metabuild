@@ -19,9 +19,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
@@ -45,7 +47,7 @@ public class JavaCompileTask extends BuildTask {
 
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
-	public final List<String> options = new ArrayList<>();
+	public final Set<String> options = new HashSet<>();
 	public File classpath = null;
 	public File stateCache = null; // if not set, will be set by prepare
 	public String sourceCompatibility = null;
@@ -55,8 +57,8 @@ public class JavaCompileTask extends BuildTask {
 	
 	protected JavaCompiler javac;
 	protected Map<File, SourceMetaData> sourceMetadata = new HashMap<>();
-	protected List<File> toCompile;
-	protected List<File> toRemove;
+	protected List<File> compile;
+	protected List<File> removed;
 	
 	public JavaCompileTask(String name) {
 		super(name);
@@ -129,7 +131,7 @@ public class JavaCompileTask extends BuildTask {
 				.toList();
 		
 		// Check for updated source files to compile
-		this.toCompile = sourceFiles.stream()
+		this.compile = sourceFiles.stream()
 			.filter(f -> f.getName().endsWith(".java"))
 			.filter(f -> {
 				if (!this.sourceMetadata.containsKey(f)) return true;
@@ -141,12 +143,12 @@ public class JavaCompileTask extends BuildTask {
 			.toList();
 		
 		// List class files that need to be removed
-		this.toRemove = this.sourceMetadata.entrySet().stream()
+		this.removed = this.sourceMetadata.entrySet().stream()
 			.filter(e -> !sourceFiles.contains(e.getKey()))
 			.map(e -> e.getKey())
 			.toList();
 		
-		return (!this.toCompile.isEmpty() || !this.toRemove.isEmpty()) ? TaskState.OUTDATED : TaskState.UPTODATE;
+		return (!this.compile.isEmpty() || !this.removed.isEmpty()) ? TaskState.OUTDATED : TaskState.UPTODATE;
 	}
 	
 	protected class CompilationOutputFileManager extends ForwardingJavaFileManager<JavaFileManager> {
@@ -249,7 +251,7 @@ public class JavaCompileTask extends BuildTask {
 		File classPath = FileUtility.absolute(this.classesDir);
 		
 		// Delete outdated class files
-		for (File outdatedSource : this.toRemove) {
+		for (File outdatedSource : this.removed) {
 			for (File outdatedClass : this.sourceMetadata.get(outdatedSource).classFiles()) {
 				File f = FileUtility.absolute(outdatedClass, classPath);
 				if (!f.delete()) {
@@ -295,7 +297,7 @@ public class JavaCompileTask extends BuildTask {
 		logger().infot(logTag(), "compiling source files in: %s", this.sourcesDir);
 		
 		// Compile outdated files
-		for (File sourceFile : this.toCompile) {
+		for (File sourceFile : this.compile) {
 
 			status("compiling > " + sourceFile.getPath());
 			

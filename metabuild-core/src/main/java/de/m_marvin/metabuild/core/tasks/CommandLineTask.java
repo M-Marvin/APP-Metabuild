@@ -1,7 +1,6 @@
 package de.m_marvin.metabuild.core.tasks;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -9,7 +8,9 @@ import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.core.util.ProcessUtility;
 
 public class CommandLineTask extends BuildTask {
 
@@ -30,6 +31,11 @@ public class CommandLineTask extends BuildTask {
 	}
 	
 	@Override
+	protected TaskState prepare() {
+		return TaskState.OUTDATED;
+	}
+	
+	@Override
 	public boolean run() {
 		
 		String[] command = buildCommand();
@@ -39,16 +45,14 @@ public class CommandLineTask extends BuildTask {
 		ProcessBuilder processBuilder = new ProcessBuilder(command);
 		processBuilder.directory(Metabuild.get().workingDir());
 		
-		logger().debugt(logTag(), "cmd: %s", Stream.of(command).reduce((a, b) -> String.format("%s %s", a, b)).get());
-		
 		try {
-			Process process = processBuilder.start();
-			int exitCode = process.waitFor();
+			// Start process
+			logger().debugt(logTag(), "cmd: %s", Stream.of(command).reduce((a, b) -> String.format("%s %s", a, b)).get());
+			int exitCode = ProcessUtility.runProcess(logger(), processBuilder);
+			
 			return this.exitCondition.test(exitCode);
-		} catch (IOException e) {
+		} catch (BuildScriptException e) {
 			throw BuildException.msg(e, "failed to run command: ", command[0]);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
 		}
 		
 	}

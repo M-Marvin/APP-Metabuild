@@ -1,22 +1,20 @@
 package de.m_marvin.metabuild.java.tasks;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.core.util.ProcessUtility;
 
 public class JavaRunClasspathTask extends BuildTask {
 
@@ -89,59 +87,12 @@ public class JavaRunClasspathTask extends BuildTask {
 		try {
 			// Start process
 			logger().warnt(logTag(), "starting process: %s", this.mainClass);
-			Process process = processBuilder.start();
-			
-			// Pipe output to logger
-			Thread stoutPipe = new Thread(() -> {
-				BufferedReader source = new BufferedReader(new InputStreamReader(process.getInputStream()));
-				PrintWriter target = logger().infoPrinterRaw();
-				String line;
-				try {
-					while ((line = source.readLine()) != null) {
-						target.println(line);
-					}
-					source.close();
-					target.close();
-				} catch (IOException e) {}
-			}, "PipeStdOut");
-			Thread sterrPipe = new Thread(() -> {
-				BufferedReader source = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-				PrintWriter target = logger().errorPrinterRaw();
-				String line;
-				try {
-					while ((line = source.readLine()) != null) {
-						target.println(line);
-					}
-					source.close();
-					target.close();
-				} catch (IOException e) {}
-			}, "PipeStdErr");
-			
-			// Pipe input to process
-			Metabuild.get().setConsoleInputTarget(process.getOutputStream());
-			
-			// Start pipe threads
-			stoutPipe.setDaemon(true);
-			sterrPipe.setDaemon(true);
-			stoutPipe.start();
-			sterrPipe.start();
-			
-			// Wait for process to finish
-			int exitCode = process.waitFor();
-			
-			// Close pipes
-			Metabuild.get().setConsoleInputTarget(null);
-			process.getInputStream().close();
-			process.getOutputStream().close();
-			stoutPipe.join();
-			sterrPipe.join();
+			int exitCode = ProcessUtility.runProcess(logger(), processBuilder);
 			
 			logger().warnt(logTag(), "process terminated, exit code: %d", exitCode);
 			return true;
-		} catch (IOException e) {
-			throw BuildException.msg(e, "failed to initiate java process: %s", javaExecutable.get());
-		} catch (InterruptedException e) {
-			throw BuildException.msg(e, "interrupted while waring for java process: %s", javaExecutable.get());
+		} catch (BuildScriptException e) {
+			throw BuildException.msg(e, "failed to run java process: %s", javaExecutable.get());
 		}
 		
 	}

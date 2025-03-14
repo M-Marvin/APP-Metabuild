@@ -222,4 +222,21 @@ public class FileUtility {
 		}	
 	}
 	
+	public static Optional<File> locateOnPath(String nameOrPath) {
+		File f = new File(nameOrPath);
+		if (f.isFile()) return Optional.of(f);
+		f = absolute(f);
+		if (f.isFile()) return Optional.of(f);
+		String systemPath = System.getenv("PATH");
+		if (systemPath == null) systemPath = System.getenv("path");
+		String[] pathDirs = systemPath.split(File.pathSeparator);
+		for (String pathDir : pathDirs) {
+			File pathDirectory = new File(pathDir);
+			for (File file : pathDirectory.listFiles()) {
+				if (file.getName().equals(nameOrPath) || getNameNoExtension(file).equals(nameOrPath)) return Optional.of(file);
+			}
+		}
+		return Optional.empty();
+	}
+	
 }

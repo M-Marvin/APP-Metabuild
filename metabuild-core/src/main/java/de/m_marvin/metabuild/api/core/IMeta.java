@@ -86,6 +86,13 @@ public interface IMeta {
 	 * @param refreshDependencies true to re-query all dependencies
 	 */
 	public void setRefreshDependencies(boolean refreshDependencies);
+
+	/**
+	 * If set to true, the next build process will skip the run phase for all tasks.<br>
+	 * This will only be active for the next build cycle, and be reset to false after that.
+	 * @param skipTaskRun true to skip the run phase
+	 */
+	public void setSkipTaskRun(boolean skipTaskRun);
 	
 	/**
 	 * If set to true, all tasks and their dependencies are run even if they are up to date.<br>

@@ -404,8 +404,10 @@ public final class Metabuild implements IMeta {
 		this.workingDirectory = workingDirectory;
 	}
 	
-	public List<File> getBuildfileClasspath() {
+	@Override
+	public Collection<File> getBuildfileClasspath() {
 		List<File> classpathFiles = new ArrayList<File>();
+		classpathFiles.add(new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().getFile()));
 		File[] pluginFiles = new File(this.workingDirectory, META_PLUGIN_LOCATION).listFiles();
 		Stream.of(this.metaHome.listFiles())
 			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))

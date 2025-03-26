@@ -2,8 +2,11 @@ package de.m_marvin.eclipsemeta.ui.editors;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
@@ -26,26 +29,32 @@ public class BuildscriptEditor extends CompilationUnitEditor {
 		setTitleImage(Icons.META_FILE_ICON.createImage());
 	}
 	
+	public Collection<IClasspathEntry> getClasspath() {
+		List<IClasspathEntry> classpath = new ArrayList<IClasspathEntry>();
+		classpath.add(JavaRuntime.getDefaultJREContainerEntry());
+		IResource resource = getEditorInput().getAdapter(IResource.class);
+		if (resource == null) return classpath;
+		IProject project = resource.getProject();
+		MetaProjectNature nature = MetaProjectNature.getProjectNature(project);
+		if (nature == null) return classpath;
+		for (File entryPath : nature.getBuildfileClasspath()) {
+			classpath.add(JavaCore.newLibraryEntry(IPath.fromFile(entryPath), null, null));
+		}
+		return classpath;
+	}
+	
 	@Override
 	protected ITypeRoot getInputJavaElement() {
-
-		List<IClasspathEntry> classpath = new ArrayList<IClasspathEntry>();
-		
-		classpath.add(JavaRuntime.getDefaultJREContainerEntry());
-
-		File buildsystemJar = new File("C:\\Users\\marvi\\.meta\\versions\\meta-0.1_build1\\metabuild-core.jar");
-		classpath.add(JavaCore.newLibraryEntry(IPath.fromFile(buildsystemJar), null, null));
-		
 		try {
 			return MetaProjectNature.BUILDFILE_WORKING_COPY_OWNER.newWorkingCopy(
 					this.getEditorInput().getName(), 
-					classpath.toArray(IClasspathEntry[]::new),
-					null);
+					getClasspath().toArray(IClasspathEntry[]::new),
+					null
+			);
 		} catch (JavaModelException e) {
 			e.printStackTrace();
 			return null;
-		}
-		
+		}	
 	}
 	
 }

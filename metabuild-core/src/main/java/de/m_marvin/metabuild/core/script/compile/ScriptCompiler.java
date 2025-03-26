@@ -136,6 +136,10 @@ public class ScriptCompiler {
 		}
 		
 		byte[] classBytes = sourceCompiler.getClassFileManager().getClassBytes(Metabuild.BUILD_SCRIPT_CLASS_NAME);
+		if (classBytes == null) {
+			logger().errort(LOG_TAG, "java compiler error, build file compilation failed!");
+			return false;
+		}
 		target.write(classBytes);
 		
 		return true;

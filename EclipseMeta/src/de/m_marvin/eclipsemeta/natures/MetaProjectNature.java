@@ -102,6 +102,7 @@ public class MetaProjectNature implements IProjectNature {
 	
 	protected final List<MetaTask<MetaProjectNature>> tasks = new ArrayList<>();
 	protected final List<MetaGroup<MetaProjectNature>> groups = new ArrayList<>();
+	protected final List<File> buildfileClasspath = new ArrayList<File>();
 	protected MetaState state = MetaState.UNLOADED;
 	
 	@Override
@@ -155,6 +156,10 @@ public class MetaProjectNature implements IProjectNature {
 	@Override
 	public IProject getProject() {
 		return this.project;
+	}
+	
+	public Collection<File> getBuildfileClasspath() {
+		return this.buildfileClasspath;
 	}
 	
 	public IEclipsePreferences getSettings() {
@@ -303,6 +308,9 @@ public class MetaProjectNature implements IProjectNature {
 					task.accept(SubMonitor.convert(monitor));
 					
 				}
+				
+				buildfileClasspath.clear();
+				buildfileClasspath.addAll(this.meta.getBuildfileClasspath());
 				
 			} catch (Throwable e) {
 				MetaProjectNature.this.changeState(MetaState.ERROR);

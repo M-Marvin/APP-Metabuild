@@ -151,6 +151,11 @@ public interface IMeta {
 	 * @param workingDirectory
 	 */
 	public void setWorkingDirectory(File workingDirectory);
+
+	/**
+	 * Returns a list of all java archives and folders which should be on the buildfile classpath.
+	 */
+	public Collection<File> getBuildfileClasspath();
 	
 	/**
 	 * Attempts to initialize using the build file at the default location.

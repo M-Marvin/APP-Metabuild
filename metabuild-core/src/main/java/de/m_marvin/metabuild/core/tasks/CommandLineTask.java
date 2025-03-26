@@ -3,6 +3,7 @@ package de.m_marvin.metabuild.core.tasks;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -23,7 +24,16 @@ public class CommandLineTask extends BuildTask {
 	}
 	
 	public String[] buildCommand() {
-		String cmdPath = FileUtility.absolute(this.executable).getAbsolutePath();
+		
+		if (this.executable == null)
+			throw BuildScriptException.msg("executable path not set!");
+		
+		File file = FileUtility.absolute(this.executable);
+		if (!file.isFile()) {
+			Optional<File> pathFile = FileUtility.locateOnPath(this.executable.toString());
+			if (pathFile.isPresent()) file = pathFile.get();
+		}
+		String cmdPath = file.getAbsolutePath();
 		List<String> params = new ArrayList<>();
 		params.add(cmdPath);
 		params.addAll(this.arguments);

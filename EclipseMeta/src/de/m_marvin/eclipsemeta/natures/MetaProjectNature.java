@@ -30,6 +30,7 @@ import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.WorkingCopyOwner;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -53,6 +54,8 @@ public class MetaProjectNature implements IProjectNature {
 	public static final String JAVA_NATURE_ID = "org.eclipse.jdt.core.javanature";
 	public static final String C_NATURE_ID = "org.eclipse.cdt.core.cnature";
 	public static final String CPP_NATURE_ID = "org.eclipse.cdt.core.ccnature";
+	
+	public static final WorkingCopyOwner BUILDFILE_WORKING_COPY_OWNER = new WorkingCopyOwner() {};
 	
 	public static enum MetaState {
 		OK,UNLOADED,ERROR;

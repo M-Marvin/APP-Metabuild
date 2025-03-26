@@ -17,6 +17,7 @@ public class Icons {
 	}
 	
 	public static final ImageDescriptor META_ICON = img("icons/obj16/meta.png");
+	public static final ImageDescriptor META_FILE_ICON = img("icons/obj16/meta_file.png");
 	
 	public static final ImageDescriptor INFO_ICON = img("icons/obj16/info.png");
 	public static final ImageDescriptor REFRESH_ICON = img("icons/obj16/refresh.png");

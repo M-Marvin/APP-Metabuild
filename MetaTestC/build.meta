@@ -1,9 +1,7 @@
 
 import java.io.File;
 
-import javax.management.RuntimeErrorException;
-
-import de.m_marvin.metabuild.core.exception.BuildScriptException;
+import de.m_marvin.metabuild.core.tasks.CommandLineTask;
 import de.m_marvin.metabuild.cpp.script.CppBuildScript;
 
 public class Buildfile extends CppBuildScript {
@@ -13,8 +11,6 @@ public class Buildfile extends CppBuildScript {
 		this.projectName = "Test-Project";
 		
 		super.init();
-		
-		
 		
 	}
 	

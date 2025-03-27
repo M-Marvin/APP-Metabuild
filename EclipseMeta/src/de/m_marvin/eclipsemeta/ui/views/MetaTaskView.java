@@ -67,11 +67,8 @@ public class MetaTaskView extends ViewPart {
 		});
 		
 	}
-	
+
 	@Override
-	public void setFocus() {
-		// TODO Auto-generated method stub
-
-	}
-
+	public void setFocus() {}
+	
 }

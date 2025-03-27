@@ -30,7 +30,7 @@ public class CppBuildScript extends BuildScript {
 		this.linkCpp = new CppLinkTask("linkCpp");
 		this.linkCpp.group = "build";
 		this.linkCpp.objectsDir = this.compileCpp.objectsDir;
-		this.linkCpp.outputFile = new File("build/out/" + this.projectName + ".exe"); // TODO
+		this.linkCpp.outputFile = new File("build/out/" + this.projectName + ".exe");
 		this.linkCpp.dependsOn(this.compileCpp);
 		
 		linkage();
@@ -46,14 +46,14 @@ public class CppBuildScript extends BuildScript {
 	@Override
 	public void finish() {
 		
-		CppSourceIncludes.include(this.compileCpp.includeDirs);
+		CppSourceIncludes.include(this.compileCpp.allIncludes());
 		
 	}
 	
 	public void sharedLib() {
 		
 		this.linkCpp.arguments.add("-shared");
-		this.linkCpp.outputFile = new File("build/out/lib" + this.projectName + ".dll"); // TODO
+		this.linkCpp.outputFile = new File("build/out/lib" + this.projectName + ".dll");
 		
 	}
 	

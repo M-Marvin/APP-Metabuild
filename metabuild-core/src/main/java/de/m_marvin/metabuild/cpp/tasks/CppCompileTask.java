@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ public class CppCompileTask extends CommandLineTask {
 
 	public File sourcesDir = new File("src/cpp");
 	public File objectsDir = new File("objects");
+	public File toolchainInclude = new File("../include"); // relative to compiler executable
 	public final Set<File> includeDirs = new HashSet<>();
 	public Predicate<File> sourceFilePredicate = file -> {
 		String extension = FileUtility.getExtension(file);
@@ -148,6 +150,18 @@ public class CppCompileTask extends CommandLineTask {
 		
 	}
 
+	public Collection<File> allIncludes() {
+		List<File> includes = new ArrayList<File>();
+		if (this.executable == null) {
+			Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
+			this.executable = compilerPath.orElse(null);
+		}
+		if (this.executable != null && this.toolchainInclude != null)
+			includes.add(FileUtility.absolute(this.toolchainInclude, this.executable.getParentFile()));
+		includes.addAll(this.includeDirs);
+		return includes;
+	}
+	
 	@Override
 	public String[] buildCommand() {
 		

@@ -9,14 +9,16 @@ public class Buildfile extends CppBuildScript {
 	public void init() {
 		
 		this.projectName = "Test-Project";
-		
+
 		super.init();
+		
+		compileCpp.toolchainInclude = new File("../x86_64-w64-mingw32/include");
 		
 	}
 	
 	public void compillation() {
 		
-		//this.compileCpp.includeDirs.add(new File("E:\\GitHub\\LIBRARY-SerialPortAccess\\JSerialPortAccess\\build\\generated\\sources\\headers\\java\\main"));
+//		this.compileCpp.includeDirs.add(new File("D:\\Programms\\mingw64-ucrt\\x86_64-w64-mingw32\\include"));
 		
 		this.compileCpp.options.add("-DPLATFORM_WIN");
 		
@@ -24,7 +26,7 @@ public class Buildfile extends CppBuildScript {
 	
 	public void linkage() {
 		
-		sharedLib();
+		//sharedLib();
 		
 	}
 	

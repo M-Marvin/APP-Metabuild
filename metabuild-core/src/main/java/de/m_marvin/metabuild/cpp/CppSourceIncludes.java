@@ -8,6 +8,7 @@ import java.util.List;
 
 import de.m_marvin.metabuild.api.core.devenv.ICppSourceIncludes;
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.util.FileUtility;
 
 public class CppSourceIncludes implements ICppSourceIncludes {
 	
@@ -26,7 +27,7 @@ public class CppSourceIncludes implements ICppSourceIncludes {
 	 * Used to pass include directories of dependencies required by this project to external software running the metabuild system, usually an IDE.<br>
 	 */
 	public static void include(Collection<File> includes) {
-		Metabuild.get().addSourceInclude(new CppSourceIncludes(includes));
+		Metabuild.get().addSourceInclude(new CppSourceIncludes(includes.stream().map(FileUtility::absolute).toList()));
 	}
 
 	/**

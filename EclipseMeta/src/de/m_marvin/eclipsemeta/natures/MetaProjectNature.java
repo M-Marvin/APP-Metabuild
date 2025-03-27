@@ -12,6 +12,9 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.eclipse.cdt.core.model.CoreModel;
+import org.eclipse.cdt.core.model.ICProject;
+import org.eclipse.cdt.core.model.IPathEntry;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectNature;
 import org.eclipse.core.resources.IResource;
@@ -42,12 +45,20 @@ import de.m_marvin.eclipsemeta.MetaManager;
 import de.m_marvin.eclipsemeta.ui.MetaUI;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.api.core.IMeta.IStatusCallback;
+import de.m_marvin.metabuild.api.core.devenv.ICppSourceIncludes;
 import de.m_marvin.metabuild.api.core.devenv.IJavaSourceIncludes;
 import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
 import de.m_marvin.metabuild.api.core.tasks.MetaTask;
 
 public class MetaProjectNature implements IProjectNature {
 
+	/**
+	 * TODO EclipseMeta Features
+	 * - Run-Configurations for Java projects
+	 * - Run-Configurations for C projects
+	 * - Creation Wizards (Meta C and Meta Java projects)
+	 */
+	
 	public static final String NATURE_ID = "de.m_marvin.eclipsemeta.metaNature";
 	public static final String TASK_CONFIG_NODE = "metaTaskConfig";
 	
@@ -363,12 +374,22 @@ public class MetaProjectNature implements IProjectNature {
 			
 			monitor.subTask("Load Dependencies ...");
 			
-			// TODO per language implementations
+			processJavaSourceIncludes();
+			processCppSourceIncludes();
 			
-			IJavaProject jp = JavaCore.create(this.project);
+		});
+		
+	}
+	
+	protected void processJavaSourceIncludes() {
+		
+		try {
 			
-			if (jp != null) {
+			if (this.project.hasNature(JAVA_NATURE_ID)) {
 
+				IJavaProject jp = JavaCore.create(this.project);
+				if (jp == null) return;
+				
 				try {
 
 					List<IJavaSourceIncludes> javaIncludes = new ArrayList<>();
@@ -399,7 +420,31 @@ public class MetaProjectNature implements IProjectNature {
 				
 			}
 			
-		});
+		} catch (CoreException e) {}
+		
+	}
+	
+	protected void processCppSourceIncludes() {
+		
+		try {
+			
+			if (this.project.hasNature(C_NATURE_ID)) {
+
+				ICProject cp = CoreModel.getDefault().create(this.project);
+				if (cp == null) return;
+				
+				List<ICppSourceIncludes> cppIncludes = new ArrayList<>();
+				this.meta.getSourceIncludes(cppIncludes, ICppSourceIncludes.CPP_LANGUAGE_ID);
+				
+				IPathEntry[] includeEntries = cppIncludes.stream().flatMap(incl -> incl.getIncludeDirectories().stream().map(
+						entry -> CoreModel.newIncludeEntry(null, null, IPath.fromFile(entry))
+				)).toArray(IPathEntry[]::new);
+				
+				cp.setRawPathEntries(includeEntries, null);
+				
+			}
+			
+		} catch (CoreException e) {}
 		
 	}
 	

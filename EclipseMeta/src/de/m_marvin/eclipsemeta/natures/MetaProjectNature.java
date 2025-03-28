@@ -435,11 +435,6 @@ public class MetaProjectNature implements IProjectNature {
 			)).toArray(IPathEntry[]::new);
 			
 			try {
-				
-				for (IPathEntry e : includeEntries) {
-					System.out.println(e);
-				}
-				
 				cp.setRawPathEntries(includeEntries, null);
 			} catch (CoreException e) {}
 			

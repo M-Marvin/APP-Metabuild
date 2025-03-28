@@ -383,69 +383,68 @@ public class MetaProjectNature implements IProjectNature {
 	
 	protected void processJavaSourceIncludes() {
 		
-		try {
+		if (isJava()) {
+
+			IJavaProject jp = JavaCore.create(this.project);
+			if (jp == null) return;
 			
-			if (this.project.hasNature(JAVA_NATURE_ID)) {
+			try {
 
-				IJavaProject jp = JavaCore.create(this.project);
-				if (jp == null) return;
+				List<IJavaSourceIncludes> javaIncludes = new ArrayList<>();
+				this.meta.getSourceIncludes(javaIncludes, IJavaSourceIncludes.JAVA_LANGUAGE_ID);
+
+				for (IJavaSourceIncludes js : javaIncludes) {
 				
-				try {
-
-					List<IJavaSourceIncludes> javaIncludes = new ArrayList<>();
-					this.meta.getSourceIncludes(javaIncludes, IJavaSourceIncludes.JAVA_LANGUAGE_ID);
-
-					for (IJavaSourceIncludes js : javaIncludes) {
+					List<IClasspathEntry> ncp = new ArrayList<>();
+					Stream.of(jp.getRawClasspath())
+							.filter(cpe -> cpe.getEntryKind() != IClasspathEntry.CPE_LIBRARY)
+							.forEach(ncp::add);
 					
-						List<IClasspathEntry> ncp = new ArrayList<>();
-						Stream.of(jp.getRawClasspath())
-								.filter(cpe -> cpe.getEntryKind() != IClasspathEntry.CPE_LIBRARY)
-								.forEach(ncp::add);
-						
-						for (File binary : js.getSourceJars()) {
-							// TODO javadoc attachments ?
-							File sourceAttachment = js.getSourceAttachments().get(binary);
-							IClasspathEntry cpe = JavaCore.newLibraryEntry(IPath.fromFile(binary), sourceAttachment == null ? null : IPath.fromFile(sourceAttachment), null);
-							ncp.add(cpe);
-						}
-						
-						jp.setRawClasspath(ncp.toArray(IClasspathEntry[]::new), new NullProgressMonitor());
-						
+					for (File binary : js.getSourceJars()) {
+						// TODO javadoc attachments ?
+						File sourceAttachment = js.getSourceAttachments().get(binary);
+						IClasspathEntry cpe = JavaCore.newLibraryEntry(IPath.fromFile(binary), sourceAttachment == null ? null : IPath.fromFile(sourceAttachment), null);
+						ncp.add(cpe);
 					}
 					
-				} catch (JavaModelException e) {
-					System.err.println("Failed to add source includes to classpath:");
-					e.printStackTrace();
+					jp.setRawClasspath(ncp.toArray(IClasspathEntry[]::new), new NullProgressMonitor());
+					
 				}
 				
+			} catch (JavaModelException e) {
+				System.err.println("Failed to add source includes to classpath:");
+				e.printStackTrace();
 			}
 			
-		} catch (CoreException e) {}
-		
+		}
+			
 	}
 	
 	protected void processCppSourceIncludes() {
 		
-		try {
-			
-			if (this.project.hasNature(C_NATURE_ID)) {
+		if (isCpp()) {
 
-				ICProject cp = CoreModel.getDefault().create(this.project);
-				if (cp == null) return;
+			ICProject cp = CoreModel.getDefault().create(this.project);
+			if (cp == null) return;
+			
+			List<ICppSourceIncludes> cppIncludes = new ArrayList<>();
+			this.meta.getSourceIncludes(cppIncludes, ICppSourceIncludes.CPP_LANGUAGE_ID);
+			
+			IPathEntry[] includeEntries = cppIncludes.stream().flatMap(incl -> incl.getIncludeDirectories().stream().map(
+					entry -> CoreModel.newIncludeEntry(null, null, IPath.fromFile(entry))
+			)).toArray(IPathEntry[]::new);
+			
+			try {
 				
-				List<ICppSourceIncludes> cppIncludes = new ArrayList<>();
-				this.meta.getSourceIncludes(cppIncludes, ICppSourceIncludes.CPP_LANGUAGE_ID);
-				
-				IPathEntry[] includeEntries = cppIncludes.stream().flatMap(incl -> incl.getIncludeDirectories().stream().map(
-						entry -> CoreModel.newIncludeEntry(null, null, IPath.fromFile(entry))
-				)).toArray(IPathEntry[]::new);
+				for (IPathEntry e : includeEntries) {
+					System.out.println(e);
+				}
 				
 				cp.setRawPathEntries(includeEntries, null);
-				
-			}
+			} catch (CoreException e) {}
 			
-		} catch (CoreException e) {}
-		
+		}
+			
 	}
 	
 	public List<MetaTask<MetaProjectNature>> getMetaTasks() {

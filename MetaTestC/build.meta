@@ -12,13 +12,9 @@ public class Buildfile extends CppBuildScript {
 
 		super.init();
 		
-		compileCpp.toolchainInclude = new File("../x86_64-w64-mingw32/include");
-		
 	}
 	
 	public void compillation() {
-		
-//		this.compileCpp.includeDirs.add(new File("D:\\Programms\\mingw64-ucrt\\x86_64-w64-mingw32\\include"));
 		
 		this.compileCpp.options.add("-DPLATFORM_WIN");
 		
@@ -27,14 +23,6 @@ public class Buildfile extends CppBuildScript {
 	public void linkage() {
 		
 		//sharedLib();
-		
-	}
-	
-	public void repositories() {
-		
-	}
-	
-	public void dependencies() {
 		
 	}
 	

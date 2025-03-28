@@ -1,6 +1,7 @@
 package de.m_marvin.metabuild.cpp.tasks;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -16,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
@@ -36,7 +40,6 @@ public class CppCompileTask extends CommandLineTask {
 
 	public File sourcesDir = new File("src/cpp");
 	public File objectsDir = new File("objects");
-	public File toolchainInclude = new File("../include"); // relative to compiler executable
 	public final Set<File> includeDirs = new HashSet<>();
 	public Predicate<File> sourceFilePredicate = file -> {
 		String extension = FileUtility.getExtension(file);
@@ -149,16 +152,42 @@ public class CppCompileTask extends CommandLineTask {
 		return this.compile.size() > 0 ? TaskState.OUTDATED : TaskState.UPTODATE;
 		
 	}
-
-	public Collection<File> allIncludes() {
-		List<File> includes = new ArrayList<File>();
+	
+	protected static final Pattern PREPROCESS_PATH_PATTERN = Pattern.compile("#include <\\.\\.\\.> search starts here:([\\S\\s]*)End of search list\\.");
+	
+	public Collection<File> systemIncludes() {
+		
 		if (this.executable == null) {
 			Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
 			this.executable = compilerPath.orElse(null);
 		}
-		if (this.executable != null && this.toolchainInclude != null)
-			includes.add(FileUtility.absolute(this.toolchainInclude, this.executable.getParentFile()));
-		includes.addAll(this.includeDirs);
+		if (this.executable == null) return Collections.emptyList();
+		
+		try {
+			ProcessBuilder pbuilder = new ProcessBuilder(this.executable.getAbsolutePath(), "-v", "-xc++", "null");
+			pbuilder.redirectErrorStream(true);
+			Process process = pbuilder.start();
+			ByteArrayOutputStream stdbuf = new ByteArrayOutputStream();
+			while (process.isAlive()) {
+				stdbuf.write(process.getInputStream().readNBytes(1024));
+			}
+			String out = new String(stdbuf.toByteArray(), StandardCharsets.UTF_8);
+			Matcher m = PREPROCESS_PATH_PATTERN.matcher(out);
+			if (!m.find()) return Collections.emptyList();
+			return m.group(1).lines().map(String::trim).filter(s -> !s.isBlank()).map(File::new).toList();
+		} catch (IOException e) {
+			System.err.println("Unable to run cpp command for preprocessor path");
+			e.printStackTrace();
+		}
+		
+		return Collections.emptyList();
+		
+	}
+	
+	public Collection<File> allIncludes() {
+		List<File> includes = new ArrayList<File>();
+		includes.addAll(systemIncludes());
+		includes.addAll(this.includeDirs.stream().map(FileUtility::absolute).toList());
 		return includes;
 	}
 	

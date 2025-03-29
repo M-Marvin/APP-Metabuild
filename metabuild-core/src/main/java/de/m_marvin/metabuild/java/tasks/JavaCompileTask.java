@@ -19,11 +19,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
@@ -39,6 +38,7 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
@@ -47,8 +47,9 @@ public class JavaCompileTask extends BuildTask {
 
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
-	public final Set<String> options = new HashSet<>();
-	public File classpath = null;
+	public final List<String> options = new ArrayList<>();
+	public Predicate<File> classpathListPredicate = file -> FileUtility.getExtension(file).equals("classpath");
+	public final List<File> classpath = new ArrayList<>();
 	public File stateCache = null; // if not set, will be set by prepare
 	public String sourceCompatibility = null;
 	public String targetCompatibility = null;
@@ -119,12 +120,21 @@ public class JavaCompileTask extends BuildTask {
 		}
 		
 		loadMetadata();
-
-		// Check for changed classpath file
-		Optional<SourceMetaData> oldest = this.sourceMetadata.size() > 0 ? this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst() : Optional.empty();
-		Optional<FileTime> classpath = FileUtility.timestamp(FileUtility.absolute(this.classpath));
-		if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0)
-			this.sourceMetadata.clear(); // clearing the metadata causes all files to be recompiled
+		
+		for (File entry : this.classpath) {
+			
+			File path = FileUtility.absolute(entry);
+			if (path.isFile() && this.classpathListPredicate.test(path)) {
+				
+				// Check for changed classpath file
+				Optional<SourceMetaData> oldest = this.sourceMetadata.size() > 0 ? this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst() : Optional.empty();
+				Optional<FileTime> classpath = FileUtility.timestamp(path);
+				if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0)
+					this.sourceMetadata.clear(); // clearing the metadata causes all files to be recompiled
+				
+			}
+			
+		}
 		
 		List<File> sourceFiles = FileUtility.deepList(srcPath, f -> FileUtility.getExtension(f).equalsIgnoreCase("java")).stream().
 				map(f -> FileUtility.relative(f, srcPath))
@@ -203,39 +213,45 @@ public class JavaCompileTask extends BuildTask {
 		String sourceName = FileUtility.getNameNoExtension(source);
 		SimpleJavaFileObject sourceFileObject = new FileJavaSource(sourceName, source);
 		
-		DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
-		CompilationOutputFileManager fileManager = new CompilationOutputFileManager(javac.getStandardFileManager(diagnostics, null, null));
-		CompilationTask task = javac.getTask(logger().errorWriter(), fileManager, diagnostics, this.options, null, Collections.singleton(sourceFileObject));
-		
-		if (!task.call()) {
-			logger().warnt(logTag(), "problems occured while compiling file: %s", source);
-			for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
-				String info = null;
-				
-				try {
-					long lineNr = diagnostic.getLineNumber();
+		try {
+			
+			DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
+			CompilationOutputFileManager fileManager = new CompilationOutputFileManager(javac.getStandardFileManager(diagnostics, null, null));
+			CompilationTask task = javac.getTask(logger().errorWriter(), fileManager, diagnostics, this.options, null, Collections.singleton(sourceFileObject));
+			
+			if (!task.call()) {
+				logger().warnt(logTag(), "problems occured while compiling file: %s", source);
+				for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
+					String info = null;
 					
-					BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
-					String line = "";
-					for (long i = 0; i < lineNr; i++) line = reader.readLine();
-					reader.close();
+					try {
+						long lineNr = diagnostic.getLineNumber();
+						
+						BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
+						String line = "";
+						for (long i = 0; i < lineNr; i++) line = reader.readLine();
+						reader.close();
+						
+						StringBuffer buff = new StringBuffer();
+						buff.append(line).append("\n");
+						for (long i = 0; i < diagnostic.getColumnNumber() - 1; i++) buff.append(" ");
+						buff.append("^ Here: ").append(diagnostic.getMessage(null));
+						
+						info = buff.toString();
+					} catch (IOException e) {
+						info = "source line unavailable";
+					}
 					
-					StringBuffer buff = new StringBuffer();
-					buff.append(line).append("\n");
-					for (long i = 0; i < diagnostic.getColumnNumber() - 1; i++) buff.append(" ");
-					buff.append("^ Here: ").append(diagnostic.getMessage(null));
-					
-					info = buff.toString();
-				} catch (IOException e) {
-					info = "source line unavailable";
+					logger().warnt(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
 				}
-				
-				logger().warnt(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
+				return Optional.empty();
 			}
-			return Optional.empty();
+
+			return Optional.of(fileManager.getClassFilesOut());
+			
+		} catch (Exception e) {
+			throw BuildScriptException.msg(e, "unexpected error whenn invoking java compiler: ", e.getMessage());
 		}
-		
-		return Optional.of(fileManager.getClassFilesOut());
 		
 	}
 	
@@ -276,24 +292,23 @@ public class JavaCompileTask extends BuildTask {
 			this.options.add(this.targetCompatibility);	
 		}
 		
-		// Add classpath file content to options if set
-		if (this.classpath != null) {
-			File classpathFile = FileUtility.absolute(this.classpath);
-			if (!classpathFile.isFile()) {
-				logger().warnt(logTag(), "classpath file not found: %s", this.classpath);
+		// Add classpath options
+		StringBuffer classpathBuf = new StringBuffer();
+		for (File entry : this.classpath) {
+			File path = FileUtility.absolute(entry);
+			if (path.isFile() && this.classpathListPredicate.test(path)) {
+				String classpath = FileUtility.readFileUTF(path);
+				if (classpath == null)
+					throw BuildException.msg("could not read classpath file: %s", entry);
+				classpathBuf.append(classpath).append(";");
 			} else {
-				try {
-					InputStream is = new FileInputStream(classpathFile);
-					String classpath = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-					is.close();
-					this.options.add("-classpath");
-					this.options.add(classpath);
-				} catch (IOException e) {
-					throw BuildException.msg(e, "could not access classpath file: %s", this.classpath);
-				}
+				classpathBuf.append(path.getAbsolutePath()).append(";");
 			}
 		}
-
+		classpathBuf.append(FileUtility.absolute(this.sourcesDir));
+		this.options.add("-classpath");
+		this.options.add(classpathBuf.toString());
+		
 		logger().infot(logTag(), "compiling source files in: %s", this.sourcesDir);
 		
 		// Compile outdated files

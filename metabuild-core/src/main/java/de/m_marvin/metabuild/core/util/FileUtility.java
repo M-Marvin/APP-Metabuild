@@ -1,7 +1,12 @@
 package de.m_marvin.metabuild.core.util;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -15,10 +20,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.function.Predicate;
+import java.util.zip.ZipFile;
 
 import de.m_marvin.metabuild.core.Metabuild;
 
 public class FileUtility {
+
+	private FileUtility() {}
 	
 	public static List<File> deepList(File dir) {
 		return deepList(dir, File::isFile);
@@ -237,6 +245,38 @@ public class FileUtility {
 			}
 		}
 		return Optional.empty();
+	}
+	
+	public static boolean isArchive(File file) {
+		if (!file.isFile()) return false;
+		try {
+			new ZipFile(file).close();
+			return true;
+		} catch (IOException e) {
+			return false;
+		}
+	}
+	
+	public static String readFileUTF(File file) {
+		try {
+			InputStream is = new FileInputStream(file);
+			String utf = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+			is.close();
+			return utf;
+		} catch (IOException e) {
+			return null;
+		}
+	}
+	
+	public static boolean writeFileUTF(File file, String utf) {
+		try {
+			OutputStream os = new FileOutputStream(file);
+			os.write(utf.getBytes(StandardCharsets.UTF_8));
+			os.close();
+			return true;
+		} catch (IOException e) {
+			return false;
+		}
 	}
 	
 }

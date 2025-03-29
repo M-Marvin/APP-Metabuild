@@ -8,10 +8,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
@@ -21,10 +25,12 @@ import de.m_marvin.metabuild.core.util.FileUtility;
 public class ZipTask extends BuildTask {
 
 	public final Map<File, String> entries = new HashMap<>();
+	public final Set<File> includes = new HashSet<>();
 	public File archive = new File("out.zip");
 	public Predicate<File> filePredicate = f -> true;
 	
 	protected Map<File, String> toArchive;
+	protected Set<File> toInclude;
 	
 	public ZipTask(String name) {
 		super(name);
@@ -33,16 +39,21 @@ public class ZipTask extends BuildTask {
 	
 	protected boolean archiveFile(ZipOutputStream zstream, String eloc, File file) throws IOException {
 		try {
-			InputStream fstream = new FileInputStream(file);
-			byte[] data = fstream.readAllBytes();
-			fstream.close();
+			long size = file.length();
 			
 			ZipEntry zipEntry = new ZipEntry(eloc);
-			zipEntry.setSize(data.length);
+			zipEntry.setSize(size);
 			zipEntry.setTime(System.currentTimeMillis());
 			
 			zstream.putNextEntry(zipEntry);
-			zstream.write(data);
+			InputStream fstream = new FileInputStream(file);
+			byte[] buffer = new byte[2048];
+			while (size > 0) {
+				int len = fstream.read(buffer);
+				zstream.write(buffer, 0, len);
+				size -= len;
+			}
+			fstream.close();
 			zstream.closeEntry();
 			return true;
 		} catch (FileNotFoundException e) {
@@ -51,8 +62,30 @@ public class ZipTask extends BuildTask {
 		}
 	}
 	
-	protected boolean archiveFiles(ZipOutputStream zstream) {
-		for (var entry : this.toArchive.entrySet()) {
+	protected boolean archiveInclude(ZipOutputStream zstream, ZipInputStream archive, ZipEntry entry) throws IOException {
+		try {
+			long size = entry.getSize();
+			zstream.putNextEntry(entry);
+			byte[] buffer = new byte[2048];
+			while (size > 0) {
+				int len = archive.read(buffer, 0, (int) Math.min(size, buffer.length));
+				zstream.write(buffer, 0, len);
+				size -= len;
+			}
+			zstream.closeEntry();
+		} catch (ZipException e) {
+			if (e.getMessage().startsWith("duplicate entry")) {
+				logger().debugt(logTag(), "ignore duplicate entry: %s", entry.getName());
+			} else {
+				throw e;
+			}
+		}
+		archive.closeEntry();
+		return true;
+	}
+	
+	protected boolean archiveFiles(ZipOutputStream zstream, Map<File, String> files) {
+		for (var entry : files.entrySet()) {
 			try {
 				status("archive > " + entry.getValue());
 				logger().debugt(logTag(), "archive file: %s", entry.getValue());
@@ -62,6 +95,28 @@ public class ZipTask extends BuildTask {
 				}
 			} catch (IOException e) {
 				throw BuildException.msg(e, "failed to archive file: %s", entry.getValue());
+			}
+		}
+		return true;
+	}
+	
+	protected boolean archiveIncludes(ZipOutputStream zstream, Set<File> archives) {
+		for (File archiveFile : archives) {
+			try {
+				ZipInputStream archive = new ZipInputStream(new FileInputStream(archiveFile));
+				ZipEntry include;
+				while ((include = archive.getNextEntry()) != null) {
+					if (include.isDirectory()) continue;
+					status("include > " + include.getName() + " - " + archiveFile);
+					logger().debugt(logTag(), "archive included entries: %s - %s", include.getName(), archiveFile);
+					if (!archiveInclude(zstream, archive, include)) {
+						logger().errort(logTag(), "failed to include archive file entry: %s - %s", include.getName(), archiveFile);
+						return false;
+					}
+				}
+				archive.close();
+			} catch (IOException e) {
+				throw BuildException.msg(e, "failed to include archive: %s", archiveFile);
 			}
 		}
 		return true;
@@ -78,15 +133,29 @@ public class ZipTask extends BuildTask {
 		this.toArchive = new HashMap<>();
 		for (var entry : this.entries.entrySet()) {
 			File eloc = new File(entry.getValue());
-			for (File file : FileUtility.deepList(entry.getKey(), f -> f.isFile() && this.filePredicate.test(f))) {
+			File oloc = FileUtility.absolute(entry.getKey());
+			for (File file : FileUtility.deepList(oloc, f -> f.isFile() && this.filePredicate.test(f))) {
 				
 				Optional<FileTime> filetime = FileUtility.timestamp(file);
 				if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
 					timestamp = filetime;
 				
-				File floc = FileUtility.concat(eloc, FileUtility.relative(file, entry.getKey()));
+				File floc = FileUtility.concat(eloc, FileUtility.relative(file, oloc));
 				this.toArchive.put(file, floc.getPath().substring(1).replace('\\', '/'));
 			}
+		}
+		
+		// Get archives to include and determine timestamp
+		this.toInclude = new HashSet<>();
+		for (File entry : this.includes) {
+			File file = FileUtility.absolute(entry);
+			if (!FileUtility.isArchive(file)) continue;
+			
+			Optional<FileTime> filetime = FileUtility.timestamp(file);
+			if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
+				timestamp = filetime;
+			
+			this.toInclude.add(file);
 		}
 		
 		return (timestamp.isEmpty() || lasttime.isEmpty() || timestamp.get().compareTo(lasttime.get()) > 0) ? TaskState.OUTDATED : TaskState.UPTODATE;
@@ -105,7 +174,8 @@ public class ZipTask extends BuildTask {
 			}
 			
 			ZipOutputStream zstream = new ZipOutputStream(new FileOutputStream(archiveFile));
-			if (!archiveFiles(zstream)) return false;
+			if (!archiveFiles(zstream, this.toArchive)) return false;
+			if (!archiveIncludes(zstream, this.toInclude)) return false;
 			zstream.finish();
 			zstream.flush();
 			zstream.close();

@@ -14,6 +14,8 @@ import de.m_marvin.metabuild.java.maven.MavenResolver;
 
 public class MetaLaunch {
 	
+	private MetaLaunch() {}
+	
 	public static void main(String... args) {
 		
 		// Read list of tasks to run

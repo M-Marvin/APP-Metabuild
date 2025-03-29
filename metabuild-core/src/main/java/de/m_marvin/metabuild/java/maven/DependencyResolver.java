@@ -107,12 +107,12 @@ public class DependencyResolver {
 				
 				if (resolveCallback != null) resolveCallback.accept(dep.dependency());
 				
-				logger().info("resolve dependency: '%s'", dep.dependency());
+				//logger().info("resolve dependency: '%s'", dep.dependency());
 				
 				Optional<POM> pom = resolveDependency(dep, mode.apply(dep.dependency()));
 				
 				if (pom.isEmpty())
-					throw BuildException.msg("Unable to find dependency: %s", dep.dependency());
+					throw BuildException.msg("unable to find dependency: %s", dep.dependency());
 				
 				if (this.dependencies.containsKey(dep)) {
 					this.dependencies.put(dep, pom.get());

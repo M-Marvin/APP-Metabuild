@@ -10,6 +10,8 @@ import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class ProcessUtility {
+
+	private ProcessUtility() {}
 	
 	public static int runProcess(Logger logger,  ProcessBuilder processBuilder) throws BuildException {
 		

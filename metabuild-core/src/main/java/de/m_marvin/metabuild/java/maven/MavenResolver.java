@@ -114,6 +114,10 @@ public class MavenResolver {
 			return new URI(this.url + "/" + group.replace('.', '/') + "/" + artifact + "/" + version + "/" + file).toURL();
 		}
 		
+		public String name() {
+			return id == null ? url : id;
+		}
+		
 	}
 	
 	private final List<MavenRepository> repositories = new ArrayList<>();
@@ -156,7 +160,7 @@ public class MavenResolver {
 		
 		for (MavenRepository repository : this.repositories) {
 
-			logger().info("try resolving on [%s]: %s", repository.id, repository.url);
+			logger().info("try resolving on [%s]: %s:%s:%s", repository.name(), group, artifact, version);
 			
 			Optional<POM> pom = tryResolve(repository, group, artifact, version, configurations);
 			if (pom.isPresent()) {
@@ -316,7 +320,7 @@ public class MavenResolver {
 			
 			Optional<Document> artifactMetaDoc = verifyData(artifactMeta.get(), artifactMetaMD5, artifactMetaSHA1, artifactMetaSHA256, artifactMetaSHA512, this.builder::parse);
 			if (artifactMetaDoc.isEmpty()) {
-				logger().warn("invalid hash on repository artifact meta: [%s] %s %s:%s", repository.id, repository.url, group, artifact);
+				logger().warn("invalid hash on repository artifact meta: [%s] %s:%s", repository.name(), group, artifact);
 				return false;
 			}
 			
@@ -396,7 +400,7 @@ public class MavenResolver {
 						boolean result = verifyData(jarStream.get(), jarStreamMD5, jarStreamSHA1, jarStreamSHA256, jarStreamSHA512, s -> true).isPresent();
 						
 						if (!result) {
-							logger().warn("invalid hash for artifact: [%s] %s %s:%s:%s '%s'", repository.id, repository.url, group, artifact, version, config);
+							logger().warn("invalid hash for artifact: [%s] %s:%s:%s '%s'", repository.name(), group, artifact, version, config);
 							return Optional.empty();
 						}
 					}

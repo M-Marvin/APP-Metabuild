@@ -59,7 +59,7 @@ public class MetaManager {
 				return Optional.of(MetaWrapper.loadMetabuild());
 			} catch (Throwable e) {
 				lock.claimed = false;
-				MetaUI.openError("Meta Launch", e.getMessage());
+				MetaUI.openError("Meta Wrapper Exception", "Meta-Wrapper threw unexpected error:", e);
 				e.printStackTrace();
 				return Optional.empty();
 			}

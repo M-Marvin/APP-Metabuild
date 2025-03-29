@@ -1,0 +1,88 @@
+import de.m_marvin.metabuild.java.maven.MavenResolver;
+import de.m_marvin.metabuild.java.script.JavaBuildScript;
+import de.m_marvin.simplelogging.Log;
+
+public class Buildfile extends JavaBuildScript {
+	
+	public String version = "0.1_build1";
+	
+	@Override
+	public void init() {
+		projectName = "metabuild-core";
+		
+		super.init();
+	}
+	
+	@Override
+	public void repositories() {
+		
+		implementation.repository(new MavenResolver.MavenRepository(
+				"GHP JavaRun",
+				"https://maven.pkg.github.com/m-marvin/app-javarun",
+				new MavenResolver.MavenRepository.Credentials(
+						() -> System.getenv("GITHUB_ACTOR"), 
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
+		
+		implementation.repository(new MavenResolver.MavenRepository(
+				"GHP CommandLineParser",
+				"https://maven.pkg.github.com/m-marvin/library-commandlineparser",
+				new MavenResolver.MavenRepository.Credentials(
+						() -> System.getenv("GITHUB_ACTOR"), 
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
+
+		implementation.repository(new MavenResolver.MavenRepository(
+				"GHP SimpleLogging",
+				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
+				new MavenResolver.MavenRepository.Credentials(
+						() -> System.getenv("GITHUB_ACTOR"), 
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
+		
+	}
+	
+	@Override
+	public void dependencies() {
+		
+		// CommandLineParser
+		implementation.add("de.m_marvin.commandlineparser:commandlineutility:2.0");
+		
+		// GSON
+		//implementation "com.google.code.gson:gson:2.9.1"
+		
+		// SimpleLogging
+		implementation.add("de.m_marvin.simplelogging:simplelogging:2.3");
+		
+		// JavaRun
+		implementation.add("de.m_marvin.javarun:javarun:1.2");
+		
+		packageDependencies();
+		
+		super.dependencies();
+		
+	}
+	
+	@Override
+	public void manifest() {
+		
+		jar.metainfo.put("Main-Class", "de.m_marvin.metabuild.core.cli.MetaLaunch");
+		jar.metainfo.put("Implementation-Version", version);
+		jar.metainfo.put("Implementation-Title", projectName);
+		jar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		
+	}
+	
+
+//	apiJar {
+//	    manifest {
+//	        attributes 'Implementation-Version': version
+//	        attributes 'Implementation-Title': project.name + '-API'
+//	        attributes 'Implementation-Vendor-Id': 'de.m_marvin'
+//	    }
+//	}
+	
+}

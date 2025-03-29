@@ -123,6 +123,8 @@ public final class Metabuild implements IMeta {
 		// Set meta properties
 		String titleInfo = Metabuild.class.getPackage().getImplementationTitle();
 		String versionInfo = Metabuild.class.getPackage().getImplementationVersion();
+		if (titleInfo == null) titleInfo = "N/A";
+		if (versionInfo == null) versionInfo = "N/A";
 		System.setProperty(META_TITLE_PROPERTY, titleInfo);
 		System.setProperty(META_VERSION_PROPERTY, versionInfo);
 		
@@ -446,15 +448,24 @@ public final class Metabuild implements IMeta {
 	public boolean initBuild(File buildFile) {
 		if (!initDirectories()) return false;
 		this.registeredTasks.clear();
-		
+
 		buildFile = FileUtility.absolute(buildFile);
-		this.buildscript = this.buildCompiler.loadBuildFile(buildFile);
-		if (this.buildscript == null) {
-			logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
-			return false;
+		if (!buildFile.isFile()) {
+
+			// Initialize dummy build script to allow call to built in tasks
+			this.buildscript = new BuildScript();
+			
+		} else {
+			
+			this.buildscript = this.buildCompiler.loadBuildFile(buildFile);
+			if (this.buildscript == null) {
+				logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
+				return false;
+			}
+			
+			logger().infot(LOG_TAG, "buildfile: %s", buildFile.getName());
+			
 		}
-		
-		logger().infot(LOG_TAG, "buildfile: %s", buildFile.getName());
 		
 		try {
 			
@@ -575,7 +586,7 @@ public final class Metabuild implements IMeta {
 							if (!node.task().isEmpty()) node.task().get().failedDependency();
 							throw BuildException.msg(me, "problem with task '%s' required by '%s'!", thisName, parentName);
 						} else if (e != null) {
-							throw new AssertionError("uncatched exception: ", e.getCause());
+							throw BuildException.msg(e.getCause(), "uncatched exception: %s", e.getMessage());
 						}
 					}
 				}

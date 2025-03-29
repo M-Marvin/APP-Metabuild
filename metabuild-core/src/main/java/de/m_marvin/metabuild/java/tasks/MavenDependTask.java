@@ -1,10 +1,6 @@
 package de.m_marvin.metabuild.java.tasks;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.List;
@@ -14,7 +10,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
-import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
@@ -108,6 +103,11 @@ public class MavenDependTask extends BuildTask {
 				return TaskState.OUTDATED;
 		}
 
+		// Test if classpath file matches
+		String classpath = FileUtility.readFileUTF(classpathFile);
+		if (classpath == null) return TaskState.OUTDATED;
+		if (!classpath.equals(getClasspathString())) return TaskState.OUTDATED;
+		
 		return TaskState.UPTODATE;
 	}
 	
@@ -139,14 +139,8 @@ public class MavenDependTask extends BuildTask {
 			return false;
 		}
 		
-		try {
-			OutputStream os = new FileOutputStream(classpathFile);
-			os.write(getClasspathString().getBytes(StandardCharsets.UTF_8));
-			os.close();
-			return true;
-		} catch (IOException e) {
-			throw BuildException.msg("failed to create classpath file: %s", this.classpath);
-		}
+		FileUtility.writeFileUTF(classpathFile, getClasspathString());
+		return true;
 	}
 	
 }

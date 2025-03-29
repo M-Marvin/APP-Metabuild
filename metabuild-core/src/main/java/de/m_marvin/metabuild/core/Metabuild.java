@@ -647,7 +647,6 @@ public final class Metabuild implements IMeta {
 			
 			if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
 				logger().infot(LOG_TAG, "nothing to do");
-				printStatus();
 				success = true;
 			}
 			
@@ -691,7 +690,7 @@ public final class Metabuild implements IMeta {
 		logger().infot(LOG_TAG, "build finished, shuting down");
 		
 		this.registeredTasks.values().forEach(BuildTask::cleanupTask);
-		
+	 
 		try {
 			if (this.taskExecutor != null) {
 				if (!this.taskExecutor.shutdownNow().isEmpty()) {

@@ -1,16 +1,47 @@
+import java.io.File;
+
+import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.FileTask;
+import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.maven.MavenResolver;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
+import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.simplelogging.Log;
 
 public class Buildfile extends JavaBuildScript {
 	
-	public String version = "0.1_build1";
+	public String version = "0.1_build2";
+	
+	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
 	
 	@Override
 	public void init() {
 		projectName = "metabuild-core";
 		
 		super.init();
+		
+		// Metabuild API jar
+		var apiJar = new JarTask("apiJar");
+		apiJar.group = "build";
+		apiJar.entries.put(compileJava.classesDir, "");
+		apiJar.filePredicate = f -> FileUtility.isIn(f, new File("build/classes/main/java/de/m_marvin/metabuild/api"));
+		apiJar.dependsOn(compileJava);
+		apiJar.dependencyOf(build);
+		apiJar.archive = new File(jar.archive.getParentFile(), FileUtility.getNameNoExtension(jar.archive) + "-api.jar");
+		manifestApi(apiJar);
+		
+		// Copy Metabuild Files into Install Directory
+		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
+		copyBinary.group = "install";
+		copyBinary.dependsOn(jar);
+		var copyAdditional = new FileTask("copyAdditional", FileTask.Action.COPY, new File("src/main/misc"), installDir);
+		copyAdditional.renameFile = true;
+		copyAdditional.group = "install";
+		var install = new BuildTask("install");
+		install.group = "install";
+		install.dependsOn(copyAdditional, copyBinary);
+		
 	}
 	
 	@Override
@@ -60,6 +91,7 @@ public class Buildfile extends JavaBuildScript {
 		// JavaRun
 		implementation.add("de.m_marvin.javarun:javarun:1.2");
 		
+		// Include dependencies into final binary jar
 		packageDependencies();
 		
 		super.dependencies();
@@ -76,13 +108,12 @@ public class Buildfile extends JavaBuildScript {
 		
 	}
 	
-
-//	apiJar {
-//	    manifest {
-//	        attributes 'Implementation-Version': version
-//	        attributes 'Implementation-Title': project.name + '-API'
-//	        attributes 'Implementation-Vendor-Id': 'de.m_marvin'
-//	    }
-//	}
+	public void manifestApi(JarTask apiJar) {
+		
+		apiJar.metainfo.put("Implementation-Version", version);
+		apiJar.metainfo.put("Implementation-Title", projectName + "-api");
+		apiJar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		
+	}
 	
 }

@@ -20,6 +20,7 @@ public class JavaBuildScript extends BuildScript {
 	public MavenDependTask runtime;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
+	public BuildTask build;
 	
 	@Override
 	public void init() {
@@ -51,7 +52,7 @@ public class JavaBuildScript extends BuildScript {
 		dependencies();
 		manifest();
 		
-		var build = new BuildTask("build");
+		build = new BuildTask("build");
 		build.group = "build";
 		build.dependsOn(jar);
 		

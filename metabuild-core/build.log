@@ -1,8 +1,172 @@
-29.03.2025_16:54:50: [DEBUG] : JVM runtime: 21.0.3
-29.03.2025_16:54:50: [DEBUG] : Meta runtime: 0.1_build1
-29.03.2025_16:54:50: [DEBUG] : Meta home: C:\Users\marvi\.meta\versions\meta-0.1_build1
-29.03.2025_16:54:50: [ INFO] Metabuild: buildfile: build.meta
-29.03.2025_16:54:50: [ INFO] Metabuild: begin build init phase
-29.03.2025_16:54:50: [ INFO] Metabuild: skipping build run phase
-29.03.2025_16:54:50: [ INFO] Metabuild: build finished, shuting down
-29.03.2025_16:54:50: [ INFO] Metabuild: TASKS: 6  UP_TO_DATE: 5  FAILED: 0
+03.04.2025_19:48:02: [DEBUG] : JVM runtime: 21.0.3
+03.04.2025_19:48:02: [DEBUG] : Meta runtime: 0.1_build2
+03.04.2025_19:48:02: [DEBUG] : Meta home: C:\Users\marvi\.meta\versions\meta-0.1_build1
+03.04.2025_19:48:02: [ INFO] Metabuild: buildfile: build.meta
+03.04.2025_19:48:02: [ INFO] Metabuild: begin build init phase
+03.04.2025_19:48:02: [ INFO] Metabuild: begin build run phase
+03.04.2025_19:48:02: [ INFO] undefined/copyAdditional: copy files: src\main\misc -> C:\Users\marvi\.meta\versions\meta-0.1_build2
+03.04.2025_19:48:02: [ INFO] java_compile/compileJava: compiling source files in: src\main\java
+03.04.2025_19:48:02: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\Metabuild.java
+03.04.2025_19:48:03: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\cpp\CppSourceIncludes.java
+03.04.2025_19:48:03: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\JavaSourceIncludes.java
+03.04.2025_19:48:03: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\IMeta.java
+03.04.2025_19:48:03: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\cli\MetaLaunch.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\cli\OutputHandler.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\exception\BuildException.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\exception\BuildScriptException.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\exception\MetaInitError.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\exception\MetaScriptException.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\script\BuildScript.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\script\BuiltinScript.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\script\TaskType.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\BuildTask.java
+03.04.2025_19:48:04: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\CommandLineTask.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\FileTask.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\InitTask.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\RootTask.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\tasks\ZipTask.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\util\FileUtility.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\util\ProcessUtility.java
+03.04.2025_19:48:05: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\util\SkipOptional.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\cpp\script\CppBuildScript.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\cpp\tasks\CppCompileTask.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\cpp\tasks\CppLinkTask.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\maven\DependencyResolver.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\maven\MavenResolver.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\script\JavaBuildScript.java
+03.04.2025_19:48:06: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\tasks\JarTask.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\tasks\JavaCompileTask.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\tasks\JavaRunClasspathTask.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\java\tasks\MavenDependTask.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\devenv\ICppSourceIncludes.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\devenv\IJavaSourceIncludes.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\devenv\ISourceIncludes.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\tasks\MetaGroup.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\api\core\tasks\MetaTask.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\script\compile\ScriptCompiler.java
+03.04.2025_19:48:07: [DEBUG] java_compile/compileJava: compiling source file: de\m_marvin\metabuild\core\script\compile\SingleFileClassLoader.java
+03.04.2025_19:48:07: [ INFO] make_archive/jar: make archive from files: build\libs\metabuild-core.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive manifest
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/Metabuild.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/script/BuiltinScript.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/tasks/MetaGroup.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$POM$Artifact.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$MavenRepository$Credentials$1.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JavaCompileTask$CompilationOutputFileManager.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/exception/BuildScriptException.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JarTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/JavaSourceIncludes.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/DependencyResolver.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/devenv/IJavaSourceIncludes.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/exception/MetaScriptException.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$POM.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/devenv/ICppSourceIncludes.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/FileTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/script/compile/ScriptCompiler.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/DependencyResolver$QueryMode.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/BuildTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/Metabuild$TaskNode.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$MavenRepository.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/cpp/tasks/CppLinkTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/IMeta$IStatusCallback.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/InitTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/cli/MetaLaunch.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/DependencyResolver$Dependency.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/cpp/CppSourceIncludes.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/cli/OutputHandler$1.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JavaRunClasspathTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JavaCompileTask$FileJavaSource.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/CommandLineTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/script/TaskType.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/tasks/MetaTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/cpp/script/CppBuildScript.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/exception/BuildException.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$POM$Scope.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/script/JavaBuildScript.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/devenv/ISourceIncludes.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/util/ProcessUtility.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/cpp/tasks/CppCompileTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JavaCompileTask$SourceMetaData.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/exception/MetaInitError.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/script/compile/SingleFileClassLoader.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/JavaCompileTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/util/SkipOptional.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$MavenRepository$Credentials.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/cli/OutputHandler.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/MavenDependTask$Dependency.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/util/FileUtility.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/script/BuildScript.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/api/core/IMeta.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/FileTask$Action.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/ZipTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$POM$ArtifactAbs.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/tasks/MavenDependTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/BuildTask$TaskState.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/core/tasks/RootTask.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive file: de/m_marvin/metabuild/java/maven/MavenResolver$ExceptionFunction.class
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: include classpath archives: build\runtime.classpath
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: META-INF/MANIFEST.MF - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: ignore duplicate entry: META-INF/MANIFEST.MF
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/api/FormatLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/api/Logger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/FilteredLogger$LogFilter.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/FilteredLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/LineConsumerLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/MultiLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/SimpleLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/StacktraceLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/StreamLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/SynchronizedLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/SystemLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/TagLogger$LogFilter.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/impl/TagLogger.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/Log.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/LogLevel.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/misc/LogFileProvider.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/misc/LogWriter.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/misc/ReadBackLogFileProvider$1.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/misc/ReadBackLogFileProvider.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/simplelogging/misc/WriterOutputStream.class - C:\Users\marvi\.meta\files\de.m_marvin.simplelogging\simplelogging\2.3\simplelogging-2.3.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: META-INF/MANIFEST.MF - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: ignore duplicate entry: META-INF/MANIFEST.MF
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/MemoryClassLoader.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/PreProcessor$SkriptSource.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/PreProcessor.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/SourceCompiler$BytesJavaClass.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/SourceCompiler$InMemoryFileManager.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/SourceCompiler$StringJavaSource.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/compile/SourceCompiler.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/javarun/JavaRun.class - C:\Users\marvi\.meta\files\de.m_marvin.javarun\javarun\1.2\javarun-1.2.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: META-INF/MANIFEST.MF - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: ignore duplicate entry: META-INF/MANIFEST.MF
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/arguments/Arguments.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/arguments/CommandArgumentParser$Option.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/arguments/CommandArgumentParser.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/CommandLineReader.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/BooleanArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/CommandArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/DoubleArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/EnumArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/FloatArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/IntegerArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/LongArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/arguments/StringArgument.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/CommandContext.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/Commands.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/ArgumentCommandNode.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/CommandNode$Command.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/CommandNode$ContextModifier.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/CommandNode$NodeResult.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/CommandNode.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/LiteralCommandNode.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/commands/node/RootCommandNode.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/exception/CommandArgumentException.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/exception/CommandException.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/exception/CommandSynthaxException.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/StringFormatException.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [DEBUG] make_archive/jar: archive included entries: de/m_marvin/cliutil/StringUtility.class - C:\Users\marvi\.meta\files\de.m_marvin.commandlineparser\commandlineutility\2.0\commandlineutility-2.0.jar
+03.04.2025_19:48:07: [ INFO] undefined/copyBinary: copy files: build\libs\metabuild-core.jar -> C:\Users\marvi\.meta\versions\meta-0.1_build2
+03.04.2025_19:48:07: [ INFO] Metabuild: build completed
+03.04.2025_19:48:07: [ INFO] Metabuild: build finished, shuting down
+03.04.2025_19:48:07: [ INFO] Metabuild: TASKS: 10  UP_TO_DATE: 8  FAILED: 0

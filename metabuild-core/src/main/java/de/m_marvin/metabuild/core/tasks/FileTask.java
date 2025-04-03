@@ -19,12 +19,22 @@ public class FileTask extends BuildTask {
 	public Action action;
 	public File target;
 	public File destination;
+	public boolean renameFile;
+
+	public FileTask(String name, Action action, File from, File to, boolean rename) {
+		super(name);
+		this.action = action;
+		this.target = from;
+		this.destination = to;
+		this.renameFile = rename;
+	}
 	
 	public FileTask(String name, Action action, File from, File to) {
 		super(name);
 		this.action = action;
 		this.target = from;
 		this.destination = to;
+		this.renameFile = false;
 	}
 	
 	public FileTask(String name, Action action, File target) {
@@ -32,6 +42,7 @@ public class FileTask extends BuildTask {
 		this.action = action;
 		this.target = target;
 		this.destination = null;
+		this.renameFile = false;
 	}
 	
 	public FileTask(String name) {
@@ -80,14 +91,18 @@ public class FileTask extends BuildTask {
 			return true;
 		case MOVE:
 			logger().infot(logTag(), "move files: %s -> %s", this.target, this.destination);
-			if (!FileUtility.move(FileUtility.absolute(this.target), FileUtility.absolute(this.destination))) {
+			if (!this.destination.getParentFile().isDirectory())
+				this.destination.getParentFile().mkdirs();
+			if (!FileUtility.move(FileUtility.absolute(this.target), FileUtility.absolute(this.destination), this.renameFile)) {
 				logger().errort(logTag(), "failed to move all files!");
 				return false;
 			}
 			return true;
 		case COPY:
 			logger().infot(logTag(), "copy files: %s -> %s", this.target, this.destination);
-			if (!FileUtility.copy(FileUtility.absolute(this.target), FileUtility.absolute(this.destination))) {
+			if (!this.destination.getParentFile().isDirectory())
+				this.destination.getParentFile().mkdirs();
+			if (!FileUtility.copy(FileUtility.absolute(this.target), FileUtility.absolute(this.destination), this.renameFile)) {
 				logger().errort(logTag(), "failed to copy all files!");
 				return false;
 			}

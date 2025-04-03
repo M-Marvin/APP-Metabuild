@@ -1,6 +1,7 @@
 package de.m_marvin.metabuild.core.script;
 
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.simplelogging.api.Logger;
 
 /**
@@ -20,8 +21,18 @@ public class BuildScript {
 	 */
 	public void finish() {}
 	
+	/**
+	 * Helper method to get an logger instance for printing messages.
+	 */
 	public Logger logger() {
 		return Metabuild.get().logger();
+	}
+
+	/**
+	 * Helper method to get an task by its name.
+	 */
+	protected BuildTask taskNamed(String name) {
+		return Metabuild.get().taskNamed(name);
 	}
 	
 }

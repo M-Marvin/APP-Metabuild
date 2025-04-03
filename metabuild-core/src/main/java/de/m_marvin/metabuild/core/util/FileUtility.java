@@ -57,7 +57,7 @@ public class FileUtility {
 	public static File absolute(File path, File base) {
 		Objects.requireNonNull(path);
 		Objects.requireNonNull(base);
-		return Paths.get(base.getPath()).resolve(path.getPath()).toFile();
+		return Paths.get(base.getPath()).resolve(path.getPath()).normalize().toFile();
 	}
 	
 	public static File relative(File path) {
@@ -171,7 +171,7 @@ public class FileUtility {
 	protected static boolean relocate(File from, File to, boolean rename, boolean copy) {
 		File t = rename ? to : new File(to, from.getName());
 		if (from.isDirectory()) {
-			if (!t.exists() && !t.mkdir()) return false;
+			if (!t.exists() && !t.mkdirs()) return false;
 			for (File f : from.listFiles()) {
 				relocate(f, t, false, copy);
 			}
@@ -204,30 +204,22 @@ public class FileUtility {
 			}
 		}
 		return file.delete();
-	}
-	
+	}	
+
 	public static boolean move(File from, File to) {
-		if (!to.exists()) {
-			return relocate(from, to, true, false);
-		} else if (from.isFile() && to.isFile()) {	
-			return relocate(from, to, true, false);
-		} else if (to.isDirectory()) {
-			return relocate(from, to, false, false);
-		} else {
-			return false;
-		}	
+		return move(from, to, false);
+	}
+
+	public static boolean move(File from, File to, boolean rename) {
+		return relocate(from, to, rename, false);
 	}
 
 	public static boolean copy(File from, File to) {
-		if (!to.exists()) {
-			return relocate(from, to, true, true);
-		} else if (from.isFile() && to.isFile()) {	
-			return relocate(from, to, true, true);
-		} else if (to.isDirectory()) {
-			return relocate(from, to, false, true);
-		} else {
-			return false;
-		}	
+		return copy(from, to, false);
+	}
+	
+	public static boolean copy(File from, File to, boolean rename) {
+		return relocate(from, to, rename, true);
 	}
 	
 	public static Optional<File> locateOnPath(String nameOrPath) {
@@ -277,6 +269,12 @@ public class FileUtility {
 		} catch (IOException e) {
 			return false;
 		}
+	}
+	
+	public static boolean isIn(File path, File parent) {
+		File f1 = absolute(path);
+		File f2 = absolute(parent);
+		return f1.toPath().startsWith(f2.toPath());
 	}
 	
 }

@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
+import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.simplelogging.api.Logger;
 
@@ -19,6 +20,7 @@ public class BuildTask {
 	public String group;
 	public TaskState state;
 	
+	private BuildScript buildscript;
 	private Consumer<String> statusCallback;
 	
 	/**
@@ -27,8 +29,20 @@ public class BuildTask {
 	 */
 	public BuildTask(String name) {
 		this.name = name;
-		if (!Metabuild.get().registerTask(this))
+		if (this.getClass() != RootTask.class && !Metabuild.get().registerTask(this))
 			throw BuildScriptException.msg("failed to construct new task '%s'", name);
+	}
+	
+	public void setBuildscript(BuildScript buildscript) {
+		this.buildscript = buildscript;
+	}
+	
+	public BuildScript buildscript() {
+		return this.buildscript;
+	}
+	
+	public String fullName() {
+		return this.buildscript.buildName + ":" + this.name;
 	}
 	
 	/**

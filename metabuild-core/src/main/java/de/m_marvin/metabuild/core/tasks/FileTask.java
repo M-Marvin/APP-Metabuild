@@ -58,11 +58,11 @@ public class FileTask extends BuildTask {
 		} else if (this.action != Action.DELETE && this.destination == null) {
 			throw BuildException.msg("file task not configured!");
 		}
-
+		
 		File targetFile = FileUtility.absolute(this.target);
 		
 		if (this.action == Action.COPY) {
-			File destFile = FileUtility.absolute(this.destination);
+			File destFile = this.renameFile ? FileUtility.absolute(this.destination) : new File(FileUtility.absolute(this.destination), targetFile.getName());
 			long toReplace = FileUtility.deepList(targetFile).stream()
 					.filter(file -> {
 						File df = FileUtility.absolute(FileUtility.relative(file, targetFile), destFile);

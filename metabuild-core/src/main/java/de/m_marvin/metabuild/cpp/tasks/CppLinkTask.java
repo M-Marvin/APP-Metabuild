@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.CommandLineTask;
@@ -87,7 +88,7 @@ public class CppLinkTask extends CommandLineTask {
 		// Try to locate linker executable
 		Optional<File> linkerPath = FileUtility.locateOnPath(this.linker);
 		if (linkerPath.isEmpty()) {
-			throw BuildScriptException.msg("failed to locate linker: %s", this.linker);
+			throw BuildException.msg("failed to locate linker: %s", this.linker);
 		}
 		this.executable = linkerPath.get();
 		logger().infot(logTag(), "located linker: %s", this.executable.getAbsolutePath());
@@ -98,7 +99,7 @@ public class CppLinkTask extends CommandLineTask {
 		File outputFile = FileUtility.absolute(this.outputFile);
 		File outputDir = outputFile.getParentFile();
 		if (!outputDir.isDirectory() && !outputDir.mkdirs()) {
-			throw BuildScriptException.msg("unable to create output directory: %s", outputDir.getAbsolutePath());
+			throw BuildException.msg("unable to create output directory: %s", outputDir.getAbsolutePath());
 		}
 		
 		return super.run();

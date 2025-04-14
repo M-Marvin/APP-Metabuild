@@ -17,6 +17,28 @@ import de.m_marvin.metabuild.api.core.tasks.MetaTask;
  */
 public interface IMeta {
 
+	public static enum MetaState {
+		ERROR(false),
+		PREINIT(false),
+		IDLE(false),
+		INIT(true),
+		READY(true),
+		PREPARE(true),
+		RUN(true),
+		FINISH(true),
+		SHUTDOWN(true);
+		
+		private final boolean isRunning;
+		
+		private MetaState(boolean running) {
+			this.isRunning = running;
+		}
+		
+		public boolean isRunning() {
+			return isRunning;
+		}
+	}
+	
 	public interface IStatusCallback {
 		
 		public void taskCount(int taskCount);
@@ -39,7 +61,7 @@ public interface IMeta {
 	public static final int DEFAULT_TASK_THREADS = 8;
 	
 	public static final String BUILD_SCRIPT_CLASS_NAME = "Buildfile";
-	public static final Pattern TASK_NAME_FILTER = Pattern.compile("[\\d\\w]+");
+	public static final Pattern TASK_NAME_FILTER = Pattern.compile("((?<buildname>[\\d\\w]*):|)(?<taskname>[\\d\\w]+)");
 
 	public static final String DEPENDENCY_TASK_GROUP = "depend";
 	public static final String META_PLUGIN_LOCATION = "meta/plugins";
@@ -59,6 +81,8 @@ public interface IMeta {
 			throw new LayerInstantiationException("could not create dynamic metabuild instance!", e);
 		}
 	}
+	
+	public MetaState getState();
 
 	/**
 	 * Closes and releases the metabuild instance, after that, a new instance can be created.

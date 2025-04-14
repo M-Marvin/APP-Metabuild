@@ -51,7 +51,7 @@ public class FileUtility {
 	
 	public static File absolute(File path) {
 		Objects.requireNonNull(path);
-		return absolute(path, Metabuild.get().workingDir());
+		return absolute(path, Metabuild.get().buildWorkingDir());
 	}
 
 	public static File absolute(File path, File base) {
@@ -62,7 +62,7 @@ public class FileUtility {
 	
 	public static File relative(File path) {
 		Objects.requireNonNull(path);
-		return relative(path, Metabuild.get().workingDir());
+		return relative(path, Metabuild.get().buildWorkingDir());
 	}
 	
 	public static File relative(File path, File base) {

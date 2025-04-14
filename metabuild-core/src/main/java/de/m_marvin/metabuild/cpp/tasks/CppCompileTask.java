@@ -226,7 +226,7 @@ public class CppCompileTask extends CommandLineTask {
 		// Try to locate compiler executable
 		Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
 		if (compilerPath.isEmpty()) {
-			throw BuildScriptException.msg("failed to locate cpp compiler: %s", this.compiler);
+			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
 		}
 		this.executable = compilerPath.get();
 		logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
@@ -245,7 +245,7 @@ public class CppCompileTask extends CommandLineTask {
 			logger().infot(logTag(), "compiling source file: %s", sourceFile.getAbsolutePath());
 			
 			if (!objectDir.isDirectory() && !objectDir.mkdirs()) {
-				throw BuildScriptException.msg("unable to create object output directory: %s", objectDir.getAbsolutePath());
+				throw BuildException.msg("unable to create object output directory: %s", objectDir.getAbsolutePath());
 			}
 			
 			if (!super.run()) success = false;

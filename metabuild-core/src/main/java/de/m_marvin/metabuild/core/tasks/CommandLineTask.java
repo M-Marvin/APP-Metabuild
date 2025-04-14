@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
+import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.core.util.ProcessUtility;
 
@@ -26,7 +27,7 @@ public class CommandLineTask extends BuildTask {
 	public String[] buildCommand() {
 		
 		if (this.executable == null)
-			throw BuildScriptException.msg("executable path not set!");
+			throw BuildException.msg("executable path not set!");
 		
 		File file = FileUtility.absolute(this.executable);
 		if (!file.isFile()) {
@@ -53,7 +54,7 @@ public class CommandLineTask extends BuildTask {
 		if (command.length == 0) return true;
 		
 		ProcessBuilder processBuilder = new ProcessBuilder(command);
-		processBuilder.directory(Metabuild.get().workingDir());
+		processBuilder.directory(Metabuild.get().buildWorkingDir());
 		
 		try {
 			// Start process
@@ -61,7 +62,7 @@ public class CommandLineTask extends BuildTask {
 			int exitCode = ProcessUtility.runProcess(logger(), processBuilder);
 			
 			return this.exitCondition.test(exitCode);
-		} catch (BuildScriptException e) {
+		} catch (MetaScriptException e) {
 			throw BuildException.msg(e, "failed to run command: ", command[0]);
 		}
 		

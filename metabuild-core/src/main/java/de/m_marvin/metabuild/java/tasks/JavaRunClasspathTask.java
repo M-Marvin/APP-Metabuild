@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.BuildScriptException;
+import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
@@ -91,7 +92,7 @@ public class JavaRunClasspathTask extends BuildTask {
 			
 			logger().warnt(logTag(), "process terminated, exit code: %d", exitCode);
 			return true;
-		} catch (BuildScriptException e) {
+		} catch (MetaScriptException e) {
 			throw BuildException.msg(e, "failed to run java process: %s", javaExecutable.get());
 		}
 		

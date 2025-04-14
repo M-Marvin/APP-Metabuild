@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -24,6 +25,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -84,8 +86,12 @@ public final class Metabuild implements IMeta {
 	private boolean skipTaskRun = false;
 	/* If all tasks should be run even if they are up to date */
 	private boolean forceRunTasks = false;
-	/* Currently loaded build script instance */
-	private BuildScript buildscript;
+	/* Current state of this metabuild instance */
+	private MetaState phase = MetaState.PREINIT;
+	/* Currently active build script instance */
+	private List<BuildScript> buildstack = new ArrayList<>();
+	/* Imported build script instances */
+	private Map<String, BuildScript> imports = new HashMap<String, BuildScript>();
 	/* Task to TaskNode map, nodes combine one BuildTask and its dependent tasks */
 	private Map<BuildTask, TaskNode> task2node = new HashMap<>();
 	/* Root TaskNode for the current build task tree */
@@ -138,6 +144,11 @@ public final class Metabuild implements IMeta {
 	}
 	
 	@Override
+	public MetaState getState() {
+		return this.phase;
+	}
+	
+	@Override
 	public void close() {
 		if (this.logStream != null) {
 			try {
@@ -149,7 +160,31 @@ public final class Metabuild implements IMeta {
 		this.taskDependencies.clear();
 		this.sourceIncludes.clear();
 		this.taskTree = null;
-		this.buildscript = null;
+		this.buildstack.clear();
+		stateTransition(MetaState.IDLE, MetaState.PREINIT, MetaState.READY);
+	}
+	
+	private void stateTransition(MetaState to, MetaState... from) {
+		if (to == MetaState.ERROR) {
+			logger().debugt(LOG_TAG, "STATE TRANSITION: %s >>> %s", this.phase.name(), to.name());
+			logger().debugt(LOG_TAG, "UNRECOVERABLE ERROR TERMINATION REQUIRED");
+			this.phase = MetaState.ERROR;
+			return;
+		}
+		if (this.phase == to) {
+			logger().debugt(LOG_TAG, "STATE NO TRANSITION: %s", this.phase.name());
+			return;
+		}
+		for (MetaState s : from)
+			if (s == this.phase) {
+				logger().debugt(LOG_TAG, "STATE TRANSITION: %s >>> %s", this.phase.name(), to.name());
+				this.phase = to;
+				return;
+			}
+		logger().debugt(LOG_TAG, "INVALID STATE TRANSITION: %s >X> %s", this.phase.name(), to.name());
+		this.phase = MetaState.ERROR;
+		logger().debugt(LOG_TAG, "STATE ERROR TERMINATION REQUIRED");
+		throw BuildScriptException.msg("Illegal state transition error: %s to %s", this.phase.name(), to.name());
 	}
 	
 	@Override
@@ -157,14 +192,15 @@ public final class Metabuild implements IMeta {
 		if (instance != null) {
 			if (instance != this)
 				throw MetaInitError.msg("termination call on non active instance of metabuild!");
-			instance.close();
 		}
 		instance = null;
 	}
 
 	@Override
 	public void setCacheDirectory(File cacheDirectory) {
-		this.cacheDirectory = FileUtility.absolute(cacheDirectory);
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
+		this.cacheDirectory = FileUtility.absolute(cacheDirectory, workingDir());
 	}
 
 	/**
@@ -172,7 +208,9 @@ public final class Metabuild implements IMeta {
 	 */
 	@Override
 	public void setLogFile(File logFile) {
-		this.logFile = FileUtility.absolute(logFile);
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
+		this.logFile = FileUtility.absolute(logFile, workingDir());
 	}
 	
 	public File getLogFile() {
@@ -219,11 +257,15 @@ public final class Metabuild implements IMeta {
 
 	@Override
 	public void setTerminalOutput(PrintStream print, boolean printUI) {
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		if (this.outputHandler != null) return; // Can only be called once, the removal of the handler is not implemented
 		this.outputHandler = new OutputHandler(this, print, printUI);
 	}
 	
 	public void setConsoleInputTarget(OutputStream target) {
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		this.consoleStreamTarget = target;
 		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
 			ForkJoinPool.commonPool().execute(() -> {
@@ -240,6 +282,8 @@ public final class Metabuild implements IMeta {
 
 	@Override
 	public void setConsoleStreamInput(InputStream input) {
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		if (input == null) {
 			this.consoleStream = InputStream.nullInputStream();
 		} else {
@@ -249,6 +293,8 @@ public final class Metabuild implements IMeta {
 	
 	@Override
 	public void setLogStreamOutput(Object output) {
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		if (output instanceof OutputStream logStream) {
 			this.terminalLogger = new StreamLogger(logStream, StandardCharsets.UTF_8, true);
 		} else if (output instanceof Logger logger) {
@@ -279,15 +325,20 @@ public final class Metabuild implements IMeta {
 	 * @return true if and only if the task was not already registered, has a valid name, and could be registered
 	 */
 	public boolean registerTask(BuildTask task) {
-		if (!TASK_NAME_FILTER.matcher(task.name).matches()) {
-			logger().warnt(LOG_TAG, "Task name '%s' is invalid, needs to match [\\d\\w]+!", task.name);
+		BuildScript buildscript = peekBuild();
+		task.setBuildscript(buildscript);
+		String fullTaskName = task.fullName();
+		if (getState() != MetaState.INIT)
+			throw BuildScriptException.msg("attempt to register task outside INIT phase: %s", fullTaskName);
+		if (!TASK_NAME_FILTER.matcher(fullTaskName).matches()) {
+			logger().warnt(LOG_TAG, "task name '%s' is invalid, needs to match %s!", fullTaskName, IMeta.TASK_NAME_FILTER);
 			return false;
 		}
-		if (this.registeredTasks.containsKey(task.name)) {
-			logger().warnt(LOG_TAG, "Task '%s' already registered!", task.name);
+		if (this.registeredTasks.containsKey(fullTaskName)) {
+			logger().warnt(LOG_TAG, "task '%s' already registered!", fullTaskName);
 			return false;
 		}
-		this.registeredTasks.put(task.name, task);
+		this.registeredTasks.put(fullTaskName, task);
 		return true;
 	}
 	
@@ -297,6 +348,8 @@ public final class Metabuild implements IMeta {
 	 * @param includes The dependencies to add to the includes wrapped in an language specific class
 	 */
 	public void addSourceInclude(ISourceIncludes includes) {
+		if (getState() != MetaState.FINISH)
+			throw BuildScriptException.msg("attempt to add source includes outside FINISH phase!");
 		this.sourceIncludes.add(includes);
 	}
 	
@@ -306,9 +359,9 @@ public final class Metabuild implements IMeta {
 	 * @return The task with the name or null if none was found
 	 */
 	public BuildTask taskNamed(String name) {
+		if (!name.contains(":")) name = ":" + name;
 		if (!this.registeredTasks.containsKey(name)) {
-			logger.warnt(LOG_TAG, "No task named '%s' is registered!", name);
-			return null;
+			throw BuildScriptException.msg("no task named '%s' is registered!", name);
 		}
 		return this.registeredTasks.get(name);
 	}
@@ -319,10 +372,12 @@ public final class Metabuild implements IMeta {
 	 * @param dependencies The dependencies to add
 	 */
 	public void taskDepend(BuildTask task, BuildTask... dependencies) {
+		if (getState() != MetaState.INIT)
+			throw BuildScriptException.msg("attempt to register task dependency outside INIT phase!");
 		if (task == null) return;
-		Set<String> dep = this.taskDependencies.get(task.name);
-		if (dep == null) this.taskDependencies.put(task.name, dep = new HashSet<>());
-		dep.addAll(Stream.of(dependencies).filter(t -> t != null).map(t -> t.name).toList());
+		Set<String> dep = this.taskDependencies.get(task.fullName());
+		if (dep == null) this.taskDependencies.put(task.fullName(), dep = new HashSet<>());
+		dep.addAll(Stream.of(dependencies).filter(t -> t != null).map(t -> t.fullName()).toList());
 	}
 	
 	@Override
@@ -334,9 +389,9 @@ public final class Metabuild implements IMeta {
 					group = Optional.of(new MetaGroup<>(ref, t.group));
 					groups.add(group.get());
 				}
-				tasks.add(new MetaTask<>(ref, group, t.name));
+				tasks.add(new MetaTask<>(ref, group, t.fullName()));
 			} else {
-				tasks.add(new MetaTask<>(ref, Optional.empty(), t.name));
+				tasks.add(new MetaTask<>(ref, Optional.empty(), t.fullName()));
 			}
 		});
 	}
@@ -357,11 +412,16 @@ public final class Metabuild implements IMeta {
 	}
 	
 	/**
-	 * Initialized directories and files such as the cache directory and the log file
-	 * @return true if and only if all necessary directories and files could be created
+	 * Initialized directories and files such as the cache directory and the log file and ensures the instance to be in IDLE state
+	 * @return true if and only if all necessary directories and files could be created and the meta instacne if now in IDLE state
 	 */
-	public boolean initDirectories() {
-		close();
+	public boolean preInit() {
+		if (this.phase.isRunning()) {
+			close();
+			return true;
+		}
+		
+		if (this.phase == MetaState.IDLE) return true;
 		
 		if (this.workingDirectory == null) setWorkingDirectory(DEFAULT_CACHE_DIRECTORY);
 		if (this.cacheDirectory == null) setCacheDirectory(DEFAULT_CACHE_DIRECTORY);
@@ -398,11 +458,15 @@ public final class Metabuild implements IMeta {
 			logger().debug("Meta runtime: %s", System.getProperty(META_VERSION_PROPERTY));
 			logger().debug("Meta home: %s", this.metaHome);
 		}
+		
+		stateTransition(MetaState.IDLE, MetaState.PREINIT);
 		return true;
 	}
 	
 	@Override
 	public void setWorkingDirectory(File workingDirectory) {
+		if (getState() != MetaState.PREINIT)
+			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		this.workingDirectory = workingDirectory;
 	}
 	
@@ -422,11 +486,17 @@ public final class Metabuild implements IMeta {
 		return classpathFiles;
 	}
 	
+	public File buildWorkingDir() {
+		BuildScript buildscript = peekBuild();
+		if (buildscript == null) return workingDir();
+		return FileUtility.absolute(buildscript.workspace, this.workingDirectory);
+	}
+
 	@Override
 	public File workingDir() {
 		return this.workingDirectory;
 	}
-
+	
 	@Override
 	public File metaHome() {
 		return this.metaHome;
@@ -446,42 +516,126 @@ public final class Metabuild implements IMeta {
 	
 	@Override
 	public boolean initBuild(File buildFile) {
-		if (!initDirectories()) return false;
+		if (!preInit()) return false;
+		
+		stateTransition(MetaState.INIT, MetaState.IDLE, MetaState.READY);
 		this.registeredTasks.clear();
 
-		buildFile = FileUtility.absolute(buildFile);
+		buildFile = FileUtility.absolute(buildFile, workingDir());
 		if (!buildFile.isFile()) {
 
 			// Initialize dummy build script to allow call to built in tasks
-			this.buildscript = new BuildScript();
+			this.buildstack.add(new BuildScript());
+			pushBuild("").init(); // should never fail
+			popBuild();
 			
 		} else {
-			
-			this.buildscript = this.buildCompiler.loadBuildFile(buildFile);
-			if (this.buildscript == null) {
-				logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
+
+			try {
+				importBuild("", this.workingDirectory, buildFile);
+			} catch (MetaScriptException e) {
+				logger().errort(LOG_TAG, "buildfile init phase failed!");
+				e.printStack(logger().errorPrinter(LOG_TAG));
+				stateTransition(MetaState.IDLE, MetaState.INIT);
+				return false;
+			} catch (Throwable e) {
+				logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
+				stateTransition(MetaState.ERROR);
 				return false;
 			}
 			
-			logger().infot(LOG_TAG, "buildfile: %s", buildFile.getName());
-			
 		}
 		
-		try {
-			
-			this.buildscript.init();
-			
-		} catch (BuildScriptException e) {
-			logger().errort(LOG_TAG, "buildfile init phase failed!");
-			e.printStack(logger().errorPrinter(LOG_TAG));
-		} catch (Throwable e) {
-			logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
-			return false;
-		}
-		
+		stateTransition(MetaState.READY, MetaState.INIT);
 		return true;
 	}
 
+	public BuildScript loadBuildfile(File buildFile) {
+		if (getState() != MetaState.INIT) {
+			logger().errort(LOG_TAG, "attempt to load buildfile outside INIT phase: %s", buildFile);
+			return null;
+		}
+		
+		BuildScript buildscript = this.buildCompiler.loadBuildFile(buildFile);
+		if (buildscript == null) {
+			logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
+			return null;
+		}
+		
+		logger().infot(LOG_TAG, "loaded buildfile: %s", buildFile);
+		return buildscript;
+	}
+	
+	public BuildScript asyncEnterBuild(String name) {
+		synchronized (this.buildstack) {
+			BuildScript buildscript = peekBuild();
+			while (buildscript != null && !buildscript.buildName.equals(name)) {
+				try { this.buildstack.wait(); } catch (InterruptedException e) {}
+			}
+			return pushBuild(name);
+		}
+	}
+	
+	public void asyncLeaveBuild() {
+		synchronized (this.buildstack) {
+			popBuild();
+			this.buildstack.notifyAll();
+		}
+	}
+	
+	public BuildScript pushBuild(String name) {
+		BuildScript imp = this.imports.get(name);
+		if (imp == null) throw BuildScriptException.msg("attempt to access not imported build: %s", name);
+		this.buildstack.add(imp);
+		return imp;
+	}
+	
+	public void popBuild() {
+		int s = this.buildstack.size();
+		if (s == 0) throw BuildScriptException.msg("build stack underflow error!");
+		this.buildstack.remove(this.buildstack.size() - 1);
+	}
+	
+	public BuildScript peekBuild() {
+		int s = this.buildstack.size();
+		if (s > 0) {
+			BuildScript imp = this.buildstack.get(s - 1);
+			for (Entry<String, BuildScript> e : this.imports.entrySet()) {
+				if (e.getValue() == imp) return imp;
+			}
+		}
+		return null;
+	}
+	
+	public void importBuild(String importName, File location, File buildFile) {
+		if (location == null && buildFile != null)
+			location = buildFile.getParentFile();
+		if (buildFile == null && location != null)
+			buildFile = FileUtility.concat(location, IMeta.DEFAULT_BUILD_FILE_NAME);
+		location = FileUtility.absolute(location);
+		buildFile = FileUtility.absolute(buildFile);
+		if (importName == null)
+			importName = location.getParentFile().getName();
+		if (!buildFile.isFile()) {
+			throw BuildScriptException.msg("imported '%s' build file does not exist: %s", importName, buildFile);
+		}
+		BuildScript buildscript = Metabuild.get().loadBuildfile(buildFile);
+		if (buildscript == null) {
+			throw BuildScriptException.msg("failed to load import '%s' build file: %s", importName, buildFile);
+		}
+		buildscript.buildName = importName;
+		buildscript.workspace = location;
+		this.imports.put(importName, buildscript);
+		if (importName.isEmpty()) RootTask.TASK.setBuildscript(buildscript);
+		try {
+			pushBuild(importName);
+			buildscript.init();
+			popBuild();
+		} catch (MetaScriptException e) {
+			throw BuildScriptException.msg(e, "unable to initialize import '%s' build file!", importName);
+		}
+	}
+	
 	/**
 	 * Represents an build task and its dependencies that have to be executed
 	 */
@@ -493,6 +647,9 @@ public final class Metabuild implements IMeta {
 	 * @param taskName The name of the task to prepare
 	 */
 	protected void prepareTask(String taskName) {
+		
+		Matcher m = IMeta.TASK_NAME_FILTER.matcher(taskName);
+		if (!m.find()) throw BuildScriptException.msg("invalid task name '%s' must match %s!", taskName, IMeta.TASK_NAME_FILTER);
 		
 		BuildTask task = taskNamed(taskName);
 		if (task == null) {
@@ -513,13 +670,19 @@ public final class Metabuild implements IMeta {
 			}
 		}
 		
+		String buildName = m.group("buildname");
+		if (buildName == null) buildName = "";
+		pushBuild(buildName);
+		
 		try {
 			if (!task.state().requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
 				this.taskTree = new TaskNode(Optional.empty(), new HashSet<>());
 				return;
 			}
 		} catch (MetaScriptException e) {
-			throw BuildScriptException.msg(e, "failed to query state for task: %s", task.name);
+			throw BuildScriptException.msg(e, "failed to query state for task: %s", task.fullName());
+		} finally {
+			popBuild();
 		}
 		
 		if (!this.task2node.containsKey(task)) this.task2node.put(task, new TaskNode(Optional.of(task), dependendNodes));
@@ -533,7 +696,8 @@ public final class Metabuild implements IMeta {
 	 * @param tasks The list of tasks to execute.
 	 * @return true if and only if all tasks where prepared for execution successfully.
 	 */
-	public boolean buildTaskTree(List<String> tasks) {
+	private boolean buildTaskTree(List<String> tasks) {
+		
 		try {
 
 			this.task2node.clear();
@@ -558,9 +722,11 @@ public final class Metabuild implements IMeta {
 		} catch (MetaScriptException e) {
 			logger().errort(LOG_TAG, "failed to prepare all tasks:");
 			e.printStack(logger().errorPrinter(LOG_TAG));
+			stateTransition(MetaState.READY, MetaState.PREPARE);
 			return false;
 		} catch (Throwable e) {
 			logger().errort(LOG_TAG, "uncatched exception while building task tree:", e);
+			stateTransition(MetaState.READY, MetaState.PREPARE);
 			return false;
 		}
 	}
@@ -570,7 +736,8 @@ public final class Metabuild implements IMeta {
 	 * @param node The node in the task tree to run
 	 * @return true if and only if all the tasks from the node upward have completed successfully
 	 */
-	protected CompletableFuture<Void> runTaskTree(TaskNode node) {
+	private CompletableFuture<Void> runTaskTree(TaskNode node) {
+		
 		return CompletableFuture.runAsync(() -> {
 			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn)));
 			try {
@@ -581,8 +748,8 @@ public final class Metabuild implements IMeta {
 						task.getValue().join();
 					} catch (CompletionException e) {
 						if (e.getCause() instanceof MetaScriptException me) {
-							String thisName = task.getKey().task().isPresent() ? task.getKey().task().get().name : "nothing";
-							String parentName = node.task().isPresent() ? node.task().get().name : "nothing";
+							String thisName = task.getKey().task().isPresent() ? task.getKey().task().get().fullName() : "nothing";
+							String parentName = node.task().isPresent() ? node.task().get().fullName() : "nothing";
 							if (!node.task().isEmpty()) node.task().get().failedDependency();
 							throw BuildException.msg(me, "problem with task '%s' required by '%s'!", thisName, parentName);
 						} else if (e != null) {
@@ -593,12 +760,17 @@ public final class Metabuild implements IMeta {
 			}
 		}).thenAcceptAsync(v -> {
 			if (node.task().isEmpty()) return;
-			if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskStarted(node.task().get().name));
-			boolean result = node.task().get().runTask(
-					status -> statusCallback.forEach(s -> s.taskStatus(node.task().get().name, status)));
-			if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCompleted(node.task().get().name));
-			if (!result) {
-				throw BuildException.msg("task '%s' failed!", node.task().get().name);
+			asyncEnterBuild(node.task().get().buildscript().buildName);
+			try {
+				if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskStarted(node.task().get().fullName()));
+				boolean result = node.task().get().runTask(
+						status -> statusCallback.forEach(s -> s.taskStatus(node.task().get().fullName(), status)));
+				if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCompleted(node.task().get().fullName()));
+				if (!result) {
+					throw BuildException.msg("task '%s' failed!", node.task().get().fullName());
+				}
+			} finally {
+				asyncLeaveBuild();
 			}
 		}, this.taskExecutor);
 	}
@@ -627,8 +799,7 @@ public final class Metabuild implements IMeta {
 	@Override
 	public boolean runTasks(List<String> tasks) {
 		
-		logger().infot(LOG_TAG, "begin build init phase");
-		
+		stateTransition(MetaState.PREPARE, MetaState.READY);
 		if (!buildTaskTree(tasks)) {
 			logger().errort(LOG_TAG, "could not build task tree, abort build!");
 
@@ -642,8 +813,6 @@ public final class Metabuild implements IMeta {
 		
 		boolean success = false;
 		if (!this.skipTaskRun) {
-
-			logger().infot(LOG_TAG, "begin build run phase");
 			
 			if (this.taskTree.dep().stream().filter(n -> n.task().isPresent()).count() == 0) {
 				logger().infot(LOG_TAG, "nothing to do");
@@ -654,8 +823,8 @@ public final class Metabuild implements IMeta {
 			this.taskExecutor = new ThreadPoolExecutor(0, this.taskThreads, 10, TimeUnit.SECONDS, this.taskQueue);
 			
 			try {
+				stateTransition(MetaState.RUN, MetaState.PREPARE);
 				runTaskTree(this.taskTree).join();
-				logger().infot(LOG_TAG, "build completed");
 				success = true;
 			} catch (CompletionException e)  {
 				if (e.getCause() instanceof MetaScriptException me) {
@@ -663,6 +832,8 @@ public final class Metabuild implements IMeta {
 					me.printStack(logger().errorPrinter(LOG_TAG));
 				} else {
 					logger().errort(LOG_TAG, "uncatched build task error:", e.getCause());
+					stateTransition(MetaState.ERROR);
+					return false;
 				}
 			}
 			
@@ -670,11 +841,13 @@ public final class Metabuild implements IMeta {
 			logger().infot(LOG_TAG, "skipping build run phase");
 			success = true;
 		}
+
+		stateTransition(MetaState.FINISH, MetaState.PREPARE, MetaState.RUN);
 		
 		if (success) {
 			try {
-				this.buildscript.finish();
-			} catch (BuildScriptException e) {
+				pushBuild("").finish();
+			} catch (MetaScriptException e) {
 				logger().errort(LOG_TAG, "buildfile finish phase failed!");
 				e.printStack(logger().errorPrinter(LOG_TAG));
 			} catch (Throwable e) {
@@ -683,11 +856,14 @@ public final class Metabuild implements IMeta {
 				this.refreshDependencies = false;
 				this.forceRunTasks = false;
 				this.skipTaskRun = false;
+				stateTransition(MetaState.ERROR);
 				return false;
+			} finally {
+				popBuild();
 			}
 		}
-		
-		logger().infot(LOG_TAG, "build finished, shuting down");
+
+		stateTransition(MetaState.SHUTDOWN, MetaState.FINISH);
 		
 		this.registeredTasks.values().forEach(BuildTask::cleanupTask);
 	 
@@ -706,6 +882,7 @@ public final class Metabuild implements IMeta {
 			}
 		} catch (InterruptedException e) {}
 		
+		stateTransition(MetaState.READY, MetaState.SHUTDOWN);
 		printStatus();
 		
 		for (var s : this.statusCallback) s.buildCompleted(success);
@@ -713,6 +890,7 @@ public final class Metabuild implements IMeta {
 		this.refreshDependencies = false;
 		this.forceRunTasks = false;
 		this.skipTaskRun = false;
+		
 		return success;
 		
 	}

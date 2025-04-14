@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -38,7 +39,6 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
@@ -219,38 +219,61 @@ public class JavaCompileTask extends BuildTask {
 			CompilationOutputFileManager fileManager = new CompilationOutputFileManager(javac.getStandardFileManager(diagnostics, null, null));
 			CompilationTask task = javac.getTask(logger().errorWriter(), fileManager, diagnostics, this.options, null, Collections.singleton(sourceFileObject));
 			
-			if (!task.call()) {
-				logger().warnt(logTag(), "problems occured while compiling file: %s", source);
-				for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
-					String info = null;
+			boolean success = task.call();
+			
+			for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
+				String info = null;
+				
+				try {
+					long lineNr = diagnostic.getLineNumber();
 					
-					try {
-						long lineNr = diagnostic.getLineNumber();
-						
-						BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
-						String line = "";
-						for (long i = 0; i < lineNr; i++) line = reader.readLine();
-						reader.close();
-						
-						StringBuffer buff = new StringBuffer();
+					BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
+					String line = "";
+					for (long i = 0; i < lineNr; i++) line = reader.readLine();
+					reader.close();
+					
+					StringBuffer buff = new StringBuffer();
+					
+					if (diagnostic.getLineNumber() < 0) {
+						buff.append(diagnostic.getMessage(Locale.ENGLISH));
+					} else {
 						buff.append(line).append("\n");
 						for (long i = 0; i < diagnostic.getColumnNumber() - 1; i++) buff.append(" ");
-						buff.append("^ Here: ").append(diagnostic.getMessage(null));
-						
-						info = buff.toString();
-					} catch (IOException e) {
-						info = "source line unavailable";
+						buff.append("^ Here: ").append(diagnostic.getMessage(Locale.ENGLISH));
 					}
 					
-					logger().warnt(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
+					info = buff.toString();
+				} catch (IOException e) {
+					info = "source line unavailable";
 				}
-				return Optional.empty();
+				
+				if (diagnostic.getKind() == Diagnostic.Kind.ERROR) {
+					if (diagnostic.getLineNumber() >= 0) {
+						logger().errort(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
+					} else {
+						logger().errort(logTag(), "[%s] : %s", diagnostic.getKind().name(), info);
+					}
+				} else if (diagnostic.getKind() == Diagnostic.Kind.WARNING || diagnostic.getKind() == Diagnostic.Kind.MANDATORY_WARNING) {
+					if (diagnostic.getLineNumber() >= 0) {
+						logger().warnt(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
+					} else {
+						logger().warnt(logTag(), "[%s] : %s", diagnostic.getKind().name(), info);
+					}
+				} else {
+					if (diagnostic.getLineNumber() >= 0) {
+						logger().infot(logTag(), "[%s] : Line %d / Col %d\n%s", diagnostic.getKind().name(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), info);
+					} else {
+						logger().infot(logTag(), "[%s] : %s", diagnostic.getKind().name(), info);
+					}
+				}
+				
 			}
-
+			
+			if (!success) return Optional.empty();
 			return Optional.of(fileManager.getClassFilesOut());
 			
 		} catch (Exception e) {
-			throw BuildScriptException.msg(e, "unexpected error whenn invoking java compiler: ", e.getMessage());
+			throw BuildException.msg(e, "unexpected error whenn invoking java compiler: ", e.getMessage());
 		}
 		
 	}

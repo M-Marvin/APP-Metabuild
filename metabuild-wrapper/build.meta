@@ -1,0 +1,7 @@
+import de.m_marvin.metabuild.java.script.JavaBuildScript;
+
+public class Buildfile extends JavaBuildScript {
+	
+	
+	
+}

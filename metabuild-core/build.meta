@@ -19,6 +19,8 @@ public class Buildfile extends JavaBuildScript {
 	public void init() {
 		projectName = "metabuild-core";
 		
+		importBuild("wrapper", new File("../metabuild-wrapper"));
+		
 		super.init();
 		
 		// Metabuild API jar
@@ -41,6 +43,9 @@ public class Buildfile extends JavaBuildScript {
 		var install = new BuildTask("install");
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
+		
+		// for testing only
+		// install.dependsOn("wrapper:clean");
 		
 	}
 	

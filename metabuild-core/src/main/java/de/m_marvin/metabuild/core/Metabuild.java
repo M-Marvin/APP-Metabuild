@@ -383,6 +383,7 @@ public final class Metabuild implements IMeta {
 	@Override
 	public <T> void getTasks(T ref, Collection<MetaGroup<T>> groups, Collection<MetaTask<T>> tasks) {
 		this.registeredTasks.values().forEach(t -> {
+			if (!t.buildscript().buildName.isEmpty()) return; // only return root tasks
 			if (t.group != null) {
 				Optional<MetaGroup<T>> group = groups.stream().filter(g -> g.group().equals(t.group)).findAny();
 				if (group.isEmpty()) {

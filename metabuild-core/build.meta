@@ -44,9 +44,6 @@ public class Buildfile extends JavaBuildScript {
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
 		
-		// for testing only
-		// install.dependsOn("wrapper:clean");
-		
 	}
 	
 	@Override

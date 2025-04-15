@@ -15,8 +15,8 @@ import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.java.maven.DependencyResolver;
-import de.m_marvin.metabuild.java.maven.DependencyResolver.QueryMode;
+import de.m_marvin.metabuild.java.maven.DependencyManager;
+import de.m_marvin.metabuild.java.maven.DependencyManager.QueryMode;
 import de.m_marvin.metabuild.java.maven.MavenResolver.MavenRepository;
 import de.m_marvin.metabuild.java.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.impl.TagLogger;
@@ -28,14 +28,14 @@ public class MavenDependTask extends BuildTask {
 	public Predicate<Scope> scope = s -> s == Scope.COMPILE || s == Scope.RUNTIME;
 	public File classpath = new File(".classpath");
 	
-	protected DependencyResolver resolver;
+	protected DependencyManager resolver;
 	
 	public MavenDependTask(String name) {
 		super(name);
 		this.type = TaskType.named("JAVA_DEPENDENCY");
 		
 		try {
-			this.resolver = new DependencyResolver(new File(Metabuild.get().cacheDir(), "files"), new TagLogger(Metabuild.get().logger(), logTag()));
+			this.resolver = new DependencyManager(new File(Metabuild.get().cacheDir(), "files"), new TagLogger(Metabuild.get().logger(), logTag()));
 		} catch (Exception e) {
 			throw BuildScriptException.msg(e, "unable to initialize maven dependency resolver!");
 		}

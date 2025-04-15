@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Optional;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;

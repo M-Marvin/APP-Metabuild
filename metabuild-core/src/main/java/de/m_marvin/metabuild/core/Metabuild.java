@@ -8,9 +8,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +27,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -647,10 +648,7 @@ public final class Metabuild implements IMeta {
 	 * Also performs the same operations for all registered dependencies of that task.
 	 * @param taskName The name of the task to prepare
 	 */
-	protected void prepareTask(String taskName) {
-		
-		Matcher m = IMeta.TASK_NAME_FILTER.matcher(taskName);
-		if (!m.find()) throw BuildScriptException.msg("invalid task name '%s' must match %s!", taskName, IMeta.TASK_NAME_FILTER);
+	protected void prepareTask(String taskName, Deque<String> taskTrace) {
 		
 		BuildTask task = taskNamed(taskName);
 		if (task == null) {
@@ -658,12 +656,15 @@ public final class Metabuild implements IMeta {
 		}
 		
 		Set<String> dependencies = this.taskDependencies.get(taskName);
-		
 		Set<TaskNode> dependendNodes = new HashSet<>();
 		if (dependencies != null) {
 			for (String depTask : dependencies) {
 				try {
-					prepareTask(depTask);
+					if (taskTrace.contains(taskName))
+						throw BuildScriptException.msg("recursive task dependency detected: %s", taskTrace.toString());
+					taskTrace.addFirst(taskName);
+					prepareTask(depTask, taskTrace);
+					taskTrace.poll();
 				} catch (MetaScriptException e) {
 					throw BuildScriptException.msg(e, "problem with task '%s' required by '%s'", depTask, taskName);
 				}
@@ -671,9 +672,7 @@ public final class Metabuild implements IMeta {
 			}
 		}
 		
-		String buildName = m.group("buildname");
-		if (buildName == null) buildName = "";
-		pushBuild(buildName);
+		pushBuild(task.buildscript().buildName);
 		
 		try {
 			if (!task.state().requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
@@ -708,7 +707,7 @@ public final class Metabuild implements IMeta {
 			
 			for (String task : tasks) {
 				try {
-					prepareTask(task);
+					prepareTask(task, new ArrayDeque<String>());
 				} catch (MetaScriptException e) {
 					logger().errort(LOG_TAG, "failed to build task tree for task: %s", task);
 					e.printStack(logger().errorPrinter(LOG_TAG));
@@ -737,8 +736,7 @@ public final class Metabuild implements IMeta {
 	 * @param node The node in the task tree to run
 	 * @return true if and only if all the tasks from the node upward have completed successfully
 	 */
-	private CompletableFuture<Void> runTaskTree(TaskNode node) {
-		
+	private CompletableFuture<Void> runTaskTree(TaskNode node) {	
 		return CompletableFuture.runAsync(() -> {
 			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn)));
 			try {

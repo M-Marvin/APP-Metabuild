@@ -27,7 +27,7 @@ import de.m_marvin.metabuild.java.maven.MavenResolver.POM.Scope;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.TagLogger;
 
-public class DependencyResolver {
+public class DependencyManager {
 	
 	public static record Dependency(String dependency, String[] configurations) {}
 
@@ -45,7 +45,7 @@ public class DependencyResolver {
 	protected final Map<Dependency, POM> transitives = new HashMap<>();
 	protected final Map<String, File> dependencyJarPaths = new HashMap<>();
 	
-	public DependencyResolver(File cache, Logger logger) throws Exception {
+	public DependencyManager(File cache, Logger logger) throws Exception {
 		this.logger = logger;
 		this.resolver = new MavenResolver(cache, new TagLogger(logger, "/maven"));
 	}

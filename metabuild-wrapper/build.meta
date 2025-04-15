@@ -1,7 +1,30 @@
+import de.m_marvin.metabuild.java.maven.MavenResolver;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 
 public class Buildfile extends JavaBuildScript {
 	
+	@Override
+	public void init() {
+		
+		projectName = "metabuild-wrapper";
+		
+		super.init();
+		
+	}
+	
+	@Override
+	public void repositories() {
+		
+		implementation.repository(MavenResolver.MavenRepository.mavenLocal());
+		
+	}
+	
+	@Override
+	public void dependencies() {
+		
+		implementation.add("de.m_marvin.metabuild:metabuild-core:0.1_build2", "api", "sources");
+		
+	}
 	
 	
 }

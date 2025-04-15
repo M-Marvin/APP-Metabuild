@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
-import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.CommandLineTask;
 import de.m_marvin.metabuild.core.util.FileUtility;

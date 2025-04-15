@@ -3,17 +3,18 @@ package de.m_marvin.metabuild.java.maven;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Authenticator;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -29,6 +30,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -118,6 +120,14 @@ public class MavenResolver {
 			return id == null ? url : id;
 		}
 		
+		public static MavenRepository mavenLocal() {
+			return new MavenRepository(
+					"Maven Local",
+					"file:///" + System.getProperty("user.home").replace('\\', '/') + "/.m2/repository",
+					null
+			);
+		}
+		
 	}
 	
 	private final List<MavenRepository> repositories = new ArrayList<>();
@@ -179,45 +189,54 @@ public class MavenResolver {
 	protected Optional<InputStream> queryFile(URL url, File cache, Credentials credentials) throws IOException {
 		
 		logger().debug("request from url: %s", url);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod("GET");
+		URLConnection connection = url.openConnection();
 		connection.setReadTimeout((int) this.timeoutUnit.toMillis(this.timeout));
-		if (credentials != null) {
-			if (credentials.username() != null && credentials.password() != null)
-				connection.setAuthenticator(credentials.authenticator());
-			if (credentials.token() != null)
-				connection.setRequestProperty("Authorization", "Bearer "+credentials.bearer());
-		}
-		int rcode = connection.getResponseCode();
 		
-		if (rcode == 404) {
-			logger().debug("not found: 404 %s", connection.getResponseMessage());
-			connection.disconnect();
-			return Optional.empty();
-		}
-		
-		if (rcode != 200) {
-			logger().debug("failed: %d %s", rcode, connection.getResponseMessage());
-			connection.disconnect();
-			throw new IOException(String.format("unable to query http: %d %s : %s", rcode, connection.getResponseMessage(), url.toString()));
-		}
-		
-		InputStream stream = connection.getInputStream();
-		
-		if (cache != null) {
-			try {
-				if (!cache.getParentFile().isDirectory() && !cache.getParentFile().mkdirs())
-					throw new IOException("failed to create cache directory: %s" + cache.getParentFile());
-				OutputStream cstream = new FileOutputStream(cache);
-				cstream.write(stream.readAllBytes());
-				cstream.close();
-				stream = new FileInputStream(cache);
-			} catch (IOException e) {
-				throw new IOException("failed to write/read cache file: " + cache, e);
+		if (connection instanceof HttpsURLConnection httpConnection) {
+			httpConnection.setRequestMethod("GET");
+			if (credentials != null) {
+				if (credentials.username() != null && credentials.password() != null)
+					httpConnection.setAuthenticator(credentials.authenticator());
+				if (credentials.token() != null)
+					httpConnection.setRequestProperty("Authorization", "Bearer "+credentials.bearer());
+			}
+			int rcode = httpConnection.getResponseCode();
+			
+			if (rcode == 404) {
+				logger().debug("not found: 404 %s", httpConnection.getResponseMessage());
+				httpConnection.disconnect();
+				return Optional.empty();
+			}
+			
+			if (rcode != 200) {
+				logger().debug("failed: %d %s", rcode, httpConnection.getResponseMessage());
+				httpConnection.disconnect();
+				throw new IOException(String.format("unable to query http: %d %s : %s", rcode, httpConnection.getResponseMessage(), url.toString()));
 			}
 		}
 		
-		return Optional.of(stream);
+		try {
+			
+			InputStream stream = connection.getInputStream();
+			
+			if (cache != null) {
+				try {
+					if (!cache.getParentFile().isDirectory() && !cache.getParentFile().mkdirs())
+						throw new IOException("failed to create cache directory: %s" + cache.getParentFile());
+					OutputStream cstream = new FileOutputStream(cache);
+					cstream.write(stream.readAllBytes());
+					cstream.close();
+					stream = new FileInputStream(cache);
+				} catch (IOException e) {
+					throw new IOException("failed to write/read cache file: " + cache, e);
+				}
+			}
+
+			return Optional.of(stream);
+			
+		} catch (FileNotFoundException e) {
+			return Optional.empty();
+		}
 		
 	}
 	
@@ -311,7 +330,9 @@ public class MavenResolver {
 
 		try {
 			
-			Optional<InputStream> artifactMeta = queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml"), null, repository.credentials());
+			URL artifactMetaURL = repository.getArtifactURL(group, artifact, "maven-metadata.xml");
+			if (artifactMetaURL.getProtocol().equals("file")) return true; // indicates maven local repository
+			Optional<InputStream> artifactMeta = queryFile(artifactMetaURL, null, repository.credentials());
 			if (artifactMeta.isEmpty()) return false;
 			SkipOptional<InputStream> artifactMetaSHA512 = strictHashVerify ? SkipOptional.of(queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.sha512"), null, repository.credentials())) : SkipOptional.skipped();
 			SkipOptional<InputStream> artifactMetaSHA256 = artifactMetaSHA512.isEmpty() ? SkipOptional.of(queryFile(repository.getArtifactURL(group, artifact, "maven-metadata.xml.sha256"), null, repository.credentials())) : SkipOptional.skipped();

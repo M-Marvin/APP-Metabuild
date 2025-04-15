@@ -115,7 +115,7 @@ public class BuildTask {
 	}
 	
 	/**
-	 * Runs a preparation and if neccessary, then runs this task.
+	 * Runs a preparation and if necessary runs this task.
 	 * @return true if and only if the task completed successfully
 	 */
 	public boolean runTask(Consumer<String> statusCallback) {

@@ -326,6 +326,14 @@ public class MavenResolver {
 		return IntStream.range(0, parent.getChildNodes().getLength()).mapToObj(i -> parent.getChildNodes().item(i));
 	}
 	
+	/**
+	 * Attempts to query the repositories metadata file and verifies that the requested artifacts are available.
+	 * @param repository The repository to query the artifacts from
+	 * @param group The group id
+	 * @param artifact The artifact id
+	 * @param version The version
+	 * @return true if the artifact is available on in the repositories metadata
+	 */
 	protected boolean checkVersions(MavenRepository repository, String group, String artifact, String version) {
 
 		try {
@@ -389,6 +397,16 @@ public class MavenResolver {
 		
 	}
 	
+	/**
+	 * Tries to resolve the artifacts on the provided repository.<br>
+	 * If successfully, the artifact files will be placed in the cache and be locally available, the POM of the artifacts will be returned.
+	 * @param repository The repository to look for the artifacts
+	 * @param group The group id
+	 * @param artifact The artifact id
+	 * @param version The artifact version
+	 * @param configurations 
+	 * @return
+	 */
 	protected Optional<POM> tryResolve(MavenRepository repository, String group, String artifact, String version, String[] configurations) {
 		
 		if (!checkVersions(repository, group, artifact, version)) return Optional.empty();

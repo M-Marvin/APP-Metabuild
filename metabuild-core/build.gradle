@@ -62,8 +62,12 @@ dependencies {
 	// JavaRun
 	shade 'de.m_marvin.javarun:javarun:1.2'
 	
-	// ConsoleMode
-	//implementation 'de.m_marvin.cmode:cmode:0.1_build1'
+	// JAXB
+	shade "com.sun.xml.bind:jaxb-impl:3.0.0"
+	
+	// Maven API
+	shade 'org.apache.maven:maven-resolver-provider:3.9.9'
+	shade 'org.apache.maven.resolver:maven-resolver-supplier:1.9.22'
 	
 }
 

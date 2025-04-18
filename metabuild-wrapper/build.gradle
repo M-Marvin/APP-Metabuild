@@ -82,7 +82,7 @@ task exportTestProject() {
 	group = 'output'
 	
 	doLast {
-		ant.copy(file:'build/libs/' + project.name + '-' + version + '-all.jar', tofile: '../MetaTestC/meta/metabuild-wrapper.jar')
+		ant.copy(file:'build/libs/' + project.name + '-' + version + '-all.jar', tofile: '../metabuild-wrapper/meta/metabuild-wrapper.jar')
 	}
 }
 exportTestProject.dependsOn(shadowJar)

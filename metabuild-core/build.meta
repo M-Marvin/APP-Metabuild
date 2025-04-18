@@ -75,6 +75,12 @@ public class Buildfile extends JavaBuildScript {
 						() -> System.getenv("GITHUB_TOKEN")
 				)
 		));
+
+		implementation.repository(new MavenResolver.MavenRepository(
+				"Maven Central",
+				"https://repo.maven.apache.org/maven2",
+				null
+		));
 		
 	}
 	
@@ -92,6 +98,8 @@ public class Buildfile extends JavaBuildScript {
 		
 		// JavaRun
 		implementation.add("de.m_marvin.javarun:javarun:1.2");
+		
+		implementation.add("javax.xml.bind:jaxb-api:2.2.4");
 		
 		// Include dependencies into final binary jar
 		packageDependencies();

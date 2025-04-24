@@ -29,16 +29,15 @@ import java.util.function.Predicate;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import de.m_marvin.metabuild.maven.VersionUtil;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.MavenException;
-import de.m_marvin.metabuild.maven.types.POM;
-import de.m_marvin.metabuild.maven.types.POM.Dependency;
-import de.m_marvin.metabuild.maven.types.POM.Dependency.Scope;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.metabuild.maven.xml.POM;
+import de.m_marvin.metabuild.maven.xml.POM.Dependency;
+import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.TagLogger;
 
@@ -73,43 +72,68 @@ public class MavenResolver {
 		return this.logger;
 	}
 	
-	public boolean resolveGraph(DependencyGraph graph, boolean downloadArtifacts, Predicate<Artifact> exclusion) throws MavenException {
+	public boolean resolveGraph(DependencyGraph graph, List<File> artifactOutput, Predicate<Artifact> exclusion) throws MavenException {
 		
-		for (Artifact artifact : graph.getArtifacts()) {
+		for (Artifact artifactGroup : graph.getTransitiveGroups()) {
 			
-			if (!exclusion.test(artifact)) continue;
+			if (!exclusion.test(artifactGroup)) continue;
 			
-			DependencyGraph transitiveGraph = graph.getTransitiveGraph(artifact);
-			
-			if (transitiveGraph == null) {
-				
-				transitiveGraph = resolveGraphPOM(graph, artifact.getPOMId());
+			if (!graph.isSystemOnly(artifactGroup)) {
+
+				DependencyGraph transitiveGraph = graph.getTransitiveGraph(artifactGroup);
 				
 				if (transitiveGraph == null) {
 					
-					logger().warn("unable to resolve artifact graph: %s", artifact);
-					return false;
+					transitiveGraph = resolveGraphPOM(graph, artifactGroup.getPOMId());
+					
+					if (transitiveGraph == null) {
+						
+						logger().warn("unable to resolve artifact graph: %s", artifactGroup);
+						return false;
+						
+					}
+					
+					graph.setTransitiveGraph(artifactGroup, transitiveGraph);
 					
 				}
 				
-				graph.setTransitiveGraph(artifact, transitiveGraph);
+				Predicate<Artifact> transitiveExclusion = graph.getExclusionPredicate(artifactGroup);
 				
-			}
-			
-			Predicate<Artifact> transitiveExclusion = graph.getExclusionPredicate(artifact);
-			
-			if (!resolveGraph(transitiveGraph, downloadArtifacts, transitiveExclusion)) {
-				logger().warn("unable to resolve transitive graphs for artifact: %s", artifact);
-				return false;
-			}
-			
-			if (downloadArtifacts) {
-				
-				Repository repository = transitiveGraph.getResolutionRepository();
-				File localArtifact = downloadArtifact(repository, artifact);
-				if (localArtifact == null) {
-					logger().warn("failed to download artifact: %s", artifact);
+				if (!resolveGraph(transitiveGraph, artifactOutput, transitiveExclusion)) {
+					logger().warn("unable to resolve transitive graphs for artifact: %s", artifactGroup);
 					return false;
+				}
+				
+			}
+			
+			if (artifactOutput != null) {
+				
+				for (Artifact artifact : graph.getArtifacts(artifactGroup)) {
+					
+					String systemPath = graph.getSystemPath(artifact);
+					if (systemPath != null) {
+						
+						File systemFile = new File(systemPath);
+						if (!systemFile.isFile()) {
+							logger().warn("failed to find system artifact: %s", systemFile);
+							return false;
+						}
+						
+						artifactOutput.add(systemFile);
+						
+					} else {
+
+						Repository repository = graph.getTransitiveGraph(artifactGroup).getResolutionRepository();
+						File localArtifact = downloadArtifact(repository, artifact);
+						if (localArtifact == null) {
+							logger().warn("failed to download artifact: %s", artifact);
+							return false;
+						}
+						
+						artifactOutput.add(localArtifact);
+						
+					}
+					
 				}
 				
 			}
@@ -128,9 +152,11 @@ public class MavenResolver {
 		if (pom == null)
 			throw new MavenException("unable to resolve POM artifact: %s", pomArtifact);
 		
+		Set<String> ndrepo = new HashSet<String>();
 		if (pom.repositories != null) {
 			for (var r : pom.repositories) {
 				String urlStr = pom.fillPoperties(r.url);
+				if (!ndrepo.add(urlStr)) continue; // avoid duplicate repositories, pick first in order of import
 				try {
 					graph.addRepository(new Repository(pom.fillPoperties(r.name), new URL(urlStr)));
 				} catch (MalformedURLException e) {
@@ -140,7 +166,7 @@ public class MavenResolver {
 		}
 		
 		// resolve dependency management version declarations
-		Map<Integer, String> transitiveVersions = new HashMap<Integer, String>();
+		Map<Artifact, String> transitiveVersions = new HashMap<Artifact, String>();
 		if (pom.dependencyManagement != null) {
 			for (var d : pom.dependencyManagement) {
 				
@@ -148,12 +174,15 @@ public class MavenResolver {
 				if (d.scope == Scope.IMPORT) continue;
 				
 				Artifact artifact = d.gavce(pom);
-				transitiveVersions.put(artifact.groupHash(), VersionUtil.union(transitiveVersions.get(artifact.groupHash()), artifact.version));
+				Artifact group = artifact.getGAV().withVersion(null);
+				if (transitiveVersions.containsKey(group)) continue; // avoid duplicate entries, pick first in order of import
+				transitiveVersions.put(group, artifact.version);
 				
 			}
 		}
 		
 		// resolve transitive dependencies
+		Set<Artifact> nddepend = new HashSet<Artifact>();
 		if (pom.dependencies != null) {
 			for (var d : pom.dependencies) {
 				
@@ -161,24 +190,31 @@ public class MavenResolver {
 				
 				Artifact artifact = d.gavce(pom);
 				if (artifact.version == null) {
-					String declaredVersion = transitiveVersions.get(artifact.groupHash());
+					String declaredVersion = transitiveVersions.get(artifact.getGAV());
 					if (declaredVersion == null)
-						throw new MavenException("artifact '%s' has no version declared!", artifact);
-					artifact = new Artifact(artifact.groupId, artifact.artifactId, declaredVersion, artifact.classifier, artifact.extension);
+						throw new MavenException("artifact '%s' has no version declared in dependency management!", artifact);
+					artifact = artifact.withVersion(declaredVersion);
 				}
+				
+				if (!artifact.hasGAVCE())
+					throw new MavenException("artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+				
+				Artifact group = artifact.getGAV();
+				if (!nddepend.add(group)) continue; // avoid duplicate dependencies, pick first in order of import
 				
 				Set<Artifact> excludes = new HashSet<Artifact>();
 				if (d.exclusions != null) {
 					for (var e : d.exclusions) {
-						excludes.add(e.gavce(pom));
+						excludes.add(e.ga(pom));
 					}
 				}
-				
-				graph.addArtifact(artifact, excludes);
-				
+
+				String systemPath = null;
 				if (d.scope == Scope.SYSTEM) {
-					graph.setArtifactSystemPath(artifact, pom.fillPoperties(d.systemPath));
+					systemPath = pom.fillPoperties(d.systemPath);
 				}
+				
+				graph.addTransitive(artifact, excludes, systemPath);
 				
 			}
 		}

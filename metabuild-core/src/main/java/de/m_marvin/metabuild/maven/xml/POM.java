@@ -1,7 +1,6 @@
-package de.m_marvin.metabuild.maven.types;
+package de.m_marvin.metabuild.maven.xml;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +13,9 @@ import javax.xml.stream.XMLStreamReader;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import de.m_marvin.metabuild.maven.types.Artifact;
+import de.m_marvin.metabuild.maven.types.ImportOrderList;
+import de.m_marvin.metabuild.maven.types.MavenException;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
@@ -26,22 +28,17 @@ import jakarta.xml.bind.annotation.XmlType;
 import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
-@XmlRootElement(name = "project", namespace = "http://maven.apache.org/POM/4.0.0")
+@XmlRootElement(name = "project")
 public class POM {
 	
-	public static final String MAVEN_NAMESPACE = "http://maven.apache.org/POM/4.0.0";
-	
-//	@XmlElement(namespace = MAVEN_NAMESPACE)
-//	public String modelVersion;
-
 	/* artifact coordinates of this POM file */
 	
-	@XmlElement(namespace = MAVEN_NAMESPACE)
-	public String groupId;
-	@XmlElement(namespace = MAVEN_NAMESPACE)
-	public String artifactId;
-	@XmlElement(namespace = MAVEN_NAMESPACE)
-	public String version;
+	@XmlElement()
+	public String groupId; // required
+	@XmlElement()
+	public String artifactId; // required
+	@XmlElement()
+	public String version; // required
 
 	public Artifact gavce() throws MavenException {
 		return new Artifact(fillPoperties(this.groupId), fillPoperties(this.artifactId), fillPoperties(this.version));
@@ -49,27 +46,27 @@ public class POM {
 	
 	/* transitive dependency declarations (including POM imports) */
 	
-	@XmlElement(name = "dependency", namespace = MAVEN_NAMESPACE)
-	@XmlElementWrapper(name = "dependencies", namespace = MAVEN_NAMESPACE)
-	public List<Dependency> dependencies;
-	@XmlElement(name = "dependency", namespace = MAVEN_NAMESPACE)
-	@XmlElementWrapper(name = "dependencyManagement", namespace = MAVEN_NAMESPACE)
-	public List<Dependency> dependencyManagement;
+	@XmlElement(name = "dependency")
+	@XmlElementWrapper(name = "dependencies")
+	public ImportOrderList<Dependency> dependencies = null; // NOTE: ORDER OF IMPORTS IN XML
+	@XmlElement(name = "dependency")
+	@XmlElementWrapper(name = "dependencyManagement")
+	public ImportOrderList<Dependency> dependencyManagement = null; // NOTE: ORDER OF IMPORTS IN XML
 
 	public static class Dependency {
 		
 		/* artifact coordinates of the dependency */
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String groupId;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String artifactId;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String version;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String classifier;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String type;
+		@XmlElement()
+		public String groupId; // required
+		@XmlElement()
+		public String artifactId; // required
+		@XmlElement()
+		public String version = null;
+		@XmlElement()
+		public String classifier = "";
+		@XmlElement()
+		public String type = "jar";
 
 		public Artifact gavce(POM pom) throws MavenException {
 			return new Artifact(this.groupId, this.artifactId, this.version, this.classifier, this.type);
@@ -77,10 +74,10 @@ public class POM {
 		
 		/* scope of the dependency, and path to look for SYSTEM scope dependencies */
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public Scope scope;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String systemPath;
+		@XmlElement()
+		public Scope scope = Scope.COMPILE;
+		@XmlElement()
+		public String systemPath = null;
 
 		@XmlType
 		@XmlEnum(String.class)
@@ -95,23 +92,23 @@ public class POM {
 		
 		/* if this dependency is optional */
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public boolean optional;
+		@XmlElement()
+		public boolean optional = false;
 		
 		/* transitive dependencies to exclude */
 		
-		@XmlElement(name = "exclusion", namespace = MAVEN_NAMESPACE)
-		@XmlElementWrapper(name = "exclusions", namespace = MAVEN_NAMESPACE)
-		public List<Exclusion> exclusions;
+		@XmlElement(name = "exclusion")
+		@XmlElementWrapper(name = "exclusions")
+		public List<Exclusion> exclusions = null;
 
 		public static class Exclusion {
 			
-			@XmlElement(namespace = MAVEN_NAMESPACE)
-			public String groupId;
-			@XmlElement(namespace = MAVEN_NAMESPACE)
-			public String artifactId;
+			@XmlElement()
+			public String groupId; // required
+			@XmlElement()
+			public String artifactId; // required
 
-			public Artifact gavce(POM pom) throws MavenException {
+			public Artifact ga(POM pom) throws MavenException {
 				return new Artifact(pom.fillPoperties(this.groupId), pom.fillPoperties(this.artifactId));
 			}
 			
@@ -121,37 +118,37 @@ public class POM {
 	
 	/* additional repositories for resolving of transitive dependencies */
 	
-	@XmlElement(name = "repository", namespace = MAVEN_NAMESPACE)
-	@XmlElementWrapper(name = "repositories", namespace = MAVEN_NAMESPACE)
-	public List<Repository> repositories;
+	@XmlElement(name = "repository")
+	@XmlElementWrapper(name = "repositories")
+	public ImportOrderList<Repository> repositories; // NOTE: ORDER OF IMPORTS IN XML
 
 	public static class Repository {
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String id;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String name;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String url;
+		@XmlElement()
+		public String id; // required
+		@XmlElement()
+		public String name; // required
+		@XmlElement()
+		public String url; // required
 		
 	}
 	
 	/* parent POM to import dependencies and repositories from */
 	
-	@XmlElement(namespace = MAVEN_NAMESPACE)
-	public Parent parent;
+	@XmlElement()
+	public Parent parent = null;
 
 	@XmlType
 	public static class Parent {
 		
 		/* artifact id of POM to import */
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String groupId;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String artifactId;
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String version;
+		@XmlElement()
+		public String groupId; // required
+		@XmlElement()
+		public String artifactId; // required
+		@XmlElement()
+		public String version; // required
 
 		public Artifact gavce(POM pom) throws MavenException {
 			return new Artifact(pom.fillPoperties(this.groupId), pom.fillPoperties(this.artifactId), pom.fillPoperties(this.version), "", "pom");
@@ -159,61 +156,71 @@ public class POM {
 		
 		/* optional relative path to look for the POM, before resolving using coordinates */
 		
-		@XmlElement(namespace = MAVEN_NAMESPACE)
-		public String relativePath;
+		@XmlElement()
+		public String relativePath = null;
 		
 	}
 	
 	/* key value pairs to replace in all other property strings in this POM */
 	
 	@XmlAnyElement
-	@XmlElementWrapper(name = "properties", namespace = MAVEN_NAMESPACE)
+	@XmlElementWrapper(name = "properties")
 	@XmlJavaTypeAdapter(PropertyMapAdapter.class)
-	public List<Property> properties;
+	public ImportOrderList<POM.Property> properties;
 	
 	public static class Property {
 		
 		public static final Property FALLBACK_PROPERTY = new Property();
 		
-		public String key;
-		public String value = "";
+		public String key; // required
+		public String value = "NA"; // required
 		
 	}
 	
 	protected static final Pattern PROP_PATTERN = Pattern.compile("\\$\\{([^\\$\\{\\}]+)\\}");
 	
 	public String fillPoperties(String str) {
-		// TODO
+		// TODO settings.x and project.x properties
 		Matcher m = PROP_PATTERN.matcher(str);
-		return m.replaceAll(r -> this.properties.stream().filter(p -> p.key.equals(r.group(1))).findAny().orElse(Property.FALLBACK_PROPERTY).value);
+		return m.replaceAll(r -> {
+			String property = r.group(1);
+			if (property.startsWith("env.")) {
+				return System.getenv(property.substring(4));
+			} else if (System.getProperties().contains(property)) {
+				return System.getProperty(property);
+			} else {			
+				return this.properties.stream().filter(p -> p.key.equals(property)).findAny().orElse(Property.FALLBACK_PROPERTY).value;
+			}
+			
+		});
 	}
 	
-	/* POM serialization and deserialiuzation */
+	/* POM serialization and de-serialization */
 	
 	public void importPOM(POM other, boolean fullImport) {
 		
 		if (fullImport) {
 			
 			if (other.repositories != null) {
-				if (this.repositories == null) this.repositories = new ArrayList<POM.Repository>();
-				this.repositories.addAll(other.repositories);
+				if (this.repositories == null) this.repositories = new ImportOrderList<POM.Repository>();
+				this.repositories.importList(other.repositories);
 			}
 			
 			if (other.dependencies != null) {
-				if (this.dependencies == null) this.dependencies = new ArrayList<POM.Dependency>();
-				this.dependencies.addAll(other.dependencies);
+				if (this.dependencies == null) this.dependencies = new ImportOrderList<POM.Dependency>();
+				this.dependencies.importList(other.dependencies);
 			}
 			
 			if (other.properties != null) {
-				if (this.properties == null) this.properties = new ArrayList<POM.Property>();
-				this.properties.addAll(other.properties);
+				if (this.properties == null) this.properties = new ImportOrderList<POM.Property>();
+				this.properties.importList(other.properties);
 			}
 			
 		}
 		
 		if (other.dependencyManagement != null) {
-			if (this.dependencyManagement == null) this.dependencyManagement = new ArrayList<POM.Dependency>();
-			this.dependencyManagement.addAll(other.dependencyManagement);
+			if (this.dependencyManagement == null) this.dependencyManagement = new ImportOrderList<POM.Dependency>();
+			this.dependencyManagement.importList(other.dependencyManagement);
 		}
 		
 	}
@@ -231,7 +238,7 @@ public class POM {
 		@Override
 		public Element marshal(Property v) throws Exception {
 			
-			// FIXME
+			// FIXME marshaling of properties
 			Document d = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder().newDocument();
 			Element e = d.createElement(v.key);
 			e.appendChild(d.createTextNode(v.value));

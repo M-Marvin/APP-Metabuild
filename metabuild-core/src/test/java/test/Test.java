@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
 import de.m_marvin.metabuild.maven.types.Artifact;
@@ -22,13 +24,19 @@ public class Test {
 		System.out.println(local);
 		
 		DependencyGraph graph = new DependencyGraph();
-		graph.addArtifact(Artifact.of("javax.xml.bind:jaxb-api:2.2.4"), null);
-		graph.addArtifact(Artifact.of("javax.xml.bind:jaxb-api:sources:2.2.4"), null);
-		graph.addArtifact(Artifact.of("javax.xml.bind:jaxb-api:javadoc:2.2.4"), null);
+		graph.addTransitive(Artifact.of("javax.xml.bind:jaxb-api:2.2.4"), null, null);
+		graph.addTransitive(Artifact.of("javax.xml.bind:jaxb-api:sources:2.2.4"), null, null);
+		graph.addTransitive(Artifact.of("javax.xml.bind:jaxb-api:javadoc:2.2.4"), null, null);
 		graph.addRepository(new Repository("Maven Central", new URL("https://repo.maven.apache.org/maven2")));
 		
+		List<File> artifacts = new ArrayList<File>();
 		MavenResolver resolver = new MavenResolver(Log.defaultLogger(), local);
-		resolver.resolveGraph(graph, true, r -> true);
+		resolver.setRefreshLocal(true);
+		resolver.resolveGraph(graph, artifacts, r -> true);
+		
+		for (File f : artifacts) {
+			System.out.println("-> " + f);
+		}
 		
 //		DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
 //

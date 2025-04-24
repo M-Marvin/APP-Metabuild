@@ -27,17 +27,24 @@ public class Artifact {
 	}
 	
 	public Artifact(String groupId, String artifactId, String version, String classifier, String extension) throws MavenException {
+		this(groupId, artifactId, version, classifier, extension, true);
+	}
+	
+	protected Artifact(String groupId, String artifactId, String version, String classifier, String extension, boolean fillDefaults) throws MavenException {
+		if (fillDefaults) {
+			if (extension == null) extension = "jar";
+			if (classifier == null) classifier = "";
+		}
 		if (groupId == null) throw new MavenException("illegal argument, groupId must not be null!");
 		if (artifactId == null) throw new MavenException("illegal argument, artifactId must not be null!");
-		// default to java jar artifact
-		if (version == null) version = "";
-		if (classifier == null) classifier = "";
-		if (extension == null) extension = "jar";
-		if (!FIELD_PATTERN.matcher(groupId).matches()) throw new MavenException("illegal argument, groupId must match '%s'", FIELD_PATTERN.toString());
-		if (!FIELD_PATTERN.matcher(artifactId).matches()) throw new MavenException("illegal argument, artifactId must match '%s'", FIELD_PATTERN.toString());
-		if (!FIELD_PATTERN.matcher(version).matches()) throw new MavenException("illegal argument, version must match '%s'", FIELD_PATTERN.toString());
-		if (!FIELD_PATTERN.matcher(classifier).matches() && !classifier.isEmpty()) throw new MavenException("illegal argument, classifier must match '%s'", FIELD_PATTERN.toString());
-		if (!FIELD_PATTERN.matcher(extension).matches() && !extension.isEmpty()) throw new MavenException("illegal argument, extension must match '%s'", FIELD_PATTERN.toString());
+		
+		
+		
+		if (!groupId.equals("*") && !FIELD_PATTERN.matcher(groupId).matches()) throw new MavenException("illegal argument, groupId must match '%s'", FIELD_PATTERN.toString());
+		if (!artifactId.equals("*") && !FIELD_PATTERN.matcher(artifactId).matches()) throw new MavenException("illegal argument, artifactId must match '%s'", FIELD_PATTERN.toString());
+		if (version != null && !FIELD_PATTERN.matcher(version).matches()) throw new MavenException("illegal argument, version must match '%s'", FIELD_PATTERN.toString());
+		if (classifier != null && !FIELD_PATTERN.matcher(classifier).matches() && !classifier.isEmpty()) throw new MavenException("illegal argument, classifier must match '%s'", FIELD_PATTERN.toString());
+		if (extension != null && !FIELD_PATTERN.matcher(extension).matches() && !extension.isEmpty()) throw new MavenException("illegal argument, extension must match '%s'", FIELD_PATTERN.toString());
 		this.groupId = groupId;
 		this.artifactId = artifactId;
 		this.version = version;
@@ -62,20 +69,18 @@ public class Artifact {
 		return Objects.hash(this.groupId, this.artifactId, this.version, this.classifier, this.extension);
 	}
 	
-	public int groupHash() {
-		return Objects.hash(this.groupId, this.artifactId);
-	}
-	
 	@Override
 	public String toString() {
 		StringBuffer buff = new StringBuffer();
 		buff.append(this.groupId).append(':').append(this.artifactId);
-		if (this.extension != null || this.classifier != null) {
-			buff.append(':').append(this.classifier);
-			if (this.extension != null) 
-				buff.append(':').append(this.extension);
+		if (this.version != null) {
+			if (this.extension != null || this.classifier != null) {
+				buff.append(':').append(this.classifier);
+				if (this.extension != null) 
+					buff.append(':').append(this.extension);
+			}
+			buff.append(':').append(this.version);
 		}
-		buff.append(':').append(this.version);
 		return buff.toString();
 	}
 	
@@ -111,24 +116,38 @@ public class Artifact {
 		throw new MavenException("invalid coordinate synthax: '%s'", gavce);
 	}
 	
+	// FIXME snapshot versions
 	public boolean isSnapshot() {
 		return this.version != null && this.version.endsWith("-SNAPSHOT");
 	}
 	
-	public boolean isBase() {
-		return this.classifier == null || this.extension == null;
+	public boolean hasGAV() {
+		return this.groupId != null && this.artifactId != null && this.version != null;
 	}
 	
-	public Artifact getPOMId() {
-		try {
-			return new Artifact(this.groupId, this.artifactId, this.version, "", "pom");
-		} catch (MavenException e) { throw new RuntimeException("This is not supposed to happen ..."); }
+	public boolean isGAWildcard() {
+		return this.groupId.equals("*") || this.artifactId.equals("*");
 	}
 	
-	public Artifact getFileId(String classifier, String extension) {
+	public boolean hasGAVCE() {
+		return this.groupId != null && this.artifactId != null && this.version != null && this.classifier != null && this.extension != null;
+	}
+	
+	public Artifact getGAV() {
 		try {
-			return new Artifact(this.groupId, this.artifactId, this.version, classifier, extension);
-		} catch (MavenException e) { throw new RuntimeException("This is not supposed to happen ..."); }
+			return new Artifact(this.groupId, this.artifactId, this.version, null, null, false);
+		} catch (MavenException e) { throw new RuntimeException("this makes not sense ..."); }
+	}
+	
+	public Artifact getPOMId() throws MavenException {
+		if (isGAWildcard()) throw new MavenException("can not get POM from wildcard: %s", this.toString());
+		if (!hasGAV()) throw new MavenException("can not get POM from non GAV coordinates: %s", this.toString());
+		return new Artifact(this.groupId, this.artifactId, this.version, "", "pom");
+	}
+	
+	public Artifact withVersion(String version) throws MavenException {
+		if (isGAWildcard()) throw new MavenException("can not get specific version from wildcard: %s", this.toString());
+		return new Artifact(this.groupId, this.artifactId, version, this.classifier, this.extension, false);
 	}
 	
 }

@@ -77,7 +77,7 @@ public class Repository {
 		}
 		
 		public static ArtifactFile[] checksums() {
-			return new ArtifactFile[] { SHA512, SHA256, SHA1, MD5 };
+			return new ArtifactFile[] { MD5, SHA1, SHA256, SHA512 };
 		}
 	}
 	

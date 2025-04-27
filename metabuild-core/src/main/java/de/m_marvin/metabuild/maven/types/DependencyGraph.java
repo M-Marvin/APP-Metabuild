@@ -52,12 +52,14 @@ public class DependencyGraph {
 	}
 	
 	public void addRepository(Repository repository) {
+		if (!this.repositories.contains(repository))
+			this.repositories.remove(repository); // to allow updating of credentials
 		this.repositories.add(repository);
 	}
 	
 	public void setResolutionRepository(Repository resolutionRepository) {
 		this.resolutionRepository = resolutionRepository;
-		this.repositories.add(resolutionRepository);
+		addRepository(resolutionRepository);
 	}
 	
 	public void addTransitive(Artifact artifact, Set<Artifact> excludes, String systemPath) {
@@ -74,11 +76,6 @@ public class DependencyGraph {
 		if (this.transitives.containsKey(group)) {
 			this.transitives.get(group).graph = graph;
 		}
-	}
-	
-	public void setArtifactSystemPath(Artifact artifact, String systemPath) {
-		
-				
 	}
 	
 	public List<Repository> getRepositories() {

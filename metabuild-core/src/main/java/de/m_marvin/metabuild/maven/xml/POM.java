@@ -191,7 +191,6 @@ public class POM {
 			} else {			
 				return this.properties.stream().filter(p -> p.key.equals(property)).findAny().orElse(Property.FALLBACK_PROPERTY).value;
 			}
-			
 		});
 	}
 	

@@ -4,7 +4,10 @@ import java.net.Authenticator;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
+import java.util.Objects;
 import java.util.function.Supplier;
+
+import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 
 public class Repository {
 
@@ -20,6 +23,24 @@ public class Repository {
 		this.name = name;
 		this.baseURL = baseURL;
 		this.credentials = credentials;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.baseURL);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Repository other) {
+			return Objects.equals(this.baseURL, other.baseURL);
+		}
+		return false;
+	}
+	
+	@Override
+	public String toString() {
+		return "Repositiry{url=" + this.baseURL + ",credentials=" + (this.credentials != null ? "yes" : "no") + "}";
 	}
 	
 	public static record Credentials(Supplier<String> username, Supplier<String> password, Supplier<String> token) {
@@ -47,9 +68,9 @@ public class Repository {
 		
 	}
 	
-	public URL artifactURL(Artifact artifact, ArtifactFile file) throws MavenException {
+	public URL artifactURL(Artifact artifact, DataLevel dataLevel, ArtifactFile artifactFile) throws MavenException {
 		try {
-			return new URL(this.baseURL.getProtocol(), this.baseURL.getHost(), this.baseURL.getPort(), this.baseURL.getFile() + artifact.getLocalPath() + file.getExtension());
+			return new URL(this.baseURL.getProtocol(), this.baseURL.getHost(), this.baseURL.getPort(), this.baseURL.getFile() + artifact.getLocalPath(dataLevel) + artifactFile.getExtension());
 		} catch (MalformedURLException e) {
 			throw new MavenException("unable to format artifact URL: %s + %s", this.baseURL, artifact);
 		}

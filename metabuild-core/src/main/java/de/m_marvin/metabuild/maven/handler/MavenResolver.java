@@ -11,11 +11,15 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -30,11 +34,13 @@ import java.util.function.Predicate;
 import javax.net.ssl.HttpsURLConnection;
 
 import de.m_marvin.metabuild.maven.types.Artifact;
+import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.metabuild.maven.xml.MetaVersion;
 import de.m_marvin.metabuild.maven.xml.POM;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
@@ -43,27 +49,46 @@ import de.m_marvin.simplelogging.impl.TagLogger;
 
 public class MavenResolver {
 	
-	protected Logger logger;
-	private TimeUnit timeoutUnit = TimeUnit.SECONDS;
-	private long timeout = 5;
-	private File cache;
+	protected final Logger logger;
+	private final File localCache;
+	private TimeUnit remoteTimeoutUnit = TimeUnit.SECONDS;
+	private long remoteTimeout = 5;
+	private TimeUnit metadataExpirationUnit = TimeUnit.SECONDS;
+	private long metadataExpiration = 30;
 	private boolean refreshLocal;
 	private boolean ignoreOptionalDependencies;
 	
 	public MavenResolver(Logger logger, File localCache) {
 		this.logger = new TagLogger(logger, "resolver");
-		this.cache = localCache;
+		this.localCache = localCache;
 	}
 	
+	/**
+	 * Sets the timeout for remote connections
+	 */
+	public void setRemoteTimeout(long timeout, TimeUnit unit) {
+		this.remoteTimeout = timeout;
+		this.remoteTimeoutUnit = unit;
+	}
+	
+	/**
+	 * Sets the expiration time for metadata in the local cache
+	 */
+	public void setMetadataExpiration(long expiration, TimeUnit unit) {
+		this.metadataExpiration = expiration;
+		this.metadataExpirationUnit = unit;
+	}
+	
+	/**
+	 * Forces all remote artifacts to be re-downloaded if set to true
+	 */
 	public void setRefreshLocal(boolean refreshLocal) {
 		this.refreshLocal = refreshLocal;
 	}
 	
-	public void setRemoteTimeout(long timeout, TimeUnit unit) {
-		this.timeout = timeout;
-		this.timeoutUnit = unit;
-	}
-	
+	/**
+	 * Tells the resolver to ignore all transitive dependencies marked as optional
+	 */
 	public void setIgnoreOptionalDependencies(boolean ignoreOptionalDependencies) {
 		this.ignoreOptionalDependencies = ignoreOptionalDependencies;
 	}
@@ -72,12 +97,24 @@ public class MavenResolver {
 		return this.logger;
 	}
 	
+	/**
+	 * Attempt to resolve all transitive dependencies to a full dependency graph.<br>
+	 * If an list for collecting the artifact paths is supplied, the artifacts are also attempted to download.
+	 * @param graph The top level graph containing the first dependencies to resolve
+	 * @param artifactOutput The list to collect the resolved local cache artifacts, may be null
+	 * @param exclusion An exclusion predicate for direct transitive artifacts to ignore
+	 * @return true if all dependencies where successfully resolved, false otherwise
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	public boolean resolveGraph(DependencyGraph graph, List<File> artifactOutput, Predicate<Artifact> exclusion) throws MavenException {
 		
+		// attempt to resolve all transitive dependencies of this graph
 		for (Artifact artifactGroup : graph.getTransitiveGroups()) {
 			
+			// ignore excluded transitive dependencies
 			if (!exclusion.test(artifactGroup)) continue;
 			
+			// do not attempt graph resolution for system dependencies
 			if (!graph.isSystemOnly(artifactGroup)) {
 
 				DependencyGraph transitiveGraph = graph.getTransitiveGraph(artifactGroup);
@@ -97,8 +134,10 @@ public class MavenResolver {
 					
 				}
 				
+				// get configured excludes for transitive dependencies
 				Predicate<Artifact> transitiveExclusion = graph.getExclusionPredicate(artifactGroup);
 				
+				// attempt to resolve child graph of transitive dependency
 				if (!resolveGraph(transitiveGraph, artifactOutput, transitiveExclusion)) {
 					logger().warn("unable to resolve transitive graphs for artifact: %s", artifactGroup);
 					return false;
@@ -106,6 +145,7 @@ public class MavenResolver {
 				
 			}
 			
+			// if artifact output configured, download artifacts and add local cache paths
 			if (artifactOutput != null) {
 				
 				for (Artifact artifact : graph.getArtifacts(artifactGroup)) {
@@ -113,6 +153,7 @@ public class MavenResolver {
 					String systemPath = graph.getSystemPath(artifact);
 					if (systemPath != null) {
 						
+						// system dependencies are expected to be available on the system
 						File systemFile = new File(systemPath);
 						if (!systemFile.isFile()) {
 							logger().warn("failed to find system artifact: %s", systemFile);
@@ -122,7 +163,7 @@ public class MavenResolver {
 						artifactOutput.add(systemFile);
 						
 					} else {
-
+						
 						Repository repository = graph.getTransitiveGraph(artifactGroup).getResolutionRepository();
 						File localArtifact = downloadArtifact(repository, artifact);
 						if (localArtifact == null) {
@@ -144,14 +185,24 @@ public class MavenResolver {
 		
 	}
 	
+	/**
+	 * Attempt to resolve the POM of the supplied POM artifact and parse it to an transitive dependency graph.
+	 * @param parent The parent graph from which this POM is a transitive dependency
+	 * @param pomArtifact The POM artifact coordinates
+	 * @return the parsed dependency graph or null if the resolution failed
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	public DependencyGraph resolveGraphPOM(DependencyGraph parent, Artifact pomArtifact) throws MavenException {
-
-		DependencyGraph graph = new DependencyGraph();
+		
+		// create child graph for this POM
+		DependencyGraph graph = new DependencyGraph(parent.getRepositories(), Collections.emptyList()); // PARENT REPOSITORY FORWARDING 1
+		
+		// attempt to resolve full POM
 		POM pom = resolveFullPOM(parent.getRepositories(), r -> graph.setResolutionRepository(r), pomArtifact);
 		
-		if (pom == null)
-			throw new MavenException("unable to resolve POM artifact: %s", pomArtifact);
+		if (pom == null) return null;
 		
+		// resolve additional repositories
 		Set<String> ndrepo = new HashSet<String>();
 		if (pom.repositories != null) {
 			for (var r : pom.repositories) {
@@ -176,7 +227,7 @@ public class MavenResolver {
 				Artifact artifact = d.gavce(pom);
 				Artifact group = artifact.getGAV().withVersion(null);
 				if (transitiveVersions.containsKey(group)) continue; // avoid duplicate entries, pick first in order of import
-				transitiveVersions.put(group, artifact.version);
+				transitiveVersions.put(group, artifact.baseVersion);
 				
 			}
 		}
@@ -186,29 +237,32 @@ public class MavenResolver {
 		if (pom.dependencies != null) {
 			for (var d : pom.dependencies) {
 				
+				// ignore optional dependencies if requested
 				if (d.optional && this.ignoreOptionalDependencies) continue;
 				
+				// resolve full transitive artifact coordinates
 				Artifact artifact = d.gavce(pom);
-				if (artifact.version == null) {
+				if (artifact.baseVersion == null) {
 					String declaredVersion = transitiveVersions.get(artifact.getGAV());
 					if (declaredVersion == null)
-						throw new MavenException("artifact '%s' has no version declared in dependency management!", artifact);
+						throw new MavenException("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
 					artifact = artifact.withVersion(declaredVersion);
 				}
 				
 				if (!artifact.hasGAVCE())
-					throw new MavenException("artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+					throw new MavenException("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
 				
 				Artifact group = artifact.getGAV();
 				if (!nddepend.add(group)) continue; // avoid duplicate dependencies, pick first in order of import
 				
+				// parse exclusion filters
 				Set<Artifact> excludes = new HashSet<Artifact>();
 				if (d.exclusions != null) {
 					for (var e : d.exclusions) {
 						excludes.add(e.ga(pom));
 					}
 				}
-
+				
 				String systemPath = null;
 				if (d.scope == Scope.SYSTEM) {
 					systemPath = pom.fillPoperties(d.systemPath);
@@ -223,6 +277,14 @@ public class MavenResolver {
 		
 	}
 	
+	/**
+	 * Resolves the POM of the supplied artifact, including parent POMs and imports.
+	 * @param repositories The repositories to attempt to resolve the POM on
+	 * @param pomRepository The callback for reporting back where the POM was successfully resolved
+	 * @param artifact The artifact  The artifact from which to get the POM for
+	 * @return the resolved POM or null if the POM could not be resolved on the supplied repositories and was not available in cache
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	public POM resolveFullPOM(Collection<Repository> repositories, Consumer<Repository> pomRepository, Artifact artifact) throws MavenException {
 		
 		for (Repository repository : repositories) {
@@ -245,7 +307,8 @@ public class MavenResolver {
 					}
 				}).filter(Objects::nonNull).forEach(repositories2::add);
 			}
-			repositories2.add(repository);
+			//repositories2.add(repository);
+			repositories2.addAll(repositories); // PARENT REPOSITORY FORWARDING 2
 			
 			// parse dependency management imports
 			if (pom.dependencyManagement != null) {
@@ -260,10 +323,10 @@ public class MavenResolver {
 					try {
 						POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
 						if (importPOM == null)
-							throw new MavenException("not found on repositories: %s", importArtifactPOM);
+							throw new MavenException("POM resolution inconsistencies, import not found on repositories: %s", importArtifactPOM);
 						pom.importPOM(importPOM, false);
 					} catch (MavenException e) {
-						throw new MavenException(e, "failed to resolve import POM: %s", importArtifactPOM);
+						throw new MavenException(e, "POM resolution inconsistencies, failed to resolve import POM: %s", importArtifactPOM);
 					}
 					
 				}
@@ -277,17 +340,17 @@ public class MavenResolver {
 				try {
 					POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
 					if (importPOM == null)
-						throw new MavenException("not found on repositories: %s", importArtifactPOM);
+						throw new MavenException("POM resolution inconsistencies, parent not found on repositories: %s", importArtifactPOM);
 					pom.importPOM(importPOM, true);
 				} catch (MavenException e) {
-					throw new MavenException(e, "failed to resolve parent POM: %s", importArtifactPOM);
+					throw new MavenException(e, "POM resolution inconsistencies, failed to resolve parent POM: %s", importArtifactPOM);
 				}
 				
 			}
 			
 			pomRepository.accept(repository);
 			
-			logger().debug("-> fully resolved POM: %s", artifact);
+			logger().info("-> fully resolved POM: %s", artifact);
 			return pom;
 			
 		}
@@ -296,6 +359,14 @@ public class MavenResolver {
 		
 	}
 	
+	/**
+	 * Attempts to download the POM for the supplied artifact from the remote repository to the cache if required, and parses it from XML<br>
+	 * Snapshot version resolution is handled automatically.
+	 * @param repository The remote repository from which to download the file if required
+	 * @param artifact The artifact to acquire, this must not necccessarly point to the POM itself
+	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	public POM downloadArtifactPOM(Repository repository, Artifact artifact) throws MavenException {
 		
 		File localArtifact = downloadArtifact(repository, artifact.getPOMId());
@@ -309,34 +380,105 @@ public class MavenResolver {
 		
 	}
 	
+	/**
+	 * Attempts to download the artifact from the remote repository to the cache if required, and returns the local cache file<br>
+	 * Snapshot version resolution is handled automatically.
+	 * @param repository The remote repository from which to download the file if required
+	 * @param artifact The artifact to acquire
+	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	public File downloadArtifact(Repository repository, Artifact artifact) throws MavenException {
 		
-		URL artifactURL = repository.artifactURL(artifact, ArtifactFile.DATA);
-		File localArtifact = new File(this.cache, artifact.getLocalPath());
-		if (localArtifact.isFile() && !this.refreshLocal) return localArtifact;
+		// if snapshot artifact, metadata resolution required first
+		if (artifact.isSnapshot()) {
+			
+			// download snapshot metadata or pull from cache if not yet expired
+			File snapshotMetadataFile = downloadArtifact(repository, artifact, DataLevel.META_VERSION);
+			if (snapshotMetadataFile == null) return null;
+			
+			try {
+				
+				// parse metadata XML
+				MetaVersion snapshotMetadata = MetaVersion.fromXML(new FileInputStream(snapshotMetadataFile));
+				if (snapshotMetadata.versioning == null)
+					throw new MavenException("malformed snapshot mave-metadata: %s", artifact);
+				
+				// get latest snapshot version
+				String concreteVersion = snapshotMetadata.versioning.snapshot.timestamp + "-" + snapshotMetadata.versioning.snapshot.buildNumber;
+				artifact = artifact.withSnapshotVersion(concreteVersion);
+				
+				logger().info("-> resolved snapshot version: %s", artifact);
+			} catch (IOException | MavenException e) {
+				throw new MavenException(e, "problem when parsing maven-metadata: %s", artifact);
+			}
+			
+		}
+		
+		return downloadArtifact(repository, artifact, DataLevel.ARTIFACT);
+		
+	}
+	
+	/**
+	 * Attempts to download the artifact or metadata from the remote repository to the cache if required, and returns the local cache file<br>
+	 * If the artifact coordinates are snapshot coordinates, the concrete timestamped version has to be resolved for this to work.
+	 * @param repository The remote repository from which to download the file if required
+	 * @param artifact The artifact to acquire
+	 * @param dataLevel The data level, this indicates if the actual artifact or one of the three metadata levels should be acquired
+	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
+	private File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
+		
+		// assemble remote URL and local path
+		URL artifactURL = repository.artifactURL(artifact, dataLevel, ArtifactFile.DATA);
+		File localArtifact = new File(this.localCache, artifact.getLocalPath(dataLevel));
+		
+		// check for existing file in cache, ignore if metadata category and refresh interval expired
+		if (localArtifact.isFile() && !this.refreshLocal) {
+			if (!dataLevel.isMetadata()) return localArtifact;
+			try {
+				BasicFileAttributes atr = Files.readAttributes(Paths.get(localArtifact.getPath()), BasicFileAttributes.class);
+				long lastUpdate = System.currentTimeMillis() - atr.lastModifiedTime().toMillis();
+				if (lastUpdate < this.metadataExpirationUnit.toMillis(this.metadataExpiration)) return localArtifact;
+			} catch (Exception e) {
+				return localArtifact;
+			}
+		}
+		
+		// create directories in cache
 		localArtifact.getParentFile().mkdirs();
 		
 		try {
-
+			
+			// get remote connection stream
 			InputStream onlineStream = openURLConnection(artifactURL, repository.credentials);
-			if (onlineStream == null) return null;
+			
+			// if remote connection failed, check if cache is still available to return
+			if (onlineStream == null) return localArtifact.isFile() ? localArtifact : null;
+			
+			// get local cache file stream
 			OutputStream localStream = new FileOutputStream(localArtifact);
 			
+			// attempt to request one of the checksums from remote repository
 			for (ArtifactFile file : ArtifactFile.checksums()) {
 				
 				try {
-					URL checksumURL = repository.artifactURL(artifact, file);
+					// acquire checksum stream and checksum algorithm
+					URL checksumURL = repository.artifactURL(artifact, dataLevel, file);
 					MessageDigest digest = MessageDigest.getInstance(file.getAlgorithm());
 					InputStream checksumStream = openURLConnection(checksumURL, repository.credentials);
 					
 					// checksum not supported on repository, skip
 					if (checksumStream == null) continue;
 					
+					// parse checksum from stream
 					String checksumStr = new String(checksumStream.readAllBytes()).split("\\W")[0];
 					try {
 						byte[] onlineChecksum = HexFormat.of().parseHex(checksumStr);
 						checksumStream.close();
 						
+						// transfer bytes from remote repository, compute hash for checksum check
 						byte[] buffer = new byte[1024];
 						int len = 0;
 						while ((len = onlineStream.read(buffer)) > 0) {
@@ -345,6 +487,7 @@ public class MavenResolver {
 						}
 						byte[] localChecksum = digest.digest();
 						
+						// terminate local cache and remote repository streams
 						onlineStream.close();
 						localStream.close();
 						
@@ -395,18 +538,27 @@ public class MavenResolver {
 			localArtifact.delete();
 			throw new MavenException(e, "unknown internal error when processing POM artifact: %s", artifact, localArtifact);
 		}
-		
+		 
 	}
 	
+	/**
+	 * Opens a connection to the remote URL, handling authorization using the supplied credentials
+	 * @param url The remote URL to connect to
+	 * @param credentials The credentials for authorization (may be null)
+	 * @return An input stream to the remote URL, or null if the connection could not be established
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
 	private InputStream openURLConnection(URL url, Credentials credentials) throws MavenException {
 		
 		logger().debug("access URL: %s", url);
 		
 		try {
 			
+			// open remote connection and configure timeouts
 			URLConnection connection = url.openConnection();
-			connection.setReadTimeout((int) this.timeoutUnit.toMillis(this.timeout));
+			connection.setReadTimeout((int) this.remoteTimeoutUnit.toMillis(this.remoteTimeout));
 			
+			// apply credentials if available
 			if (credentials != null) {
 				if (credentials.token() != null)
 					connection.setRequestProperty("Authorization", "Bearer " + credentials.bearer());
@@ -414,6 +566,7 @@ public class MavenResolver {
 					httpsConnection.setAuthenticator(credentials.authenticator());
 			}
 			
+			// if HTTP connection, check header status codes
 			if (connection instanceof HttpURLConnection httpConnection) {
 				httpConnection.setRequestMethod("GET");
 				int rcode = httpConnection.getResponseCode();
@@ -425,13 +578,14 @@ public class MavenResolver {
 				}
 			}
 			
+			// return connection stream
 			return connection.getInputStream();
 			
 		} catch (FileNotFoundException e) {
 			logger().debug("unable to get resource: %s", e.getMessage());
 			return null;
 		} catch (IOException e) {
-			throw new MavenException(e, "exception while transfering remote artifact: %s", url);
+			throw new MavenException(e, "exception while connecting to remote artifact: %s", url);
 		}
 		
 	}

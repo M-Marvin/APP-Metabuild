@@ -1,6 +1,7 @@
 package de.m_marvin.metabuild.maven.xml;
 
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,6 +24,7 @@ import jakarta.xml.bind.annotation.XmlAnyElement;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlElementWrapper;
 import jakarta.xml.bind.annotation.XmlEnum;
+import jakarta.xml.bind.annotation.XmlEnumValue;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlType;
 import jakarta.xml.bind.annotation.adapters.XmlAdapter;
@@ -80,14 +82,69 @@ public class POM {
 		public String systemPath = null;
 
 		@XmlType
-		@XmlEnum(String.class)
+		@XmlEnum
 		public static enum Scope {
-			COMPILE,
-			PROVIDED,
-			RUNTIME,
-			TEST,
-			SYSTEM,
-			IMPORT
+			@XmlEnumValue("compile")
+			COMPILE(5),
+			@XmlEnumValue("provided")
+			PROVIDED(4),
+			@XmlEnumValue("runtime")
+			RUNTIME(2),
+			@XmlEnumValue("test")
+			TEST(1),
+			@XmlEnumValue("system")
+			SYSTEM(0),
+			@XmlEnumValue("import")
+			IMPORT(0);
+			
+			private final int priority;
+			
+			private Scope(int priority) {
+				this.priority = priority;
+			}
+			
+			public Scope priotity(Collection<Scope> scopes) {
+				Scope scope = null;
+				for (Scope s : scopes)
+					if (scope == null || s.priority > scope.priority) scope = s;
+				return scope;
+			}
+			
+			public Scope effective(Scope transitiveScope) {
+				switch (this) {
+				case COMPILE: {
+					switch (transitiveScope) {
+					case COMPILE: return COMPILE;
+					case RUNTIME: return RUNTIME;
+					case SYSTEM: return SYSTEM;
+					default: return null;
+					}
+				}
+				case PROVIDED: {
+					switch (transitiveScope) {
+					case COMPILE: return PROVIDED;
+					case RUNTIME: return PROVIDED;
+					case SYSTEM: return SYSTEM;
+					default: return null;
+					}
+				}
+				case RUNTIME: {
+					switch (transitiveScope) {
+					case COMPILE: return RUNTIME;
+					case RUNTIME: return RUNTIME;
+					default: return null;
+					}
+				}
+				case TEST: {
+					switch (transitiveScope) {
+					case COMPILE: return TEST;
+					case RUNTIME: return TEST;
+					default: return null;
+					}
+				}
+				default: return null;
+				}
+			}
 		}
 		
 		/* if this dependency is optional */

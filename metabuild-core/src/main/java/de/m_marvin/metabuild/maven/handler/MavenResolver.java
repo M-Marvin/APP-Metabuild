@@ -36,6 +36,9 @@ import javax.net.ssl.HttpsURLConnection;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
+import de.m_marvin.metabuild.maven.types.DependencyScope;
+import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveEntry;
+import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveGroup;
 import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
@@ -55,12 +58,22 @@ public class MavenResolver {
 	private long remoteTimeout = 5;
 	private TimeUnit metadataExpirationUnit = TimeUnit.SECONDS;
 	private long metadataExpiration = 30;
-	private boolean refreshLocal;
+	private ResolutionStrategy resolutionStrategy = ResolutionStrategy.REMOTE;
 	private boolean ignoreOptionalDependencies;
+	private boolean metaExpired = false;
+	private Consumer<String> statusCallback = s -> {};
+	
+	public static enum ResolutionStrategy {
+		OFFLINE,REMOTE,FORCE_REMOTE;
+	}
 	
 	public MavenResolver(Logger logger, File localCache) {
 		this.logger = new TagLogger(logger, "resolver");
 		this.localCache = localCache;
+	}
+	
+	public void setStatusCallback(Consumer<String> statusCallback) {
+		this.statusCallback = statusCallback;
 	}
 	
 	/**
@@ -80,10 +93,13 @@ public class MavenResolver {
 	}
 	
 	/**
-	 * Forces all remote artifacts to be re-downloaded if set to true
+	 * Sets the resolution strategy to use.<br>
+	 * - OFFLINE -> Acquire artifacts only from local cache<br>
+	 * - REMOTE -> Acquire artifacts from remote repository if not available in local cache<br>
+	 * - FORCE_REMOTE -> Acquire all artifacts from remote repository, replacing the ones in the local cache<br>
 	 */
-	public void setRefreshLocal(boolean refreshLocal) {
-		this.refreshLocal = refreshLocal;
+	public void setResolutionStrategy(ResolutionStrategy resolutionStrategy) {
+		this.resolutionStrategy = resolutionStrategy;
 	}
 	
 	/**
@@ -91,6 +107,13 @@ public class MavenResolver {
 	 */
 	public void setIgnoreOptionalDependencies(boolean ignoreOptionalDependencies) {
 		this.ignoreOptionalDependencies = ignoreOptionalDependencies;
+	}
+	
+	/**
+	 * Returns true after an resolution detected that metadata should be updated from remote repository, but could not do so.
+	 */
+	public boolean isMetaExpired() {
+		return metaExpired;
 	}
 	
 	protected Logger logger() {
@@ -101,60 +124,65 @@ public class MavenResolver {
 	 * Attempt to resolve all transitive dependencies to a full dependency graph.<br>
 	 * If an list for collecting the artifact paths is supplied, the artifacts are also attempted to download.
 	 * @param graph The top level graph containing the first dependencies to resolve
-	 * @param artifactOutput The list to collect the resolved local cache artifacts, may be null
 	 * @param exclusion An exclusion predicate for direct transitive artifacts to ignore
+	 * @param artifactOutput The list to collect the resolved local cache artifacts, may be null
+	 * @param artifactScope The scope for which to collect the local artifacts, may be null
 	 * @return true if all dependencies where successfully resolved, false otherwise
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public boolean resolveGraph(DependencyGraph graph, List<File> artifactOutput, Predicate<Artifact> exclusion) throws MavenException {
+	public boolean resolveGraph(DependencyGraph graph, Predicate<Artifact> exclusion, List<File> artifactOutput, DependencyScope artifactScope) throws MavenException {
 		
-		// attempt to resolve all transitive dependencies of this graph
-		for (Artifact artifactGroup : graph.getTransitiveGroups()) {
+		if (artifactOutput != null) artifactOutput.clear();
+		this.metaExpired = false;
+		
+		// attempt to resolve all transitive dependency groups of this graph
+		for (TransitiveGroup transitiveGroup : graph.getTransitiveGroups()) {
 			
 			// ignore excluded transitive dependencies
-			if (!exclusion.test(artifactGroup)) continue;
+			if (exclusion.test(transitiveGroup.group)) continue;
+			
+			this.statusCallback.accept("resolving graph > " + transitiveGroup.group);
 			
 			// do not attempt graph resolution for system dependencies
-			if (!graph.isSystemOnly(artifactGroup)) {
-
-				DependencyGraph transitiveGraph = graph.getTransitiveGraph(artifactGroup);
+			if (transitiveGroup.scope != Scope.SYSTEM) {
 				
-				if (transitiveGraph == null) {
+				if (transitiveGroup.graph == null) {
 					
-					transitiveGraph = resolveGraphPOM(graph, artifactGroup.getPOMId());
+					transitiveGroup.graph = resolveGraphPOM(graph, transitiveGroup.group.getPOMId(), transitiveGroup.scope);
 					
-					if (transitiveGraph == null) {
+					if (transitiveGroup.graph == null) {
 						
-						logger().warn("unable to resolve artifact graph: %s", artifactGroup);
+						logger().warn("unable to resolve artifact graph for group: %s (scope %s)", transitiveGroup.group, transitiveGroup.scope);
 						return false;
 						
 					}
 					
-					graph.setTransitiveGraph(artifactGroup, transitiveGraph);
-					
 				}
 				
-				// get configured excludes for transitive dependencies
-				Predicate<Artifact> transitiveExclusion = graph.getExclusionPredicate(artifactGroup);
+				// get exclusion predicate for transitive dependencies
+				Predicate<Artifact> transitiveExclusion = transitiveGroup.excludes != null ? transitiveGroup.excludes::contains : g -> false;
 				
 				// attempt to resolve child graph of transitive dependency
-				if (!resolveGraph(transitiveGraph, artifactOutput, transitiveExclusion)) {
-					logger().warn("unable to resolve transitive graphs for artifact: %s", artifactGroup);
+				if (!resolveGraph(transitiveGroup.graph, transitiveExclusion, artifactOutput, artifactScope)) {
+					logger().warn("unable to resolve transitive graphs for artifact group: %s (scope %s)", transitiveGroup.group, transitiveGroup.scope);
 					return false;
 				}
 				
 			}
 			
 			// if artifact output configured, download artifacts and add local cache paths
-			if (artifactOutput != null) {
+			if (artifactOutput != null && artifactScope != null) {
 				
-				for (Artifact artifact : graph.getArtifacts(artifactGroup)) {
+				for (TransitiveEntry transitive : transitiveGroup.artifacts) {
 					
-					String systemPath = graph.getSystemPath(artifact);
-					if (systemPath != null) {
+					if (!artifactScope.includes(transitiveGroup.scope)) continue;
+
+					this.statusCallback.accept("resolving > " + transitive.artifact);
+					
+					if (transitiveGroup.scope == Scope.SYSTEM) {
 						
 						// system dependencies are expected to be available on the system
-						File systemFile = new File(systemPath);
+						File systemFile = new File(transitive.systemPath);
 						if (!systemFile.isFile()) {
 							logger().warn("failed to find system artifact: %s", systemFile);
 							return false;
@@ -164,10 +192,10 @@ public class MavenResolver {
 						
 					} else {
 						
-						Repository repository = graph.getTransitiveGraph(artifactGroup).getResolutionRepository();
-						File localArtifact = downloadArtifact(repository, artifact);
+						Repository repository = transitiveGroup.graph.getResolutionRepository();
+						File localArtifact = downloadArtifact(repository, transitive.artifact);
 						if (localArtifact == null) {
-							logger().warn("failed to download artifact: %s", artifact);
+							logger().warn("failed to download artifact: %s", transitive.artifact);
 							return false;
 						}
 						
@@ -189,10 +217,11 @@ public class MavenResolver {
 	 * Attempt to resolve the POM of the supplied POM artifact and parse it to an transitive dependency graph.
 	 * @param parent The parent graph from which this POM is a transitive dependency
 	 * @param pomArtifact The POM artifact coordinates
+	 * @param scope The scope under which the transitive are imported
 	 * @return the parsed dependency graph or null if the resolution failed
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public DependencyGraph resolveGraphPOM(DependencyGraph parent, Artifact pomArtifact) throws MavenException {
+	public DependencyGraph resolveGraphPOM(DependencyGraph parent, Artifact pomArtifact, Scope scope) throws MavenException {
 		
 		// create child graph for this POM
 		DependencyGraph graph = new DependencyGraph(parent.getRepositories(), Collections.emptyList()); // PARENT REPOSITORY FORWARDING 1
@@ -221,8 +250,14 @@ public class MavenResolver {
 		if (pom.dependencyManagement != null) {
 			for (var d : pom.dependencyManagement) {
 				
-				// ignore POM imports here
-				if (d.scope == Scope.IMPORT) continue;
+				// get the scope the imported transitive will have in this graph
+				Scope effectiveScope = scope.effective(d.scope);
+				
+				// ignore dependencies which should be omitted
+				if (effectiveScope == null) continue;
+				
+				// ignore optional dependencies if asked to
+				if (d.optional && this.ignoreOptionalDependencies) continue;
 				
 				Artifact artifact = d.gavce(pom);
 				Artifact group = artifact.getGAV().withVersion(null);
@@ -236,8 +271,14 @@ public class MavenResolver {
 		Set<Artifact> nddepend = new HashSet<Artifact>();
 		if (pom.dependencies != null) {
 			for (var d : pom.dependencies) {
+
+				// get the scope the imported transitive will have in this graph
+				Scope effectiveScope = scope.effective(d.scope);
 				
-				// ignore optional dependencies if requested
+				// ignore dependencies which should be omitted
+				if (effectiveScope == null) continue;
+				
+				// ignore optional dependencies if asked to
 				if (d.optional && this.ignoreOptionalDependencies) continue;
 				
 				// resolve full transitive artifact coordinates
@@ -268,7 +309,7 @@ public class MavenResolver {
 					systemPath = pom.fillPoperties(d.systemPath);
 				}
 				
-				graph.addTransitive(artifact, excludes, systemPath);
+				graph.addTransitive(effectiveScope, artifact, excludes, systemPath);
 				
 			}
 		}
@@ -289,11 +330,20 @@ public class MavenResolver {
 		
 		for (Repository repository : repositories) {
 			
-			logger().info("attempt resolve '%s' on [%s]", artifact, repository.name == null ? repository.baseURL : repository.name);
+			// don't print message if resolving from cache, might be misleading since no actual repositroy is contacted
+			if (this.resolutionStrategy != ResolutionStrategy.OFFLINE)
+				logger().info("attempt resolve '%s' on [%s]", artifact, repository.name == null ? repository.baseURL : repository.name);
 			
 			POM pom = downloadArtifactPOM(repository, artifact);
 			
-			if (pom == null) continue;
+			// abort resolution if offline mode, further attempts will fail anyway
+			if (pom == null) {
+				if (this.resolutionStrategy == ResolutionStrategy.OFFLINE) {
+					return null;
+				} else {
+					continue;
+				}
+			}
 			
 			// parse repositories for imports
 			List<Repository> repositories2 = new ArrayList<Repository>();
@@ -434,17 +484,22 @@ public class MavenResolver {
 		URL artifactURL = repository.artifactURL(artifact, dataLevel, ArtifactFile.DATA);
 		File localArtifact = new File(this.localCache, artifact.getLocalPath(dataLevel));
 		
-		// check for existing file in cache, ignore if metadata category and refresh interval expired
-		if (localArtifact.isFile() && !this.refreshLocal) {
+		// check for existing file in cache, ignore if metadata category and refresh interval expired, check for resolution strategy
+		if (localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) {
 			if (!dataLevel.isMetadata()) return localArtifact;
 			try {
 				BasicFileAttributes atr = Files.readAttributes(Paths.get(localArtifact.getPath()), BasicFileAttributes.class);
 				long lastUpdate = System.currentTimeMillis() - atr.lastModifiedTime().toMillis();
 				if (lastUpdate < this.metadataExpirationUnit.toMillis(this.metadataExpiration)) return localArtifact;
+				if (this.resolutionStrategy == ResolutionStrategy.OFFLINE) {
+					this.metaExpired = true;
+					return localArtifact;
+				}
 			} catch (Exception e) {
 				return localArtifact;
 			}
 		}
+		if (!localArtifact.isFile() && this.resolutionStrategy == ResolutionStrategy.OFFLINE) return null;
 		
 		// create directories in cache
 		localArtifact.getParentFile().mkdirs();

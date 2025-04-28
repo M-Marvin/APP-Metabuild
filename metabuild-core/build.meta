@@ -7,6 +7,11 @@ import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.maven.MavenResolver;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
+import de.m_marvin.metabuild.maven.types.Artifact;
+import de.m_marvin.metabuild.maven.types.MavenException;
+import de.m_marvin.metabuild.maven.types.Repository;
+import de.m_marvin.metabuild.maven.types.Scope;
+import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.simplelogging.Log;
 
 public class Buildfile extends JavaBuildScript {
@@ -49,34 +54,34 @@ public class Buildfile extends JavaBuildScript {
 	@Override
 	public void repositories() {
 		
-		implementation.repository(new MavenResolver.MavenRepository(
+		dependencies.repository(new Repository(
 				"GHP JavaRun",
 				"https://maven.pkg.github.com/m-marvin/app-javarun",
-				new MavenResolver.MavenRepository.Credentials(
+				new Credentials(
 						() -> System.getenv("GITHUB_ACTOR"), 
 						() -> System.getenv("GITHUB_TOKEN")
 				)
 		));
 		
-		implementation.repository(new MavenResolver.MavenRepository(
+		dependencies.repository(new Repository(
 				"GHP CommandLineParser",
 				"https://maven.pkg.github.com/m-marvin/library-commandlineparser",
-				new MavenResolver.MavenRepository.Credentials(
+				new Credentials(
 						() -> System.getenv("GITHUB_ACTOR"), 
 						() -> System.getenv("GITHUB_TOKEN")
 				)
 		));
 
-		implementation.repository(new MavenResolver.MavenRepository(
+		dependencies.repository(new Repository(
 				"GHP SimpleLogging",
 				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
-				new MavenResolver.MavenRepository.Credentials(
+				new Credentials(
 						() -> System.getenv("GITHUB_ACTOR"), 
 						() -> System.getenv("GITHUB_TOKEN")
 				)
 		));
 
-		implementation.repository(new MavenResolver.MavenRepository(
+		dependencies.repository(new Repository(
 				"Maven Central",
 				"https://repo.maven.apache.org/maven2",
 				null
@@ -88,21 +93,26 @@ public class Buildfile extends JavaBuildScript {
 	public void dependencies() {
 		
 		// CommandLineParser
-		implementation.add("de.m_marvin.commandlineparser:commandlineutility:2.0");
+		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
 		
 		// GSON
 		//implementation "com.google.code.gson:gson:2.9.1"
 		
 		// SimpleLogging
-		implementation.add("de.m_marvin.simplelogging:simplelogging:2.3");
+		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3");
 		
 		// JavaRun
-		implementation.add("de.m_marvin.javarun:javarun:1.2");
+		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
 		
-		implementation.add("javax.xml.bind:jaxb-api:2.2.4");
+		// JAXB
+		dependencies.implementation("com.sun.xml.bind:jaxb-runtime:3.0.0");
+		dependencies.implementation("com.sun.xml.bind:jaxb-impl:3.0.0");
+		
+		
+		
 		
 		// Include dependencies into final binary jar
-		packageDependencies();
+		packageExecutable();
 		
 		super.dependencies();
 		

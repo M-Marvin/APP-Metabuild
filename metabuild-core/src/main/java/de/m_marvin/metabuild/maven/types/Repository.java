@@ -14,6 +14,20 @@ public class Repository {
 	public final String name;
 	public final URL baseURL;
 	public final Credentials credentials;
+
+	public Repository(String name, String baseURL) {
+		this(name, baseURL, null);
+	}
+	
+	public Repository(String name, String baseURL, Credentials credentials) {
+		try {
+			this.name = name;
+			this.baseURL = new URL(baseURL);
+			this.credentials = credentials;
+		} catch (MalformedURLException e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
 	public Repository(String name, URL baseURL) {
 		this(name, baseURL, null);

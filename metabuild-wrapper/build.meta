@@ -15,14 +15,14 @@ public class Buildfile extends JavaBuildScript {
 	@Override
 	public void repositories() {
 		
-		implementation.repository(MavenResolver.MavenRepository.mavenLocal());
+//		implementation.repository(MavenResolver.MavenRepository.mavenLocal());
 		
 	}
 	
 	@Override
 	public void dependencies() {
 		
-		implementation.add("de.m_marvin.metabuild:metabuild-core:0.1_build2", "api", "sources");
+//		implementation.add("de.m_marvin.metabuild:metabuild-core:0.1_build2", "api", "sources");
 		
 	}
 	

@@ -10,14 +10,13 @@ import de.m_marvin.metabuild.java.JavaSourceIncludes;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
 import de.m_marvin.metabuild.java.tasks.JavaRunClasspathTask;
-import de.m_marvin.metabuild.java.tasks.MavenDependTask;
+import de.m_marvin.metabuild.maven.tasks.MavenResolveTask;
 
 public class JavaBuildScript extends BuildScript {
 	
 	public String projectName = "Project";
 	
-	public MavenDependTask implementation;
-	public MavenDependTask runtime;
+	public MavenResolveTask dependencies;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
 	public BuildTask build;
@@ -25,20 +24,19 @@ public class JavaBuildScript extends BuildScript {
 	@Override
 	public void init() {
 		
-		implementation = new MavenDependTask("javaDependImpl");
-		implementation.group = "depend";
-		implementation.classpath = new File("build/implementation.classpath");
-		
-		runtime = new MavenDependTask("javaDependRun");
-		runtime.group = "depend";
-		runtime.classpath = new File("build/runtime.classpath");
+		dependencies = new MavenResolveTask("javaDependencies");
+		dependencies.group = "dependencies";
+		dependencies.cpCompiletime = new File("build/compile.classpath");
+		dependencies.cpRunttime = new File("build/runtime.classpath");
+		dependencies.cpTestCompiletime = new File("build/testcompile.classpath");
+		dependencies.cpTestRuntime = new File("build/testruntime.classpath");
 		
 		compileJava = new JavaCompileTask("compileJava");
 		compileJava.group = "build";
 		compileJava.sourcesDir = new File("src/main/java");
 		compileJava.classesDir = new File("build/classes/main/java");
-		compileJava.classpath.add(implementation.classpath);
-		compileJava.dependsOn(implementation);
+		compileJava.classpath.add(dependencies.cpCompiletime);
+		compileJava.dependsOn(dependencies);
 		
 		jar = new JarTask("jar");
 		jar.group = "build";
@@ -46,7 +44,6 @@ public class JavaBuildScript extends BuildScript {
 		jar.entries.put(new File("src/main/resource"), "");
 		jar.archive = new File(String.format("build/libs/%s.jar", projectName));
 		jar.dependsOn(compileJava);
-		jar.dependsOn(runtime);
 		
 		repositories();
 		dependencies();
@@ -63,7 +60,7 @@ public class JavaBuildScript extends BuildScript {
 	@Override
 	public void finish() {
 		
-		JavaSourceIncludes.include(implementation.getDependencyEntries());
+		JavaSourceIncludes.include(dependencies.getDependencyEntries());
 		
 	}
 	
@@ -72,14 +69,12 @@ public class JavaBuildScript extends BuildScript {
 	}
 	
 	public void dependencies() {
-
-		runtime.extendsFrom(implementation);
 		
 	}
 	
-	public void packageDependencies() {
+	public void packageExecutable() {
 		
-		jar.classpathIncludes.add(runtime.classpath);
+		jar.classpathIncludes.add(dependencies.cpRunttime);
 		
 	}
 	
@@ -87,11 +82,11 @@ public class JavaBuildScript extends BuildScript {
 
 		var runJava = new JavaRunClasspathTask("run");
 		runJava.group = "run";
-		runJava.classpath = runtime.classpath;
+		runJava.classpath = dependencies.cpRunttime;
 		runJava.classesDir = compileJava.classesDir;
 		runJava.mainClass = jar.metainfo.get("Main-Class");
 		runJava.dependsOn(jar);
-		runJava.dependsOn(runtime);
+		runJava.dependsOn(dependencies);
 		
 	}
 	

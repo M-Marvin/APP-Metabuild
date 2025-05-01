@@ -286,6 +286,9 @@ public class XMLInputStream implements AutoCloseable {
 	 * @throws XMLException If an exception occurred while parsing the XML content
 	 */
 	public ElementDescriptor readNext() throws IOException, XMLException {
+		// do not allow to continue parsing within an CDATA block
+		if (cdataParsing) return null;
+		
 		if (this.version == null || this.encoding == null)
 			readProlog();
 		

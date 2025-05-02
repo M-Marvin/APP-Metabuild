@@ -364,9 +364,17 @@ public class XMLInputStream implements AutoCloseable {
 				
 				// copy text up to that to fill up char buffer
 				String text = readN(i);
-				text.getChars(0, Math.min(len, i), cbuf, off + p);
+				if (!cdataParsing) {
+					// if not parsing CDATA block, replace character codes
+					text = text.replaceAll("&lt;", "<");
+					text = text.replaceAll("&gt;", ">");
+					text = text.replaceAll("&amp;", "&");
+					text = text.replaceAll("&apos;", "'");
+					text = text.replaceAll("&quot;", "\"");
+				}
+				text.getChars(0, Math.min(len, text.length()), cbuf, off + p);
 				deleteN(i);
-				p += i;
+				p += text.length();
 
 				// check for comment block and skip
 				if (!cdataParsing && readN(4).equals("<!--")) {

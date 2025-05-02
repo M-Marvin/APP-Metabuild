@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 
 import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
+import de.m_marvin.basicxml.marshalling.XMLMarshaler;
 
 public class Test {
 	
@@ -19,21 +20,27 @@ public class Test {
 		
 		XMLInputStream xmlIn = new XMLInputStream(input);
 		
-		System.out.println("Version: " + xmlIn.getVersion());
-		System.out.println("Encoding: " + xmlIn.getEncoding());
+		XMLMarshaler marshaller = new XMLMarshaler();
 		
-		for (int i = 0; i < 100; i++) {
-			var element = xmlIn.readNext();
-			if (element == null) {
-				String text = xmlIn.readAllText();
-				if (text == null) break;
-				System.out.println(text);
-			} else {
-				System.out.println(element);
-			}
-		}
+		var object = marshaller.unmarshall(xmlIn, TestType.TestSubType.class);
 		
-		xmlIn.close();
+		System.out.println(object);
+		
+//		System.out.println("Version: " + xmlIn.getVersion());
+//		System.out.println("Encoding: " + xmlIn.getEncoding());
+//		
+//		for (int i = 0; i < 100; i++) {
+//			var element = xmlIn.readNext();
+//			if (element == null) {
+//				String text = xmlIn.readAllText();
+//				if (text == null) break;
+//				System.out.println(text);
+//			} else {
+//				System.out.println(element);
+//			}
+//		}
+//		
+//		xmlIn.close();
 		
 	}
 	

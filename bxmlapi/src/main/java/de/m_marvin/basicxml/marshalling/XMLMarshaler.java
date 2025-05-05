@@ -33,9 +33,9 @@ public class XMLMarshaler {
 		
 		public final boolean isStatic;
 		public final TypeFactory<T, P> factory;
-		public final Set<Class<?>> subTypes;
-		public final Map<Integer, Field> attributes;
-		public final Map<Integer, Field> elements;
+		private final Set<Class<?>> subTypes;
+		private final Map<Integer, Field> attributes;
+		private final Map<Integer, Field> elements;
 		
 		public TypeObject(Class<T> type, Class<P> parentType) {
 			Objects.requireNonNull(type, "type can not be null");
@@ -88,8 +88,8 @@ public class XMLMarshaler {
 				String namespace = xmlField.namespace().equals(XMLField.NULL_STR) ? null : xmlField.namespace();
 				
 				switch (xmlField.value()) {
-				case ATTRIBUTE: attributes.put(null, field);
-				case ELEMENT: elements.put(null, field);
+				case ATTRIBUTE: addAttributeField(namespace, name, field);
+				case ELEMENT: addElementField(namespace, name, field);
 				}
 			}
 			
@@ -99,14 +99,41 @@ public class XMLMarshaler {
 			}
 		}
 		
+		private void addElementField(String namespace, String name, Field field) {
+			this.elements.put(Objects.hash(namespace, name), field);
+		}
+
+		private void addAttributeField(String namespace, String name, Field field) {
+			this.attributes.put(Objects.hash(namespace, name), field);
+		}
+		
+		private Field getElementField(String namespace, String name) {
+			return this.elements.get(Objects.hash(namespace, name));
+		}
+
+		private Field getAttributeField(String namespace, String name) {
+			return this.attributes.get(Objects.hash(namespace, name));
+		}
+		
+		public Set<Class<?>> getSubTypes() {
+			return subTypes;
+		}
+		
 	}
 	
 	private final Map<Class<?>, TypeObject<?, ?>> types = new HashMap<>();
 	
 	public XMLMarshaler(Class<?>... types) {
 		for (Class<?> type : types) {
-			var typeObj = new TypeObject<>(type, null);
-			
+			resolveTypeObjects(type, null);
+		}
+	}
+	
+	private void resolveTypeObjects(Class<?> type, Class<?> parent) {
+		var typeObj = new TypeObject<>(type, null);
+		this.types.put(type, typeObj);
+		for (Class<?> subTypes : typeObj.getSubTypes()) {
+			resolveTypeObjects(subTypes, type);
 		}
 	}
 	
@@ -121,18 +148,25 @@ public class XMLMarshaler {
 		
 	}
 	
-	protected <T> T makeObjectFromXML(XMLInputStream xmlStream, ElementDescriptor openingElement, Class<T> objectType) {
+	protected <T, P> T makeObjectFromXML(XMLInputStream xmlStream, ElementDescriptor openingElement, Class<T> objectType, P parentObject) {
 		assert openingElement.type() != DescType.CLOSE : "element descriptor can not be a closing element";
 		
 		try {
 			
-			Constructor<T> objectConstructor = objectType.getDeclaredConstructor();
-			T object = objectConstructor.newInstance();
+			@SuppressWarnings("unchecked")
+			TypeObject<T, P> typeObj = (TypeObject<T, P>) this.types.get(objectType);
+			if (typeObj == null)
+				 throw new IllegalArgumentException("the supplied type is recognized by this marshaler: " + objectType.getName());
+			
+			T object = typeObj.factory.makeType(parentObject);
 			
 			for (String attributeName : openingElement.attributes().keySet()) {
-				
-				//objectType.getDeclaredFields()[0].an
-				
+				Field attributeField = typeObj.getAttributeField(attributeName, openingElement.namespace().toString());
+				if (attributeField == null) {
+					// TODO warning log
+					continue;
+				}
+  				attributeField.set(object, openingElement.attributes().get(attributeName));
 			}
 			
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException

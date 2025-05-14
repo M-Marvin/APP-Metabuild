@@ -10,19 +10,19 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import de.m_marvin.basicxml.misc.StackList;
+
 /**
  * An XML character data input stream, capable of reading individual elements in order in which they are supplied from the input stream.<br>
  * Text data within and between individual tags is read separately from the tag descriptors.
  */
-public class XMLInputStream implements AutoCloseable {
+public class XMLInputStream implements XMLStream, AutoCloseable {
 	
 	/** source stream for XML character data */
 	private final InputStream stream;
@@ -38,7 +38,7 @@ public class XMLInputStream implements AutoCloseable {
 	/** character data buffer for parsing from stream */
 	private final StringBuffer buffer = new StringBuffer();
 	/** tag element stack, contains the "path" to the current element the parser is reading from */
-	private final List<TagEntry> stack = new ArrayList<TagEntry>();
+	private final StackList<TagEntry> stack = new StackList<TagEntry>();
 	/** the namespaces defined inside the element the parser is currently reading from */
 	private Map<String, URI> namespaces = new HashMap<>();
 	
@@ -110,7 +110,7 @@ public class XMLInputStream implements AutoCloseable {
 	 * Open the new tag element on the stack and clone the namespace map
 	 */
 	private void openTag(String name) {
-		this.stack.add(new TagEntry(name, this.namespaces));
+		this.stack.push(new TagEntry(name, this.namespaces));
 		this.namespaces = new HashMap<String, URI>(this.namespaces);
 	}
 	
@@ -119,12 +119,11 @@ public class XMLInputStream implements AutoCloseable {
 	 */
 	private void closeTag(String name) throws XMLException {
 		if (this.stack.size() == 0)
-			throw new XMLException("excess close tag: " + name);
-		TagEntry last = this.stack.get(this.stack.size() - 1);
+			throw new XMLException(this, "excess close tag: </" + name + ">");
+		TagEntry last = this.stack.pop();
 		if (!last.name.equals(name))
-			throw new XMLException("improper tag close order: " + name + " should be " + last);
+			throw new XMLException(this, "improper tag close order: </" + name + "> should be </" + last.name() + ">");
 		this.namespaces = last.previousNamespaces;
-		this.stack.remove(this.stack.size() -1);
 	}
 	
 	/**
@@ -198,7 +197,18 @@ public class XMLInputStream implements AutoCloseable {
 	/**
 	 * Describes an element that was parsed from the XML file
 	 */
-	public static record ElementDescriptor(DescType type, URI namespace, String name, Map<String, String> attributes) {}
+	public static record ElementDescriptor(DescType type, URI namespace, String name, Map<String, String> attributes) {
+
+		public boolean isSameField(ElementDescriptor other) {
+			return Objects.equals(other.namespace, namespace) && Objects.equals(other.name, name);
+		}
+		
+		@Override
+		public final String toString() {
+			return "namespace: " + this.namespace + " element: " + this.name;
+		}
+		
+	}
 	
 	/**
 	 * Parses the string between the angled brackets of an tag element and returns the element descriptor.
@@ -210,7 +220,7 @@ public class XMLInputStream implements AutoCloseable {
 		boolean closing = elementStr.startsWith("/");
 		boolean selfClosing = elementStr.endsWith("/");
 		if (closing && selfClosing)
-			throw new XMLException("double slashes at element: " + s);
+			throw new XMLException(this, "double slashes at element: " + s);
 		
 		// remove opening and closing slashes
 		if (closing) elementStr = elementStr.substring(1);
@@ -219,11 +229,11 @@ public class XMLInputStream implements AutoCloseable {
 		// parse tag element name with namespace
 		Matcher elementName = ELEMENT_NAME.matcher(elementStr);
 		if (!elementName.find())
-			throw new XMLException("invalid element name: " + s);
+			throw new XMLException(this, "invalid element name: " + s);
 		
 		// test for excess characters before brackets on closing elements
 		if (closing && elementName.end() != elementStr.length())
-			throw new XMLException("closing element name slash has to follow immediately: " + s);
+			throw new XMLException(this, "closing element name slash has to follow immediately: " + s);
 		
 		Map<String, URI> namespaces = this.namespaces;
 		
@@ -256,7 +266,7 @@ public class XMLInputStream implements AutoCloseable {
 						namespaces.put(xmlns.group(1) == null ? "" : xmlns.group(1), new URI(valueStr));
 						continue;
 					} catch (URISyntaxException e) {
-						throw new XMLException("malformed XML namespace URI", e);
+						throw new XMLException(this, "malformed XML namespace URI", e);
 					}
 				}
 				
@@ -264,10 +274,10 @@ public class XMLInputStream implements AutoCloseable {
 			}
 			
 			if (last != attributeStr.length())
-				throw new XMLException("excess characters after attributes: " + s);
+				throw new XMLException(this, "excess characters after attributes: " + s);
 		} else {
 			if (elementName.end() != elementStr.length())
-				throw new XMLException("excess characters after element name: " + s);
+				throw new XMLException(this, "excess characters after element name: " + s);
 		}
 		
 		// construct element descriptor
@@ -422,6 +432,11 @@ public class XMLInputStream implements AutoCloseable {
 		while ((r = readText(buf, 0, 2048)) > 0)
 			buffer.append(buf, 0, r);
 		return r == -1 ? null : buffer.toString();
+	}
+	
+	@Override
+	public String xmlStackPath() {
+		return this.stack.stream().map(TagEntry::name).reduce((a, b) -> a + "." + b).orElse("");
 	}
 	
 }

@@ -1,127 +1,18 @@
 package de.m_marvin.basicxml.marshalling;
 
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Function;
 
-import de.m_marvin.archiveutility.ArchiveAccess;
-import de.m_marvin.archiveutility.classes.ArchiveClasses;
 import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.XMLInputStream.DescType;
 import de.m_marvin.basicxml.XMLInputStream.ElementDescriptor;
-import de.m_marvin.basicxml.marshalling.annotations.XMLField;
-import de.m_marvin.basicxml.marshalling.annotations.XMLType;
+import de.m_marvin.basicxml.misc.StackList;
 
 public class XMLMarshaler {
 	
-	private static class TypeObject<T, P> {
-		
-		@FunctionalInterface
-		public static interface TypeFactory<T, P> {
-			public T makeType(P parentObject) throws LayerInstantiationException;
-		}
-		
-		public final boolean isStatic;
-		public final TypeFactory<T, P> factory;
-		private final Set<Class<?>> subTypes;
-		private final Map<Integer, Field> attributes;
-		private final Map<Integer, Field> elements;
-		
-		public TypeObject(Class<T> type, Class<P> parentType) {
-			Objects.requireNonNull(type, "type can not be null");
-			
-			if (!type.isAnnotationPresent(XMLType.class))
-				throw new IllegalArgumentException("the supplied class is not annotated as an XML type object");
-			
-			this.isStatic = Modifier.isStatic(type.getModifiers());
-			if (!this.isStatic && parentType == null)
-				throw new IllegalArgumentException("type is not a static class but parent type is null");
-			try {
-				Constructor<T> constructor = this.isStatic ? type.getDeclaredConstructor() : type.getDeclaredConstructor(parentType);
-				this.factory = this.isStatic ? parentObject -> {
-					try {
-						return constructor.newInstance();
-					} catch (ExceptionInInitializerError | InvocationTargetException e) {
-						throw new LayerInstantiationException("unable to construct type object", e);
-					} catch (IllegalArgumentException | InstantiationException | IllegalAccessException e) {
-						throw new LayerInstantiationException("construction of object threw an error", e);
-					}
-				} : parentObject -> {
-					try {
-						return constructor.newInstance(parentObject);
-					} catch (ExceptionInInitializerError | InvocationTargetException e) {
-						throw new LayerInstantiationException("unable to construct type object", e);
-					} catch (IllegalArgumentException | InstantiationException | IllegalAccessException e) {
-						throw new LayerInstantiationException("construction of object threw an error", e);
-					}
-				};
-				
-				this.subTypes = new HashSet<Class<?>>();
-				this.attributes = new HashMap<Integer, Field>();
-				this.elements = new HashMap<Integer, Field>();
-				findFieldsAndTypes(type);
-				
-			} catch (NoSuchMethodException e) {
-				throw new IllegalArgumentException("the supplied type class has no default constructor");
-			}
-		}
-		
-		private void findFieldsAndTypes(Class<?> clazz) {
-			Class<?> superclass = clazz.getSuperclass();
-			if (superclass.isAnnotationPresent(XMLType.class))
-				findFieldsAndTypes(superclass);
-			
-			for (Field field : clazz.getDeclaredFields()) {
-				XMLField xmlField = field.getAnnotation(XMLField.class);
-				if (xmlField == null) continue;
-				String name = xmlField.name().equals(XMLField.NULL_STR) ? field.getName() : xmlField.name();
-				String namespace = xmlField.namespace().equals(XMLField.NULL_STR) ? null : xmlField.namespace();
-				
-				switch (xmlField.value()) {
-				case ATTRIBUTE: addAttributeField(namespace, name, field);
-				case ELEMENT: addElementField(namespace, name, field);
-				}
-			}
-			
-			for (Class<?> type : clazz.getDeclaredClasses()) {
-				if (type.isAnnotationPresent(XMLType.class))
-					this.subTypes.add(type);
-			}
-		}
-		
-		private void addElementField(String namespace, String name, Field field) {
-			this.elements.put(Objects.hash(namespace, name), field);
-		}
-
-		private void addAttributeField(String namespace, String name, Field field) {
-			this.attributes.put(Objects.hash(namespace, name), field);
-		}
-		
-		private Field getElementField(String namespace, String name) {
-			return this.elements.get(Objects.hash(namespace, name));
-		}
-
-		private Field getAttributeField(String namespace, String name) {
-			return this.attributes.get(Objects.hash(namespace, name));
-		}
-		
-		public Set<Class<?>> getSubTypes() {
-			return subTypes;
-		}
-		
-	}
-	
-	private final Map<Class<?>, TypeObject<?, ?>> types = new HashMap<>();
+	private final Map<Class<?>, XMLClassType<?, ?>> types = new HashMap<>();
 	
 	public XMLMarshaler(Class<?>... types) {
 		for (Class<?> type : types) {
@@ -130,57 +21,157 @@ public class XMLMarshaler {
 	}
 	
 	private void resolveTypeObjects(Class<?> type, Class<?> parent) {
-		var typeObj = new TypeObject<>(type, null);
+		var typeObj = XMLClassType.makeFromClass(type, parent);
 		this.types.put(type, typeObj);
-		for (Class<?> subTypes : typeObj.getSubTypes()) {
+		for (Class<?> subTypes : typeObj.subTypes()) {
 			resolveTypeObjects(subTypes, type);
 		}
 	}
 	
-	public <T> T unmarshall(XMLInputStream xmlStream, Class<T> objectType) throws IOException, XMLException {
+	public <T> T unmarshall(XMLInputStream xmlStream, Class<T> objectType) throws IOException, XMLException, XMLMarshalingException {
 		
 		ElementDescriptor element = xmlStream.readNext();
 		if (element == null) return null;
 		
-		makeObjectFromXML(xmlStream, element, objectType);
-		
-		return null;
+		return makeObjectFromXML(xmlStream, element, objectType, new StackList<Object>());
 		
 	}
 	
-	protected <T, P> T makeObjectFromXML(XMLInputStream xmlStream, ElementDescriptor openingElement, Class<T> objectType, P parentObject) {
-		assert openingElement.type() != DescType.CLOSE : "element descriptor can not be a closing element";
-		
-		try {
-			
+	protected <T, P> void fillAttributeFromXML(Object xmlClassObject, XMLClassField<T, P> attributeField, String attributeName, XMLInputStream xmlStream, String valueStr, StackList<Object> objectStack) throws XMLMarshalingException {
+
+		objectStack.push(xmlClassObject);
+		T value = null;
+		if (attributeField.adapter() != null) {
 			@SuppressWarnings("unchecked")
-			TypeObject<T, P> typeObj = (TypeObject<T, P>) this.types.get(objectType);
-			if (typeObj == null)
-				 throw new IllegalArgumentException("the supplied type is recognized by this marshaler: " + objectType.getName());
-			
-			T object = typeObj.factory.makeType(parentObject);
-			
-			for (String attributeName : openingElement.attributes().keySet()) {
-				Field attributeField = typeObj.getAttributeField(attributeName, openingElement.namespace().toString());
+			P parentObject = attributeField.type().getEnclosingClass() == null ? null : 
+				(P) objectStack.findTopMost(attributeField.type().getEnclosingClass()::isInstance);
+			try {
+				value = attributeField.adapter().adaptType(valueStr, parentObject);
+			} catch (ClassCastException e) {
+				// if this happens, it indicates that the adapters parent object-type type-argument was probably set to some arbitrary value because the parent argument is not required.
+				value = attributeField.adapter().adaptType(valueStr, null);
+			}
+		} else if (attributeField.isPrimitive()) {
+			value = XMLClassField.adaptPrimitive(attributeField.type(), valueStr);
+		} else {
+			throw new XMLMarshalingException(xmlStream, "attribute is not XML primitive and has no adapter: " + attributeField.field());
+		}
+		objectStack.pop();
+		
+		attributeField.assign(xmlClassObject, value, attributeName);
+		
+	}
+	
+	protected <T, P> void fillElementFromXML(Object xmlClassObject, XMLClassField<T, P> elementField, String elementName, XMLInputStream xmlStream, ElementDescriptor openingElement, StackList<Object> objectStack) throws IOException, XMLException, XMLMarshalingException {
+		
+		objectStack.push(xmlClassObject);
+		T value = makeObjectFromXML(xmlStream, openingElement, elementField.type(), objectStack);
+		objectStack.pop();
+		
+		elementField.assign(xmlClassObject, value, elementName);
+		
+	}
+	
+	protected <T, P> T makeObjectFromXML(XMLInputStream xmlStream, ElementDescriptor openingElement, Class<T> objectType, StackList<Object> objectStack) throws IOException, XMLException, XMLMarshalingException {
+		assert openingElement.type() != DescType.CLOSE : "element descriptor can not be a closing element";
+	
+		@SuppressWarnings("unchecked")
+		XMLClassType<T, P> xmlClassType = (XMLClassType<T, P>) this.types.get(objectType);
+		if (xmlClassType == null)
+			 throw new XMLMarshalingException("the supplied type is not recognized by this marshaler: " + objectType.getName());
+		
+		@SuppressWarnings("unchecked")
+		P parentObject = xmlClassType.isStatic() ? null : (P) objectStack.findTopMost(xmlClassType.parentType()::isInstance);
+		if (!xmlClassType.isStatic() && parentObject == null)
+			throw new XMLMarshalingException(xmlStream, "non-static class hierarchical error, unable to identify closest parent class to construct from");
+		T xmlClassObject = xmlClassType.factory().makeType(parentObject);
+		
+		for (String attributeName : openingElement.attributes().keySet()) {
+			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), attributeName));
+			if (attributeField == null) {
+				attributeField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), XMLClassType.REMAINING_MAP_FIELD));
 				if (attributeField == null) {
-					// TODO warning log
+					// TODO 
+					System.err.println("warning: attribute unknown in java");
 					continue;
 				}
-  				attributeField.set(object, openingElement.attributes().get(attributeName));
+			}
+			fillAttributeFromXML(xmlClassObject, attributeField, openingElement.name(), xmlStream, openingElement.attributes().get(attributeName), objectStack);
+		}
+		
+		if (openingElement.type() != DescType.SELF_CLOSING) {
+			StringBuffer elementText = new StringBuffer();
+			readelements: while (true) {
+				
+				ElementDescriptor element;
+				while ((element = xmlStream.readNext()) != null) {
+					
+					if (element.type() == DescType.CLOSE) {
+						if (!element.isSameField(openingElement))
+							throw new XMLMarshalingException(xmlStream, "improper element close order, element not closed: " + openingElement); // this would indicate a problem with the stream
+						break readelements;
+					} else {
+						XMLClassField<?, ?> xmlElementField = xmlClassType.elements().get(XMLClassField.getFieldHash(element.namespace(), element.name()));
+						if (xmlElementField == null) {
+							xmlElementField = xmlClassType.elements().get(XMLClassField.getFieldHash(element.namespace(), XMLClassType.REMAINING_MAP_FIELD));
+							if (xmlElementField == null) {
+								// TODO 
+								System.err.println("warning: unknown field in XML: " + element.namespace() + "/" + element.name());
+								
+								if (element.type() == DescType.OPEN) {
+									// skip the element, read until close reached
+									skipelement: while (true) {
+										ElementDescriptor e;
+										while ((e = xmlStream.readNext()) != null)
+											if (e.isSameField(element)) break skipelement;
+										if (xmlStream.readAllText() == null)
+											throw new XMLMarshalingException(xmlStream, "unexpected EOF while skipping element: " + element);
+									}
+								}
+								continue;
+							}
+						}
+						
+						if (xmlElementField.isPrimitive() || xmlElementField.adapter() != null) {
+							// read only text data of the element
+							StringBuffer text = new StringBuffer();
+							if (element.type() != DescType.SELF_CLOSING) {
+								readtext: while (true) {
+									ElementDescriptor e;
+									while ((e = xmlStream.readNext()) != null)
+										if (e.isSameField(element)) break readtext;
+									String s = xmlStream.readAllText();
+									if (s == null)
+										throw new XMLMarshalingException(xmlStream, "unexpected EOF while reading element text: " + element);
+									text.append(s);
+								}
+							}
+							// write variable as if it was an attribute
+							fillAttributeFromXML(xmlClassObject, xmlElementField, element.name(), xmlStream, text.toString(), objectStack);
+						} else {
+							fillElementFromXML(xmlClassObject, xmlElementField, element.name(), xmlStream, element, objectStack);
+						}
+					}
+					
+				}
+				
+				String s = xmlStream.readAllText();
+				if (s == null)
+					throw new XMLMarshalingException(xmlStream, "unexpected end of XML stream"); // this would indicate a problem with the stream
+				elementText.append(s);
+				
 			}
 			
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), XMLClassType.TEXT_VALUE_FIELD));
+			if (xmlTextField != null) {
+				fillAttributeFromXML(xmlClassObject, xmlTextField, null, xmlStream, elementText.toString(), objectStack);
+			} else if (!elementText.isEmpty()) {
+				// TODO 
+				System.err.println("warning: unknown element text data!");
+			}
 		}
-		return null;
+		
+		return xmlClassObject;
 		
 	}
 	

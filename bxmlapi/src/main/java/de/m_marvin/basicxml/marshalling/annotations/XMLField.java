@@ -10,7 +10,13 @@ import java.lang.annotation.RetentionPolicy;
 public @interface XMLField {
 	
 	public static enum FieldType {
-		ATTRIBUTE, ELEMENT;
+		ATTRIBUTE,
+		ATTRIBUTE_COLLECTION,
+		REMAINING_ATTRIBUTE_MAP,
+		ELEMENT,
+		ELEMENT_COLLECTION,
+		REMAINING_ELEMENT_MAP,
+		TEXT;
 	}
 	
 	public FieldType value();
@@ -22,7 +28,5 @@ public @interface XMLField {
 	public String namespace() default NULL_STR;
 	
 	public Class<?> type() default Void.class;
-	
-	public String defaultValue() default NULL_STR;
 	
 }

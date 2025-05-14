@@ -18,5 +18,13 @@ public class XMLException extends Exception {
 	public XMLException(String msg, Exception e) {
 		super(msg, e);
 	}
+
+	public XMLException(XMLStream stream,String msg) {
+		super(stream.xmlStackPath() + " : " + msg);
+	}
+
+	public XMLException(XMLStream stream,String msg, Exception e) {
+		super(stream.xmlStackPath() + " : " + msg, e);
+	}
 	
 }

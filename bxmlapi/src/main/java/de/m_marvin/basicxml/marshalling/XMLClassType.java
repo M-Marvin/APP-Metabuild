@@ -1,0 +1,115 @@
+package de.m_marvin.basicxml.marshalling;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import de.m_marvin.basicxml.marshalling.annotations.XMLField;
+import de.m_marvin.basicxml.marshalling.annotations.XMLType;
+
+public record XMLClassType<T, P>(
+		boolean isStatic,
+		Class<P> parentType,
+		TypeFactory<T, P> factory,
+		Set<Class<?>> subTypes,
+		Map<Integer, XMLClassField<?, ?>> attributes,
+		Map<Integer, XMLClassField<?, ?>> elements
+		) {
+	
+	@FunctionalInterface
+	public static interface TypeFactory<T, P> {
+		public T makeType(P parentObject) throws LayerInstantiationException;
+	}
+	
+	public static <T, P> XMLClassType<T, P> makeFromClass(Class<T> type, Class<P> parentType) {
+		Objects.requireNonNull(type, "type can not be null");
+		
+		if (!type.isAnnotationPresent(XMLType.class))
+			throw new IllegalArgumentException("the supplied class is not annotated as an XML type object: " + type);
+		
+		boolean isStatic = type.getEnclosingClass() == null || Modifier.isStatic(type.getModifiers());
+		if (!isStatic && parentType == null)
+			throw new IllegalArgumentException("type is not a static class but parent type is null");
+		try {
+			Constructor<T> constructor = isStatic ? type.getDeclaredConstructor() : type.getDeclaredConstructor(parentType);
+			TypeFactory<T, P> factory = isStatic ? parentObject -> {
+				try {
+					return constructor.newInstance();
+				} catch (ExceptionInInitializerError | InvocationTargetException e) {
+					throw new LayerInstantiationException("unable to construct type object: " + type , e);
+				} catch (IllegalArgumentException | InstantiationException | IllegalAccessException e) {
+					throw new LayerInstantiationException("construction of object threw an error: " + type, e);
+				}
+			} : parentObject -> {
+				try {
+					return constructor.newInstance(parentObject);
+				} catch (ExceptionInInitializerError | InvocationTargetException e) {
+					throw new LayerInstantiationException("unable to construct type object: " + type + " parent: " + parentObject, e);
+				} catch (IllegalArgumentException | InstantiationException | IllegalAccessException e) {
+					throw new LayerInstantiationException("construction of object threw an error: " + type + " parent: " + parentObject, e);
+				}
+			};
+			
+			XMLClassType<T, P> xmlClassType = new XMLClassType<T, P>(isStatic, parentType, factory, new HashSet<>(), new HashMap<>(), new HashMap<>());
+			findFieldsAndTypes(type, xmlClassType);
+			return xmlClassType;
+			
+		} catch (NoSuchMethodException e) {
+			throw new LayerInstantiationException("the supplied type class has no default constructor", e);
+		}
+	}
+
+	public static final String TEXT_VALUE_FIELD = "!TEXT!";
+	public static final String REMAINING_MAP_FIELD = "!REMAINING!";
+	
+	private static void findFieldsAndTypes(Class<?> clazz, XMLClassType<?, ?> xmlClassType) {
+		Class<?> superclass = clazz.getSuperclass();
+		if (superclass.isAnnotationPresent(XMLType.class))
+			findFieldsAndTypes(superclass, xmlClassType);
+		
+		for (Class<?> in : clazz.getInterfaces())
+			if (in.isAnnotationPresent(XMLType.class))
+				findFieldsAndTypes(in, xmlClassType);
+		
+		for (Field field : clazz.getDeclaredFields()) {
+			XMLField xmlField = field.getAnnotation(XMLField.class);
+			if (xmlField == null) continue;
+			String name = xmlField.name().equals(XMLField.NULL_STR) ? field.getName() : xmlField.name();
+			String namespace = xmlField.namespace().equals(XMLField.NULL_STR) ? null : xmlField.namespace();
+			
+			XMLClassField<?, ?> xmlClassField = XMLClassField.makeFromField(field.getType(), field);
+			
+			switch (xmlField.value()) {
+			case ATTRIBUTE: 
+			case ATTRIBUTE_COLLECTION:
+				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, name), xmlClassField); 
+				break;
+			case ELEMENT: 
+			case ELEMENT_COLLECTION:
+				xmlClassType.elements.put(XMLClassField.getFieldHash(namespace, name), xmlClassField); 
+				break;
+			case REMAINING_ATTRIBUTE_MAP:
+				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, REMAINING_MAP_FIELD), xmlClassField); 
+				break;
+			case REMAINING_ELEMENT_MAP:
+				xmlClassType.elements.put(XMLClassField.getFieldHash(namespace, REMAINING_MAP_FIELD), xmlClassField); 
+				break;
+			case TEXT: 
+				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, TEXT_VALUE_FIELD), xmlClassField); 
+				break;
+			}
+		}
+		
+		for (Class<?> type : clazz.getDeclaredClasses()) {
+			if (type.isAnnotationPresent(XMLType.class))
+				xmlClassType.subTypes.add(type);
+		}
+	}
+	
+}

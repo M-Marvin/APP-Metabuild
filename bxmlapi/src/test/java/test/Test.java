@@ -9,22 +9,27 @@ import java.net.URISyntaxException;
 import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.marshalling.XMLMarshaler;
+import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
 
 public class Test {
 	
-	public static void main(String... args) throws URISyntaxException, IOException, XMLException {
+	public static void main(String... args) throws URISyntaxException, IOException, XMLException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException, XMLMarshalingException {
 		
 		File dir = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getPath(), "../../");
 		
-		InputStream input = new FileInputStream(new File(dir, "/test/maven-metadata.xml"));
+		InputStream input = new FileInputStream(new File(dir, "/test/test.xml"));
 		
 		XMLInputStream xmlIn = new XMLInputStream(input);
 		
-		XMLMarshaler marshaller = new XMLMarshaler();
+		XMLMarshaler marshaller = new XMLMarshaler(TestType.class);
 		
-		var object = marshaller.unmarshall(xmlIn, TestType.TestSubType.class);
+		var object = marshaller.unmarshall(xmlIn, TestType.class);
 		
-		System.out.println(object);
+		System.out.println(object.testlist.testitem.get(0).value);
+		
+		for (String k : object.remaining.keySet()) {
+			System.out.println(k + " = " + object.remaining.get(k));
+		}
 		
 //		System.out.println("Version: " + xmlIn.getVersion());
 //		System.out.println("Encoding: " + xmlIn.getEncoding());

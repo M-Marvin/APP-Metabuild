@@ -31,7 +31,7 @@ java {
 dependencies {
 	
 	// ArchiveUtility
-	implementation 'de.m_marvin.archiveutility:archiveutility:2.3'
+	implementation 'de.m_marvin.simplelogging:simplelogging:2.3'
 	
 }
 

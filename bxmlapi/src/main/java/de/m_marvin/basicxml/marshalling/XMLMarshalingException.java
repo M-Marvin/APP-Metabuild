@@ -3,7 +3,7 @@ package de.m_marvin.basicxml.marshalling;
 import de.m_marvin.basicxml.XMLStream;
 
 /**
- * Indicates an error while parsing XML data
+ * Indicates an error while parsing or writing XML data by an (un)marshaler
  */
 public class XMLMarshalingException extends Exception {
 	

@@ -8,7 +8,10 @@ import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.XMLInputStream.DescType;
 import de.m_marvin.basicxml.XMLInputStream.ElementDescriptor;
-import de.m_marvin.basicxml.misc.StackList;
+import de.m_marvin.basicxml.internal.StackList;
+import de.m_marvin.basicxml.marshalling.internal.XMLClassField;
+import de.m_marvin.basicxml.marshalling.internal.XMLClassType;
+import de.m_marvin.simplelogging.Log;
 
 public class XMLMarshaler {
 	
@@ -32,8 +35,9 @@ public class XMLMarshaler {
 		
 		ElementDescriptor element = xmlStream.readNext();
 		if (element == null) return null;
-		
-		return makeObjectFromXML(xmlStream, element, objectType, new StackList<Object>());
+		T xmlObject = makeObjectFromXML(xmlStream, element, objectType, new StackList<Object>());
+		xmlStream.close();
+		return xmlObject;
 		
 	}
 	
@@ -91,8 +95,7 @@ public class XMLMarshaler {
 			if (attributeField == null) {
 				attributeField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), XMLClassType.REMAINING_MAP_FIELD));
 				if (attributeField == null) {
-					// TODO 
-					System.err.println("warning: attribute unknown in java");
+					Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: attribute unknown in java");
 					continue;
 				}
 			}
@@ -115,8 +118,7 @@ public class XMLMarshaler {
 						if (xmlElementField == null) {
 							xmlElementField = xmlClassType.elements().get(XMLClassField.getFieldHash(element.namespace(), XMLClassType.REMAINING_MAP_FIELD));
 							if (xmlElementField == null) {
-								// TODO 
-								System.err.println("warning: unknown field in XML: " + element.namespace() + "/" + element.name());
+								Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: unknown field in XML: " + element.namespace() + "/" + element.name());
 								
 								if (element.type() == DescType.OPEN) {
 									// skip the element, read until close reached
@@ -166,8 +168,7 @@ public class XMLMarshaler {
 			if (xmlTextField != null) {
 				fillAttributeFromXML(xmlClassObject, xmlTextField, null, xmlStream, elementText.toString(), objectStack);
 			} else if (!elementText.isEmpty()) {
-				// TODO 
-				System.err.println("warning: unknown element text data!");
+				Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: unknown element text data!");
 			}
 		}
 		

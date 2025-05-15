@@ -1,9 +1,9 @@
 package test;
 
-import java.util.List;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
 
-import de.m_marvin.basicxml.marshalling.XMLClassFieldAdapter;
+import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
@@ -30,7 +30,7 @@ public class TestType {
 	}
 
 	@XMLType
-	public class TestList { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = TestItem.class) public List<TestItem> testitem; }
+	public class TestList { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = TestItem.class) public ArrayList<TestItem> testitem; }
 	@XMLField(FieldType.ELEMENT)
 	public TestList testlist;
 	
@@ -63,6 +63,15 @@ public class TestType {
 	}
 	
 	@XMLField(value = FieldType.REMAINING_ELEMENT_MAP, type = TestDataClass.class)
-	public Map<String, TestDataClass> remaining;
+	public HashMap<String, TestDataClass> remaining;
+	
+	@XMLField(FieldType.ELEMENT)
+	public TestEnum zzz;
+	
+	public static enum TestEnum {
+		
+		TEST1,TEST2;
+		
+	}
 	
 }

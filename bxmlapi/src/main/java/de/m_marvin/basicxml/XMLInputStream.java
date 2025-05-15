@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import de.m_marvin.basicxml.misc.StackList;
+import de.m_marvin.basicxml.internal.StackList;
 
 /**
  * An XML character data input stream, capable of reading individual elements in order in which they are supplied from the input stream.<br>
@@ -26,6 +26,8 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	
 	/** source stream for XML character data */
 	private final InputStream stream;
+	/** indicates that this stream was split from an parent stream **/
+	private final boolean isSplit;
 	/** source XML reader for character data, null until prolog read or defaulting to XML 1.0 UTF-8 */
 	private Reader reader;
 	/** XML version string from prolog entry */
@@ -45,6 +47,17 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	public XMLInputStream(InputStream stream) throws IOException {
 		Objects.requireNonNull(stream, "XML data stream can not be null");
 		this.stream = stream;
+		this.isSplit = false;
+	}
+	
+	private XMLInputStream(XMLInputStream parentStream) {
+		this.stream = parentStream.stream;
+		this.reader = parentStream.reader;
+		this.version = parentStream.version;
+		this.encoding = parentStream.encoding;
+		this.namespaces = parentStream.namespaces;
+		this.stack.add(parentStream.stack.peek());
+		this.isSplit = true;
 	}
 	
 	@Override
@@ -299,6 +312,9 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 		// do not allow to continue parsing within an CDATA block
 		if (cdataParsing) return null;
 		
+		// do not continue parsing if this stream is an split stream and left its starting element
+		if (isSplit && stack.isEmpty()) return null;
+		
 		if (this.version == null || this.encoding == null)
 			readProlog();
 		
@@ -437,6 +453,25 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	@Override
 	public String xmlStackPath() {
 		return this.stack.stream().map(TagEntry::name).reduce((a, b) -> a + "." + b).orElse("");
+	}
+	
+	/**
+	 * Splits a new XMLInputStream which reads from the same source as this stream, but treats the and of the currently open XML element as an EOF.<br>
+	 * Basically, this stream only allows to read what is remaining in the currently opened XML element and nothing more.<br>
+	 * Should the split stream be discarded (no longer used) before reaching EOF, this stream continues to read where it left.<br>
+	 * Reading from both streams before the split stream reached EOF or is discarded of results in undefined behavior.<br>
+	 * @return The split stream, or null if this stream already reached EOF
+	 */
+	public XMLInputStream splitStream() {
+		return new XMLInputStream(this);
+	}
+	
+	/**
+	 * Indicates that this stream was split from an parent stream by the {@link XMLInputStream#splitStream()} method.
+	 * @return true if this is a split stream
+	 */
+	public boolean isSplit() {
+		return isSplit;
 	}
 	
 }

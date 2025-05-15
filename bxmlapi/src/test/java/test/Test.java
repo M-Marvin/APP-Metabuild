@@ -31,6 +31,8 @@ public class Test {
 			System.out.println(k + " = " + object.remaining.get(k));
 		}
 		
+		System.out.println(object.zzz);
+		
 //		System.out.println("Version: " + xmlIn.getVersion());
 //		System.out.println("Encoding: " + xmlIn.getEncoding());
 //		

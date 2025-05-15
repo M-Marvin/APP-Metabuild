@@ -1,7 +1,7 @@
 package de.m_marvin.basicxml;
 
 /**
- * Indicates an error while parsing XML data
+ * Indicates an error while parsing XML data by an XML stream
  */
 public class XMLException extends Exception {
 	

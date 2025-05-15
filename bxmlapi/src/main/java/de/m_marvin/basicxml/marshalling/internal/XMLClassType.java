@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling;
+package de.m_marvin.basicxml.marshalling.internal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -13,12 +13,23 @@ import java.util.Set;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 
+/**
+ * Describes information about an class type required for XML marshaling
+ * @param <T> The type of the class
+ * @param <P> The type of the parent class of this class, used when construction non-static classes
+ */
 public record XMLClassType<T, P>(
+		/** true if this class is static and can be constructed without an parent instance **/
 		boolean isStatic,
+		/** the required type of the parent instacen if this class is non-static **/
 		Class<P> parentType,
+		/** the factory used to construct this class **/
 		TypeFactory<T, P> factory,
+		/** the classes which are defined by this class and also take part in XML marshaling **/
 		Set<Class<?>> subTypes,
+		/** the attribute fields defined in this class **/
 		Map<Integer, XMLClassField<?, ?>> attributes,
+		/** the element fields defined in this class **/
 		Map<Integer, XMLClassField<?, ?>> elements
 		) {
 	

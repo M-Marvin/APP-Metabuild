@@ -7,8 +7,4 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Marks an class as being an XML type object which can be used by an (un)marshaler.
  */
-public @interface XMLType {
-	
-	
-	
-}
+public @interface XMLType {}

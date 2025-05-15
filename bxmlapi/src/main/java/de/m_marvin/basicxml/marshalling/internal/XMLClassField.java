@@ -1,27 +1,36 @@
-package de.m_marvin.basicxml.marshalling;
+package de.m_marvin.basicxml.marshalling.internal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
+import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
+import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
+import de.m_marvin.simplelogging.Log;
 
+/**
+ * Describes information about an class field required for XML marshaling
+ * @param <V> The value type of the field
+ * @param <P> The type of the parent class in which the fields data type class is defined, used when construction non-static classes
+ */
 public record XMLClassField<V, P>(
+		/** true if this fields data type is an XML primitive (java primitives + string and enums) **/
 		boolean isPrimitive,
+		/** type of this fields data container, can be a single value, a list or an map **/
 		FieldType fieldType,
+		/** java field that this class is describing */
 		Field field,
+		/** data type of the field **/
 		Class<V> type,
+		/** optional type adapter used for converting to the fields data type **/
 		XMLClassFieldAdapter<V, P> adapter
 		) {
 	
@@ -70,7 +79,7 @@ public record XMLClassField<V, P>(
 			break;
 		}
 		
-		boolean isPrimitive = dataType.isPrimitive() || dataType == String.class;
+		boolean isPrimitive = dataType.isPrimitive() || dataType == String.class || dataType.isEnum();
 		
 		XMLClassFieldAdapter<V, P> adapter = null;
 		if (xmlTypeAdapterAnnotation != null) {
@@ -107,7 +116,7 @@ public record XMLClassField<V, P>(
 		
 	}
 	
-	public void assign(Object xmlClassObject, V value, String key) {
+	public void assign(Object xmlClassObject, V value, String key) throws XMLMarshalingException {
 		try {
 			switch (this.fieldType) {
 			case SINGLE_VALUE:
@@ -117,8 +126,15 @@ public record XMLClassField<V, P>(
 				@SuppressWarnings("unchecked")
 				Collection<V> collection = (Collection<V>) this.field.get(xmlClassObject);
 				if (collection == null) {
-					boolean isSet = Set.class.isAssignableFrom(this.field.getType());
-					collection = isSet ? new HashSet<V>() : new ArrayList<V>();
+					try {
+						@SuppressWarnings("unchecked")
+						Constructor<Collection<V>> collectionConstructor = (Constructor<Collection<V>>) this.field.getType().getConstructor();
+						collection = collectionConstructor.newInstance();
+					} catch (NoSuchMethodException e) {
+						throw new XMLMarshalingException("the collection class does not have an default constructor, and no instance if provided: " + this.field, e);
+					} catch (InstantiationException | SecurityException | InvocationTargetException e) {
+						throw new XMLMarshalingException("the collection class could not be constructed: " + this.field, e);
+					}
 					this.field.set(xmlClassObject, collection);
 				}
 				collection.add(value);
@@ -127,7 +143,15 @@ public record XMLClassField<V, P>(
 				@SuppressWarnings("unchecked")
 				Map<String, V> map = (Map<String, V>) this.field.get(xmlClassObject);
 				if (map == null) {
-					map = new HashMap<String, V>();
+					try {
+						@SuppressWarnings("unchecked")
+						Constructor<Map<String, V>> mapConstructor = (Constructor<Map<String, V>>) this.field.getType().getConstructor();
+						map = mapConstructor.newInstance();
+					} catch (NoSuchMethodException e) {
+						throw new XMLMarshalingException("the map class does not have an default constructor, and now instance if provided: " + this.field, e);
+					} catch (InstantiationException | SecurityException | InvocationTargetException e) {
+						throw new XMLMarshalingException("the map class could not be constructed: " + this.field, e);
+					}
 					this.field.set(xmlClassObject, map);
 				}
 				map.put(key, value);
@@ -140,7 +164,7 @@ public record XMLClassField<V, P>(
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T adaptPrimitive(Class<T> primitive, String valueStr) {
 		if (primitive == String.class) {
 			return (T) valueStr;
@@ -156,14 +180,22 @@ public record XMLClassField<V, P>(
 			return (T) Double.valueOf(valueStr);
 		} else if (primitive == Float.class || primitive == float.class) {
 			return (T) Float.valueOf(valueStr);
+		} else if (primitive.isEnum()) {
+			if (valueStr == null) return null;
+			for (T e : primitive.getEnumConstants())
+				if (((Enum) e).name().equalsIgnoreCase(valueStr)) return e;
+			Log.defaultLogger().warn("warning: unknown enum constant in XML: " + primitive + "." + valueStr);
+			return null;
 		}
 		throw new IllegalArgumentException("supplied class is not an XML primitive");
 	}
 
+	// TODO replace with better mapping system
 	public static int getFieldHash(URI namespace, String name) {
 		return getFieldHash(namespace == null ? null : namespace.toString(), name);
 	}
 
+	// TODO replace with better mapping system
 	public static int getFieldHash(String namespace, String name) {
 		return Objects.hash(namespace, name);
 	}

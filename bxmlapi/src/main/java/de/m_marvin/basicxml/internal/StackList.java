@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.misc;
+package de.m_marvin.basicxml.internal;
 
 import java.util.ArrayList;
 import java.util.function.Predicate;

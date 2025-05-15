@@ -63,8 +63,10 @@ dependencies {
 	shade 'de.m_marvin.javarun:javarun:1.2'
 	
 	// JAXB
-	shade "com.sun.xml.bind:jaxb-runtime:3.0.0";
-	shade "com.sun.xml.bind:jaxb-impl:3.0.0"
+	//shade "com.sun.xml.bind:jaxb-runtime:3.0.0";
+	//shade "com.sun.xml.bind:jaxb-impl:3.0.0"
+	
+	shade 'de.m_marvin.metabuild:bxmlapi:0.1_build1'
 	
 	// Maven API
 	//shade 'org.apache.maven:maven-resolver-provider:3.9.9'

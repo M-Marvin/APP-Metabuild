@@ -319,7 +319,8 @@ public class JavaCompileTask extends BuildTask {
 		StringBuffer classpathBuf = new StringBuffer();
 		for (File entry : this.classpath) {
 			File path = FileUtility.absolute(entry);
-			if (path.isFile() && this.classpathListPredicate.test(path)) {
+			if (this.classpathListPredicate.test(path)) {
+				if (!path.isFile()) continue;
 				String classpath = FileUtility.readFileUTF(path);
 				if (classpath == null)
 					throw BuildException.msg("could not read classpath file: %s", entry);

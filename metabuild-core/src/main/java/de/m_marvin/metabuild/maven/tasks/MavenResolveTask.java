@@ -130,10 +130,13 @@ public class MavenResolveTask extends BuildTask {
 			List<File> classpath = new ArrayList<File>();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.COMPILETIME)) return TaskState.OUTDATED;
 			if (!verifyClasspathFile(this.cpCompiletime, classpath)) return TaskState.OUTDATED;
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.RUNTIME)) return TaskState.OUTDATED;
 			if (!verifyClasspathFile(this.cpRunttime, classpath)) return TaskState.OUTDATED;
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_COMPILETIME)) return TaskState.OUTDATED;
 			if (!verifyClasspathFile(this.cpTestCompiletime, classpath)) return TaskState.OUTDATED;
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_RUNTIME)) return TaskState.OUTDATED;
 			if (!verifyClasspathFile(this.cpTestRuntime, classpath)) return TaskState.OUTDATED;
 		} catch (MavenException e) {
@@ -147,7 +150,7 @@ public class MavenResolveTask extends BuildTask {
 	}
 	
 	protected boolean verifyClasspathFile(File classpathFile, List<File> classpath) {
-		String classpathStr = FileUtility.readFileUTF(classpathFile);
+		String classpathStr = FileUtility.readFileUTF(FileUtility.absolute(classpathFile));
 		if (classpathStr == null) return false;
 		String classpathStr2 = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
 		return classpathStr.equals(classpathStr2);
@@ -155,7 +158,7 @@ public class MavenResolveTask extends BuildTask {
 	
 	protected void writeClasspathFile(File classpathFile, List<File> classpath) {
 		String classpathStr = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
-		FileUtility.writeFileUTF(classpathFile, classpathStr);
+		FileUtility.writeFileUTF(FileUtility.absolute(classpathFile), classpathStr);
 	}
 	
 	@Override
@@ -169,16 +172,19 @@ public class MavenResolveTask extends BuildTask {
 				return false;
 			}
 			writeClasspathFile(this.cpCompiletime, classpath);
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.RUNTIME)) {
 				logger().error(logTag(), "unable to resolve runtime dependencies!");
 				return false;
 			}
 			writeClasspathFile(this.cpRunttime, classpath);
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_COMPILETIME)) {
 				logger().error(logTag(), "unable to resolve test compiletime dependencies!");
 				return false;
 			}
 			writeClasspathFile(this.cpTestCompiletime, classpath);
+			classpath.clear();
 			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_RUNTIME)) {
 				logger().error(logTag(), "unable to resolve test runtime dependencies!");
 				return false;

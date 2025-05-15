@@ -132,7 +132,6 @@ public class MavenResolver {
 	 */
 	public boolean resolveGraph(DependencyGraph graph, Predicate<Artifact> exclusion, List<File> artifactOutput, DependencyScope artifactScope) throws MavenException {
 		
-		if (artifactOutput != null) artifactOutput.clear();
 		this.metaExpired = false;
 		
 		// attempt to resolve all transitive dependency groups of this graph
@@ -169,7 +168,7 @@ public class MavenResolver {
 				}
 				
 			}
-			
+
 			// if artifact output configured, download artifacts and add local cache paths
 			if (artifactOutput != null && artifactScope != null) {
 				
@@ -191,7 +190,7 @@ public class MavenResolver {
 						artifactOutput.add(systemFile);
 						
 					} else {
-						
+
 						Repository repository = transitiveGroup.graph.getResolutionRepository();
 						File localArtifact = downloadArtifact(repository, transitive.artifact);
 						if (localArtifact == null) {
@@ -234,7 +233,7 @@ public class MavenResolver {
 		// resolve additional repositories
 		Set<String> ndrepo = new HashSet<String>();
 		if (pom.repositories != null) {
-			for (var r : pom.repositories) {
+			for (var r : pom.repositories.repository) {
 				String urlStr = pom.fillPoperties(r.url);
 				if (!ndrepo.add(urlStr)) continue; // avoid duplicate repositories, pick first in order of import
 				try {
@@ -248,7 +247,7 @@ public class MavenResolver {
 		// resolve dependency management version declarations
 		Map<Artifact, String> transitiveVersions = new HashMap<Artifact, String>();
 		if (pom.dependencyManagement != null) {
-			for (var d : pom.dependencyManagement) {
+			for (var d : pom.dependencyManagement.dependency) {
 				
 				// get the scope the imported transitive will have in this graph
 				Scope effectiveScope = scope.effective(d.scope);
@@ -259,7 +258,7 @@ public class MavenResolver {
 				// ignore optional dependencies if asked to
 				if (d.optional && this.ignoreOptionalDependencies) continue;
 				
-				Artifact artifact = d.gavce(pom);
+				Artifact artifact = d.gavce();
 				Artifact group = artifact.getGAV().withVersion(null);
 				if (transitiveVersions.containsKey(group)) continue; // avoid duplicate entries, pick first in order of import
 				transitiveVersions.put(group, artifact.baseVersion);
@@ -270,7 +269,7 @@ public class MavenResolver {
 		// resolve transitive dependencies
 		Set<Artifact> nddepend = new HashSet<Artifact>();
 		if (pom.dependencies != null) {
-			for (var d : pom.dependencies) {
+			for (var d : pom.dependencies.dependency) {
 
 				// get the scope the imported transitive will have in this graph
 				Scope effectiveScope = scope.effective(d.scope);
@@ -282,7 +281,7 @@ public class MavenResolver {
 				if (d.optional && this.ignoreOptionalDependencies) continue;
 				
 				// resolve full transitive artifact coordinates
-				Artifact artifact = d.gavce(pom);
+				Artifact artifact = d.gavce();
 				if (artifact.baseVersion == null) {
 					String declaredVersion = transitiveVersions.get(artifact.getGAV());
 					if (declaredVersion == null)
@@ -299,8 +298,8 @@ public class MavenResolver {
 				// parse exclusion filters
 				Set<Artifact> excludes = new HashSet<Artifact>();
 				if (d.exclusions != null) {
-					for (var e : d.exclusions) {
-						excludes.add(e.ga(pom));
+					for (var e : d.exclusions.exclusion) {
+						excludes.add(e.ga());
 					}
 				}
 				
@@ -348,7 +347,7 @@ public class MavenResolver {
 			// parse repositories for imports
 			List<Repository> repositories2 = new ArrayList<Repository>();
 			if (pom.repositories != null) {
-				pom.repositories.stream().map(r -> {
+				pom.repositories.repository.stream().map(r -> {
 					try {
 						return new Repository(pom.fillPoperties(r.name), new URL(pom.fillPoperties(r.url)));
 					} catch (MalformedURLException e) {
@@ -363,13 +362,13 @@ public class MavenResolver {
 			// parse dependency management imports
 			if (pom.dependencyManagement != null) {
 				
-				for (Dependency dependency : pom.dependencyManagement) {
+				for (Dependency dependency : pom.dependencyManagement.dependency) {
 					
 					// only care about POM related imports for now
 					if (dependency.scope != Scope.IMPORT) continue;
 					if (dependency.optional && this.ignoreOptionalDependencies) continue;
 					
-					Artifact importArtifactPOM = dependency.gavce(pom);
+					Artifact importArtifactPOM = dependency.gavce();
 					try {
 						POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
 						if (importPOM == null)

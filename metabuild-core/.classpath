@@ -15,5 +15,6 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/"/>
 	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
+	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/de/m_marvin/javarun/javarun/1.2/javarun-1.2.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>

@@ -158,7 +158,10 @@ public class MavenResolveTask extends BuildTask {
 	
 	protected void writeClasspathFile(File classpathFile, List<File> classpath) {
 		String classpathStr = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
-		FileUtility.writeFileUTF(FileUtility.absolute(classpathFile), classpathStr);
+		File f = FileUtility.absolute(classpathFile);
+		if (!f.getParentFile().isDirectory() && !f.getParentFile().mkdirs())
+			throw BuildException.msg("unable to create destination folder for dependency classpath: %s", f);
+		FileUtility.writeFileUTF(f, classpathStr);
 	}
 	
 	@Override

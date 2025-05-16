@@ -4,7 +4,6 @@ import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.FileTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
-import de.m_marvin.metabuild.java.maven.MavenResolver;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.maven.types.Artifact;
@@ -24,21 +23,19 @@ public class Buildfile extends JavaBuildScript {
 	public void init() {
 		projectName = "metabuild-core";
 		
-		importBuild("wrapper", new File("../metabuild-wrapper"));
-		
 		super.init();
 		
-		// Metabuild API jar
+		// Make metabuild API jar
 		var apiJar = new JarTask("apiJar");
 		apiJar.group = "build";
 		apiJar.entries.put(compileJava.classesDir, "");
 		apiJar.filePredicate = f -> FileUtility.isIn(f, new File("build/classes/main/java/de/m_marvin/metabuild/api"));
+		apiJar.archive = new File(jar.archive.getParentFile(), FileUtility.getNameNoExtension(jar.archive) + "-api.jar");
 		apiJar.dependsOn(compileJava);
 		apiJar.dependencyOf(build);
-		apiJar.archive = new File(jar.archive.getParentFile(), FileUtility.getNameNoExtension(jar.archive) + "-api.jar");
 		manifestApi(apiJar);
 		
-		// Copy Metabuild Files into Install Directory
+		// Install metabuild instance on local system
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
 		copyBinary.group = "install";
 		copyBinary.dependsOn(jar);
@@ -53,16 +50,16 @@ public class Buildfile extends JavaBuildScript {
 	
 	@Override
 	public void repositories() {
-		
+
 		dependencies.repository(new Repository(
 				"GHP JavaRun",
-				"https://maven.pkg.github.com/m-marvin/app-javarun",
+				"https://maven.pkg.github.com/m-marvin/library-javarun",
 				new Credentials(
 						() -> System.getenv("GITHUB_ACTOR"), 
 						() -> System.getenv("GITHUB_TOKEN")
 				)
 		));
-		
+
 		dependencies.repository(new Repository(
 				"GHP CommandLineParser",
 				"https://maven.pkg.github.com/m-marvin/library-commandlineparser",
@@ -101,19 +98,14 @@ public class Buildfile extends JavaBuildScript {
 		// CommandLineParser
 		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
 		
-		// GSON
-		//implementation "com.google.code.gson:gson:2.9.1"
-		
 		// SimpleLogging
 		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3");
 		
 		// JavaRun
 		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
 		
-		// JAXB
-		//dependencies.implementation("com.sun.xml.bind:jaxb-runtime:3.0.0");
-		//dependencies.implementation("com.sun.xml.bind:jaxb-impl:3.0.0");
-		dependencies.implementation("de.m_marvin.metabuild:bxmlapi:0.1_build1");
+		// BasicXML
+		dependencies.implementation("de.m_marvin.metabuild:basicxml:0.1_build1");
 		
 		// Include dependencies into final binary jar
 		packageExecutable();

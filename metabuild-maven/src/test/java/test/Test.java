@@ -1,6 +1,7 @@
 package test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -16,6 +17,7 @@ import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.metabuild.maven.xml.POM;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.Log;
 
@@ -48,7 +50,7 @@ public class Test {
 		boolean success = resolver.resolveGraph(graph, r -> false, artifacts, DependencyScope.TEST_COMPILETIME);
 		
 
-		//boolean success2 = resolver.resolveGraph(graph, r -> false, artifacts, DependencyScope.COMPILETIME);
+		boolean success2 = resolver.resolveGraph(graph, r -> false, artifacts, DependencyScope.COMPILETIME);
 		
 		System.out.println("=> " + success);
 		for (File f : artifacts) {

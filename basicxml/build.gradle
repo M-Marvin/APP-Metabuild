@@ -30,7 +30,7 @@ java {
 
 dependencies {
 	
-	// ArchiveUtility
+	// SimpleLogging
 	implementation 'de.m_marvin.simplelogging:simplelogging:2.3'
 	
 }

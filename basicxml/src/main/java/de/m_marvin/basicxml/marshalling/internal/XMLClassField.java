@@ -4,7 +4,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -188,16 +187,6 @@ public record XMLClassField<V, P>(
 			return null;
 		}
 		throw new IllegalArgumentException("supplied class is not an XML primitive");
-	}
-
-	// TODO replace with better mapping system
-	public static int getFieldHash(URI namespace, String name) {
-		return getFieldHash(namespace == null ? null : namespace.toString(), name);
-	}
-
-	// TODO replace with better mapping system
-	public static int getFieldHash(String namespace, String name) {
-		return Objects.hash(namespace, name);
 	}
 	
 }

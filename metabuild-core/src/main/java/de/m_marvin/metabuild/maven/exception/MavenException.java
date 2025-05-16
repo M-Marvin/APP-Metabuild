@@ -1,4 +1,4 @@
-package de.m_marvin.metabuild.maven.types;
+package de.m_marvin.metabuild.maven.exception;
 
 public class MavenException extends Exception {
 	

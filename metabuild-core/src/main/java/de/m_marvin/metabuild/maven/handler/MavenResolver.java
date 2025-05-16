@@ -33,13 +33,13 @@ import java.util.function.Predicate;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveEntry;
 import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveGroup;
-import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
@@ -308,7 +308,7 @@ public class MavenResolver {
 					systemPath = pom.fillPoperties(d.systemPath);
 				}
 				
-				graph.addTransitive(effectiveScope, artifact, excludes, systemPath);
+				graph.addTransitive(effectiveScope, artifact, excludes, systemPath, d.optional);
 				
 			}
 		}
@@ -385,7 +385,7 @@ public class MavenResolver {
 			// parse parent POM
 			if (pom.parent != null) {
 				
-				Artifact importArtifactPOM = pom.parent.gavce(pom);
+				Artifact importArtifactPOM = pom.parent.gavce();
 				try {
 					POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
 					if (importPOM == null)
@@ -477,7 +477,7 @@ public class MavenResolver {
 	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	private File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
+	public File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
 		
 		// assemble remote URL and local path
 		URL artifactURL = repository.artifactURL(artifact, dataLevel, ArtifactFile.DATA);
@@ -602,7 +602,7 @@ public class MavenResolver {
 	 * @return An input stream to the remote URL, or null if the connection could not be established
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	private InputStream openURLConnection(URL url, Credentials credentials) throws MavenException {
+	public InputStream openURLConnection(URL url, Credentials credentials) throws MavenException {
 		
 		logger().debug("access URL: %s", url);
 		

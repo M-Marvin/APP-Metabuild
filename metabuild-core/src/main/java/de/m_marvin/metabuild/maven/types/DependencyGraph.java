@@ -27,16 +27,18 @@ public class DependencyGraph {
 	}
 	
 	public static class TransitiveEntry {
-		public TransitiveEntry(Artifact artifact, String systemPath) {
+		public TransitiveEntry(Artifact artifact, String systemPath, boolean optional) {
 			this.artifact = artifact;
 			this.systemPath = systemPath;
+			this.optional = optional;
 		}
 		
 		public final Artifact artifact;
 		public final String systemPath;
+		public final boolean optional;
 	}
 	
-	/* the list of repositories available to resolve the transitive dependencies this task */
+	/* the list of repositories available to resolve the transitive dependencies of this task */
 	protected List<Repository> repositories;
 	/* the repository which was used to resolve the POM describing this graph */
 	protected Repository resolutionRepository;
@@ -53,7 +55,7 @@ public class DependencyGraph {
 		this.transitives = new HashMap<Artifact, Map<Scope, TransitiveGroup>>();
 		for (var g : transitives) {
 			for (var a : g.artifacts) {
-				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath);
+				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
 			}
 		}
 		this.transitives = new HashMap<>();
@@ -70,7 +72,7 @@ public class DependencyGraph {
 		addRepository(resolutionRepository);
 	}
 	
-	public void addTransitive(Scope scope, Artifact artifact, Set<Artifact> excludes, String systemPath) {
+	public void addTransitive(Scope scope, Artifact artifact, Set<Artifact> excludes, String systemPath, boolean optional) {
 		if (!artifact.hasGAVCE()) return;
 		Artifact group = artifact.getGAV();
 		Map<Scope, TransitiveGroup> scopes = this.transitives.get(artifact);
@@ -83,7 +85,7 @@ public class DependencyGraph {
 			scopegroup = new TransitiveGroup(scope, group);
 			scopes.put(scope, scopegroup);
 		}
-		scopegroup.artifacts.add(new TransitiveEntry(artifact, systemPath));
+		scopegroup.artifacts.add(new TransitiveEntry(artifact, systemPath, optional));
 		if (excludes != null)
 			scopegroup.excludes.addAll(excludes);
 	}

@@ -12,8 +12,8 @@ import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
+import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact;
-import de.m_marvin.metabuild.maven.types.MavenException;
 
 @XMLType
 public class MetaVersion {
@@ -62,7 +62,7 @@ public class MetaVersion {
 			public String timestamp;
 			
 			@XMLField(FieldType.ELEMENT)
-			public String buildNumber;
+			public int buildNumber;
 			
 		}
 		
@@ -97,7 +97,7 @@ public class MetaVersion {
 
 	/* POM serialization and de-serialization */
 
-	public static final XMLMarshaler MARSHALER = new XMLMarshaler(MetaVersion.class);
+	public static final XMLMarshaler MARSHALER = new XMLMarshaler(true, MetaVersion.class);
 	
 	public static MetaVersion fromXML(InputStream xmlStream) throws MavenException {
 		try {

@@ -14,12 +14,12 @@ import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
 import de.m_marvin.metabuild.maven.handler.MavenResolver.ResolutionStrategy;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
-import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Scope;
 import de.m_marvin.simplelogging.impl.TagLogger;
@@ -54,36 +54,56 @@ public class MavenResolveTask extends BuildTask {
 		return this.graph.getRepositories();
 	}
 	
-	protected void dependency(Scope scope, Artifact artifact, String systemPath) {
-		this.graph.addTransitive(scope.mavenScope(), artifact, null, systemPath);
+	protected void dependency(Scope scope, Artifact artifact, String systemPath, boolean optional) {
+		this.graph.addTransitive(scope.mavenScope(), artifact, null, systemPath, optional);
 	}
 	
-	protected void dependency(Scope scope, String artifact, String systemPath) {
+	protected void dependency(Scope scope, String artifact, String systemPath, boolean optional) {
 		try {
-			dependency(scope, Artifact.of(artifact), systemPath);
+			dependency(scope, Artifact.of(artifact), systemPath, optional);
 		} catch (MavenException e) {
 			throw BuildScriptException.msg(e, "malformed maven coordinates: %s", artifact);
 		}
 	}
 	
 	public void implementation(String dependency) {
-		dependency(Scope.COMPILE, dependency, null);
+		dependency(Scope.COMPILE, dependency, null, false);
 	}
 	
 	public void runtime(String dependency) {
-		dependency(Scope.RUNTIME, dependency, null);
+		dependency(Scope.RUNTIME, dependency, null, false);
 	}
 	
 	public void test(String dependency) {
-		dependency(Scope.TEST, dependency, null);
+		dependency(Scope.TEST, dependency, null, false);
 	}
 	
 	public void provided(String dependency) {
-		dependency(Scope.PROVIDED, dependency, null);
+		dependency(Scope.PROVIDED, dependency, null, false);
 	}
 	
 	public void system(String dependency, String systemPath) {
-		dependency(Scope.SYSTEM, dependency, systemPath);
+		dependency(Scope.SYSTEM, dependency, systemPath, false);
+	}
+	
+	public void implementationOpt(String dependency) {
+		dependency(Scope.COMPILE, dependency, null, true);
+	}
+	
+	public void runtimeOpt(String dependency) {
+		dependency(Scope.RUNTIME, dependency, null, true);
+	}
+	
+	public void testOpt(String dependency) {
+		dependency(Scope.TEST, dependency, null, true);
+	}
+	
+	public void providedOpt(String dependency) {
+		dependency(Scope.PROVIDED, dependency, null, true);
+	}
+	
+	public void systemOpt(String dependency, String systemPath) {
+		dependency(Scope.SYSTEM, dependency, systemPath, true);
 	}
 	
 	public void extendsFrom(MavenResolveTask task) {
@@ -92,7 +112,7 @@ public class MavenResolveTask extends BuildTask {
 		}
 		for (var group : task.graph.getTransitiveGroups()) {
 			for (var dep : group.artifacts) {
-				this.graph.addTransitive(group.scope, dep.artifact, group.excludes, dep.systemPath);
+				this.graph.addTransitive(group.scope, dep.artifact, group.excludes, dep.systemPath, dep.optional);
 			}
 		}
 	}

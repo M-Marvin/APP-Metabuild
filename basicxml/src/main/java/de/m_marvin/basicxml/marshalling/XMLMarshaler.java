@@ -17,17 +17,17 @@ public class XMLMarshaler {
 	
 	private final Map<Class<?>, XMLClassType<?, ?>> types = new HashMap<>();
 	
-	public XMLMarshaler(Class<?>... types) {
+	public XMLMarshaler( boolean ignoreNamespaces, Class<?>... types) {
 		for (Class<?> type : types) {
-			resolveTypeObjects(type, null);
+			resolveTypeObjects(type, null, ignoreNamespaces);
 		}
 	}
 	
-	private void resolveTypeObjects(Class<?> type, Class<?> parent) {
-		var typeObj = XMLClassType.makeFromClass(type, parent);
+	private void resolveTypeObjects(Class<?> type, Class<?> parent, boolean ignoreNamespace) {
+		var typeObj = XMLClassType.makeFromClass(type, parent, ignoreNamespace);
 		this.types.put(type, typeObj);
 		for (Class<?> subTypes : typeObj.subTypes()) {
-			resolveTypeObjects(subTypes, type);
+			resolveTypeObjects(subTypes, type, ignoreNamespace);
 		}
 	}
 	
@@ -87,15 +87,15 @@ public class XMLMarshaler {
 		@SuppressWarnings("unchecked")
 		P parentObject = xmlClassType.isStatic() ? null : (P) objectStack.findTopMost(xmlClassType.parentType()::isInstance);
 		if (!xmlClassType.isStatic() && parentObject == null)
-			throw new XMLMarshalingException(xmlStream, "non-static class hierarchical error, unable to identify closest parent class to construct from");
+			throw new XMLMarshalingException(xmlStream, "non-static class hierarchical error, unable to identify closest parent class to construct from: " + xmlClassType.parentType());
 		T xmlClassObject = xmlClassType.factory().makeType(parentObject);
 		
 		for (String attributeName : openingElement.attributes().keySet()) {
-			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), attributeName));
+			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(openingElement.namespace(), attributeName);
 			if (attributeField == null) {
-				attributeField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), XMLClassType.REMAINING_MAP_FIELD));
+				attributeField = xmlClassType.attributes().get(openingElement.namespace(), XMLClassType.REMAINING_MAP_FIELD);
 				if (attributeField == null) {
-					Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: attribute unknown in java");
+					Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: attribute unknown in java: " + openingElement.namespace() + " > " + openingElement.name() + " > " + attributeName);
 					continue;
 				}
 			}
@@ -111,14 +111,14 @@ public class XMLMarshaler {
 					
 					if (element.type() == DescType.CLOSE) {
 						if (!element.isSameField(openingElement))
-							throw new XMLMarshalingException(xmlStream, "improper element close order, element not closed: " + openingElement); // this would indicate a problem with the stream
+							throw new XMLMarshalingException(xmlStream, "improper element close order, element not closed: " + openingElement.namespace() + " > " + openingElement.name()); // this would indicate a problem with the stream
 						break readelements;
 					} else {
-						XMLClassField<?, ?> xmlElementField = xmlClassType.elements().get(XMLClassField.getFieldHash(element.namespace(), element.name()));
+						XMLClassField<?, ?> xmlElementField = xmlClassType.elements().get(element.namespace(), element.name());
 						if (xmlElementField == null) {
-							xmlElementField = xmlClassType.elements().get(XMLClassField.getFieldHash(element.namespace(), XMLClassType.REMAINING_MAP_FIELD));
+							xmlElementField = xmlClassType.elements().get(element.namespace(), XMLClassType.REMAINING_MAP_FIELD);
 							if (xmlElementField == null) {
-								Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: unknown field in XML: " + element.namespace() + "/" + element.name());
+								Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: unknown field in XML: " + element.namespace() + " > " + element.name());
 								
 								if (element.type() == DescType.OPEN) {
 									// skip the element, read until close reached
@@ -127,7 +127,7 @@ public class XMLMarshaler {
 										while ((e = xmlStream.readNext()) != null)
 											if (e.isSameField(element)) break skipelement;
 										if (xmlStream.readAllText() == null)
-											throw new XMLMarshalingException(xmlStream, "unexpected EOF while skipping element: " + element);
+											throw new XMLMarshalingException(xmlStream, "unexpected EOF while skipping element: " + element.namespace() + " > " + element.name());
 									}
 								}
 								continue;
@@ -144,7 +144,7 @@ public class XMLMarshaler {
 										if (e.isSameField(element)) break readtext;
 									String s = xmlStream.readAllText();
 									if (s == null)
-										throw new XMLMarshalingException(xmlStream, "unexpected EOF while reading element text: " + element);
+										throw new XMLMarshalingException(xmlStream, "unexpected EOF while reading element text: " + element.namespace() + " > " + element.name());
 									text.append(s);
 								}
 							}
@@ -164,11 +164,11 @@ public class XMLMarshaler {
 				
 			}
 			
-			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(XMLClassField.getFieldHash(openingElement.namespace(), XMLClassType.TEXT_VALUE_FIELD));
+			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(openingElement.namespace(), XMLClassType.TEXT_VALUE_FIELD);
 			if (xmlTextField != null) {
 				fillAttributeFromXML(xmlClassObject, xmlTextField, null, xmlStream, elementText.toString(), objectStack);
-			} else if (!elementText.isEmpty()) {
-				Log.defaultLogger().warn(xmlStream.xmlStackPath(), "warning: unknown element text data!");
+			} else if (!elementText.toString().isBlank()) {
+				Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: unknown element text data: " + openingElement.namespace() + " > " + openingElement.name());
 			}
 		}
 		

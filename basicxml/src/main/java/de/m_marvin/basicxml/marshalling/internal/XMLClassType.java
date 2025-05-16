@@ -4,9 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -28,9 +26,9 @@ public record XMLClassType<T, P>(
 		/** the classes which are defined by this class and also take part in XML marshaling **/
 		Set<Class<?>> subTypes,
 		/** the attribute fields defined in this class **/
-		Map<Integer, XMLClassField<?, ?>> attributes,
+		NamespaceMap<XMLClassField<?, ?>> attributes,
 		/** the element fields defined in this class **/
-		Map<Integer, XMLClassField<?, ?>> elements
+		NamespaceMap<XMLClassField<?, ?>> elements
 		) {
 	
 	@FunctionalInterface
@@ -38,7 +36,7 @@ public record XMLClassType<T, P>(
 		public T makeType(P parentObject) throws LayerInstantiationException;
 	}
 	
-	public static <T, P> XMLClassType<T, P> makeFromClass(Class<T> type, Class<P> parentType) {
+	public static <T, P> XMLClassType<T, P> makeFromClass(Class<T> type, Class<P> parentType, boolean ignoreNamespaces) {
 		Objects.requireNonNull(type, "type can not be null");
 		
 		if (!type.isAnnotationPresent(XMLType.class))
@@ -67,7 +65,7 @@ public record XMLClassType<T, P>(
 				}
 			};
 			
-			XMLClassType<T, P> xmlClassType = new XMLClassType<T, P>(isStatic, parentType, factory, new HashSet<>(), new HashMap<>(), new HashMap<>());
+			XMLClassType<T, P> xmlClassType = new XMLClassType<T, P>(isStatic, parentType, factory, new HashSet<>(), new NamespaceMap<>(ignoreNamespaces), new NamespaceMap<>(ignoreNamespaces));
 			findFieldsAndTypes(type, xmlClassType);
 			return xmlClassType;
 			
@@ -99,20 +97,20 @@ public record XMLClassType<T, P>(
 			switch (xmlField.value()) {
 			case ATTRIBUTE: 
 			case ATTRIBUTE_COLLECTION:
-				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, name), xmlClassField); 
+				xmlClassType.attributes.put(namespace, name, xmlClassField); 
 				break;
 			case ELEMENT: 
 			case ELEMENT_COLLECTION:
-				xmlClassType.elements.put(XMLClassField.getFieldHash(namespace, name), xmlClassField); 
+				xmlClassType.elements.put(namespace, name, xmlClassField); 
 				break;
 			case REMAINING_ATTRIBUTE_MAP:
-				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, REMAINING_MAP_FIELD), xmlClassField); 
+				xmlClassType.attributes.put(namespace, REMAINING_MAP_FIELD, xmlClassField); 
 				break;
 			case REMAINING_ELEMENT_MAP:
-				xmlClassType.elements.put(XMLClassField.getFieldHash(namespace, REMAINING_MAP_FIELD), xmlClassField); 
+				xmlClassType.elements.put(namespace, REMAINING_MAP_FIELD, xmlClassField); 
 				break;
 			case TEXT: 
-				xmlClassType.attributes.put(XMLClassField.getFieldHash(namespace, TEXT_VALUE_FIELD), xmlClassField); 
+				xmlClassType.attributes.put(namespace, TEXT_VALUE_FIELD, xmlClassField); 
 				break;
 			}
 		}

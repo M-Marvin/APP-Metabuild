@@ -21,7 +21,7 @@ public class Test {
 		
 		XMLInputStream xmlIn = new XMLInputStream(input);
 		
-		XMLMarshaler marshaller = new XMLMarshaler(TestType.class);
+		XMLMarshaler marshaller = new XMLMarshaler(false, TestType.class);
 		
 		var object = marshaller.unmarshall(xmlIn, TestType.class);
 		

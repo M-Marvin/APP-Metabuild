@@ -4,6 +4,8 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import de.m_marvin.metabuild.maven.exception.MavenException;
+
 public class Artifact {
 	
 	public final String groupId;
@@ -182,7 +184,7 @@ public class Artifact {
 	public Artifact getPOMId() throws MavenException {
 		if (isGAWildcard()) throw new MavenException("can not get POM from wildcard: %s", this.toString());
 		if (!hasGAV()) throw new MavenException("can not get POM from non GAV coordinates: %s", this.toString());
-		return new Artifact(this.groupId, this.artifactId, this.baseVersion, null, "", "pom");
+		return new Artifact(this.groupId, this.artifactId, this.baseVersion, this.version, "", "pom");
 	}
 	
 	public Artifact withVersion(String version) throws MavenException {
@@ -196,6 +198,12 @@ public class Artifact {
 		int i = this.baseVersion.lastIndexOf("SNAPSHOT");
 		String version = this.baseVersion.substring(0, i) + snapshotVersion;
 		return new Artifact(this.groupId, this.artifactId, this.baseVersion, version, this.classifier, this.extension, false);
+	}
+	
+	public Artifact withClassifier(String classifier, String extension) throws MavenException {
+		if (isGAWildcard()) throw new MavenException("can not get specific configuration from wildcard: %s", this.toString());
+		if (!hasGAV()) throw new MavenException("can not get specific configuration from non GAV coordinates: %s", this.toString());
+		return new Artifact(this.groupId, this.artifactId, this.baseVersion, this.version, classifier, extension, false);
 	}
 	
 }

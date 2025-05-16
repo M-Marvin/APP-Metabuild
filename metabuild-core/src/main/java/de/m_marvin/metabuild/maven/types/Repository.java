@@ -7,6 +7,7 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 
 public class Repository {

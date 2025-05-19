@@ -2,36 +2,57 @@ package test;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import java.io.OutputStream;
+import java.util.HashMap;
 
-import de.m_marvin.basicxml.XMLException;
+import javax.xml.stream.XMLOutputFactory;
+
 import de.m_marvin.basicxml.XMLInputStream;
-import de.m_marvin.basicxml.marshalling.XMLMarshaler;
-import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
+import de.m_marvin.basicxml.XMLOutputStream;
+import de.m_marvin.basicxml.XMLStream.DescType;
+import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
+import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
 
 public class Test {
 	
-	public static void main(String... args) throws URISyntaxException, IOException, XMLException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException, XMLMarshalingException {
+	public static void main(String... args) throws Exception {
 		
 		File dir = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getPath(), "../../");
+		
+		OutputStream output = new FileOutputStream(new File(dir, "/test/test2.xml"));
+		
+		XMLOutputStream xmlOut = new XMLOutputStream(output, true, null);
 		
 		InputStream input = new FileInputStream(new File(dir, "/test/test.xml"));
 		
 		XMLInputStream xmlIn = new XMLInputStream(input);
 		
-		XMLMarshaler marshaller = new XMLMarshaler(false, TestType.class);
+		String text;
+		ElementDescriptor element;
+		do {
+			element = xmlIn.readNext();
+			xmlOut.writeNext(element);
+			text = xmlIn.readAllText();
+			if (text != null && !text.isBlank())
+				xmlOut.writeAllText(text, false);
+		} while (text != null);
 		
-		var object = marshaller.unmarshall(xmlIn, TestType.class);
+		xmlIn.close();
+		xmlOut.close();
 		
-		System.out.println(object.testlist.testitem.get(0).value);
-		
-		for (String k : object.remaining.keySet()) {
-			System.out.println(k + " = " + object.remaining.get(k));
-		}
-		
-		System.out.println(object.zzz);
+//		XMLUnmarshaler marshaller = new XMLUnmarshaler(false, TestType.class);
+//		
+//		var object = marshaller.unmarshall(xmlIn, TestType.class);
+//		
+//		System.out.println(object.testlist.testitem.get(0).value);
+//		
+//		for (String k : object.remaining.keySet()) {
+//			System.out.println(k + " = " + object.remaining.get(k));
+//		}
+//		
+//		System.out.println(object.zzz);
 		
 //		System.out.println("Version: " + xmlIn.getVersion());
 //		System.out.println("Encoding: " + xmlIn.getEncoding());

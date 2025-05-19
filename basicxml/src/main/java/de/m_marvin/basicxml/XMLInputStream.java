@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -34,7 +35,8 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	private String version = null;
 	/** character encoding from prolog entry */
 	private String encoding = null;
-	
+
+	// TODO
 	private static record TagEntry(String name, Map<String, URI> previousNamespaces) {}
 	
 	/** character data buffer for parsing from stream */
@@ -62,6 +64,7 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	
 	@Override
 	public void close() throws IOException {
+		this.reader.close();
 		this.stream.close();
 	}
 	
@@ -140,23 +143,25 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	}
 	
 	/**
-	 * Attempt to read the prolog entry, put the read characters onto the read buffer if this fails<br>
+	 * Attempt to read the prolog entry, put the read characters onto the read buffer if this fails.<br>
 	 * Default to XML 1.0 and UTF-8 if no prolog could be read.
 	 */
 	private void readProlog() throws IOException, XMLException {
-		// Attempt to read prolog
+		if (this.reader != null) return;
+		
+		// attempt to read prolog
 		if (readN(5).equals("<?xml")) {
 			int i = findFirst('>') + 1;
 			String prolog = readN(i).substring(2, i - 2);
 			deleteN(i);
 			
 			ElementDescriptor element = parseElementString(prolog);
-			if (element.type != DescType.OPEN)
+			if (element.type() != DescType.OPEN)
 				throw new XMLException("prolog entry can not be closing or self closing: " + prolog);
 			this.stack.clear(); // remove the "xml" element opened by the prolog entry
 			
-			this.version = element.attributes.get("version");
-			this.encoding = element.attributes.get("encoding");
+			this.version = element.attributes().get("version");
+			this.encoding = element.attributes().get("encoding");
 		}
 		
 		// fallback to default versions
@@ -199,31 +204,6 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	private static final Pattern NAMESPACE = Pattern.compile("(?i)xmlns(?::([a-zA-Z_][a-zA-Z0-9\\-_.]*)|)");
 	
 	/**
-	 * Describes if the element was opened, closed or is self closing
-	 */
-	public static enum DescType {
-		OPEN,
-		CLOSE,
-		SELF_CLOSING
-	}
-	
-	/**
-	 * Describes an element that was parsed from the XML file
-	 */
-	public static record ElementDescriptor(DescType type, URI namespace, String name, Map<String, String> attributes) {
-
-		public boolean isSameField(ElementDescriptor other) {
-			return Objects.equals(other.namespace, namespace) && Objects.equals(other.name, name);
-		}
-		
-		@Override
-		public final String toString() {
-			return "namespace: " + this.namespace + " element: " + this.name;
-		}
-		
-	}
-	
-	/**
 	 * Parses the string between the angled brackets of an tag element and returns the element descriptor.
 	 */
 	private ElementDescriptor parseElementString(String elementStr) throws IOException, XMLException {
@@ -261,7 +241,7 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 		if (selfClosing) namespaces = new HashMap<String, URI>(this.namespaces);
 		
 		// parse attributes if not a closing tag
-		Map<String, String> attributeMap = new HashMap<String, String>();
+		Map<String, String> attributeMap = new LinkedHashMap<String, String>();
 		if (!closing) {
 			String attributeStr = elementStr.substring(elementName.end());
 			Matcher attributes = ATTRIBUTE.matcher(attributeStr);
@@ -271,6 +251,7 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 				String attributeName = attributes.group(1);
 				String valueStr = attributes.group(2);
 				if (valueStr == null) valueStr = attributes.group(3);
+				valueStr = fillSpecialCharacters(valueStr);
 				
 				// check for namespace declaration
 				Matcher xmlns = NAMESPACE.matcher(attributeName);
@@ -340,6 +321,9 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 			deleteN(s);
 		}
 		
+		this.textParsing = false;
+		
+		// read and parse element tag
 		if (readAt(0) == '<') {
 			int i = findFirst('>') + 1;
 			String elementStr = readN(i).substring(1, i - 1);
@@ -351,18 +335,29 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 		// Text data within element
 		return null;
 	}
-
+	
+	protected static String fillSpecialCharacters(String text) {
+		text = text.replaceAll("&lt;", "<");
+		text = text.replaceAll("&gt;", ">");
+		text = text.replaceAll("&amp;", "&");
+		text = text.replaceAll("&apos;", "'");
+		text = text.replaceAll("&quot;", "\"");
+		return text;
+	}
+	
 	/** if the parser is currently parsing an CDATA block */
 	private boolean cdataParsing = false;
+	/** if a text section is currently being read **/
+	private boolean textParsing = false;
 	
 	/**
 	 * Reads text data from within the currently open element.<br>
 	 * All available text has to be read before the next element can be read.<br>
-	 * NOTE: Leading white spaces outside of CDATA blocks, including new-line's will be discarded.
+	 * NOTE: Leading and trailing white spaces outside of CDATA blocks, including line feeds will be discarded.
 	 * @param cbuf The character buffer to read the text data to
 	 * @param off The offset in the buffer to start putting the data
 	 * @param len The length of the text data to read
-	 * @return The number of characters actually read or -1 if the end of the text was reached
+	 * @return The number of characters actually read or -1 if EOF was reached
 	 * @throws IOException If an IO exception occurred while accessing the source stream
 	 */
 	public int readText(char[] cbuf, int off, int len) throws IOException {
@@ -375,9 +370,17 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 		int p = 0;
 		
 		try {
-
-			// check if char buffer full or and of text reached, if not, continue
-			while (p < len && (cdataParsing || readAt(0) != '<')) {
+			
+			// skip leading white spaces if first time reading text in this element
+			if (!this.textParsing) {
+				this.textParsing = true;
+				while (Character.isWhitespace(readAt(0)))
+					deleteN(1);
+			}
+			
+			// check if char buffer full or end of text reached, if not, continue
+			int lastCData = 0;
+			while (p < len && (cdataParsing || readAt(0) != '<' || readN(9).equals("<![CDATA["))) {
 
 				// find start of next tag or CDATA block or end of CDATA block
 				int i = 0;
@@ -385,22 +388,19 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 					while (readAt(i) != '<' && i < len) i++;
 				} else {
 					// make sure to read 2 more characters than len, to prevent a cut of end sequence from being interpreted as text
-					while (!readN(i + 3).endsWith("]]>") && i < len + 2) i++;
+					while (!readN(i + 3).endsWith("]]>") && i < len) i++;
 				}
 				
 				// copy text up to that to fill up char buffer
 				String text = readN(i);
 				if (!cdataParsing) {
 					// if not parsing CDATA block, replace character codes
-					text = text.replaceAll("&lt;", "<");
-					text = text.replaceAll("&gt;", ">");
-					text = text.replaceAll("&amp;", "&");
-					text = text.replaceAll("&apos;", "'");
-					text = text.replaceAll("&quot;", "\"");
+					text = fillSpecialCharacters(text);
 				}
-				text.getChars(0, Math.min(len, text.length()), cbuf, off + p);
+				int i1 = Math.min(len - p, text.length());
+				text.getChars(0, i1, cbuf, off + p);
 				deleteN(i);
-				p += text.length();
+				p += i1;
 
 				// check for comment block and skip
 				if (!cdataParsing && readN(4).equals("<!--")) {
@@ -419,15 +419,37 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 					if (i <= len && readN(3).equals("]]>")) {
 						deleteN(3);
 						cdataParsing = false;
+						// update end of last CDATA block
+						lastCData = p;
 					}
 				}
 				
 			}
 			
+			// search for first trailing white space that is not within a CDATA block
+			int firstTrailing = p;
+			for (; firstTrailing > lastCData && firstTrailing > 0; firstTrailing--)
+				if (!Character.isWhitespace(cbuf[firstTrailing + off - 1])) break;
+			
+			// verify that there are no further non whitespace characters
+			boolean noFurtherText = true;
+			if (firstTrailing < p && p == len) {
+				for (int i = 0; true; i++) {
+					if (Character.isWhitespace(readAt(i))) continue;
+					if (readAt(i) == '<' && !readN(9).equals("<![CDATA[")) break;
+					noFurtherText = false;
+					break;
+				}
+			}
+			
+			// cut of trailing whitespace's by reducing the number of characters returned
+			if (noFurtherText && firstTrailing < p)
+				p = firstTrailing;
+			
 			return p;
 			
 		} catch (EOFException e) {
-			// if we are outside the root element, an EOF indicates the end of the file
+			// if we are outside the root element, an empty string indicates the end of the file
 			if (this.stack.isEmpty()) return p == 0 ? -1 : p;
 			throw e;
 		}
@@ -437,15 +459,15 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	/**
 	 * Reads all text data available from within the currently open element.<br>
 	 * All available text has to be read before the next element can be read.<br>
-	 * NOTE: Leading white spaces outside of CDATA blocks, including new-line's will be discarded.
-	 * @return The text data read or null if no data was available
+	 * NOTE: Leading and trailing white spaces outside of CDATA blocks, including new-line's will be discarded.
+	 * @return The text data read or null if EOF was reached
 	 * @throws IOException If an IO exception occurred while accessing the source stream
 	 */
 	public String readAllText() throws IOException {
 		StringBuffer buffer = new StringBuffer();
-		char[] buf = new char[2048];
+		char[] buf = new char[4];
 		int r = 0;
-		while ((r = readText(buf, 0, 2048)) > 0)
+		while ((r = readText(buf, 0, 4)) > 0)
 			buffer.append(buf, 0, r);
 		return r == -1 ? null : buffer.toString();
 	}

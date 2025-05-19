@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -64,6 +65,12 @@ public class MavenPublisher {
 	
 	public boolean publishConfiguration(PublishConfiguration config, ZonedDateTime timeOfCreation) throws MavenException {
 		
+		// Verify all fiels
+		for (File f : config.artifacts.values()) {
+			if (!f.isFile())
+				throw new MavenException("file not found: %s", f);
+		}
+		
 		// Fill POM structure
 		POM pom = makePOM(config.coordinates, config.dependencies);
 		
@@ -79,66 +86,8 @@ public class MavenPublisher {
 		return failure;
 		
 	}
-	
-	public static final String TIMESTAMP_FORMAT = "%04d%02d%02d-%02d%02d%02d-%d";
-	
-	public boolean uploadArtifacts(Repository repository, Map<String, File> artifacts, POM pom, ZonedDateTime timeOfCreation) throws MavenException {
-		
-		Artifact pomArtifact = pom.gavce().getPOMId();
-		
-		// TODO SNAPSHOT RESOLUTION
-		
-		if (pomArtifact.isSnapshot()) {
-			
-			int buildNumber = 1;
-			try {
-				File snapshotMeta = this.resolver.downloadArtifact(repository, pomArtifact, DataLevel.META_VERSION);
-				if (snapshotMeta != null) {
-					MetaVersion versionMetadata = MetaVersion.fromXML(new FileInputStream(snapshotMeta));
-					buildNumber = versionMetadata.versioning.snapshot.buildNumber + 1;
-				}
-			} catch (FileNotFoundException | MavenException e) {
-				throw new MavenException(e, "exception while requesting version level meta data for snapshot upload: " + pomArtifact);
-			}
-			
-			String timestamp = String.format(TIMESTAMP_FORMAT, 
-					timeOfCreation.getYear(), 
-					timeOfCreation.getMonthValue(), 
-					timeOfCreation.getDayOfMonth(), 
-					timeOfCreation.getHour(), 
-					timeOfCreation.getMinute(), 
-					timeOfCreation.getSecond(), 
-					buildNumber);
-			
-			pomArtifact = pomArtifact.withSnapshotVersion(timestamp);
-			
-		}
-		
-		System.out.println("upload POM: " + pomArtifact);
-		
-		URL url = repository.artifactURL(pomArtifact, DataLevel.ARTIFACT, ArtifactFile.DATA);
-		
-		System.out.println("upload URL: " + url);
-		
-		for (String classifier : artifacts.keySet()) {
-			File artifactFile = artifacts.get(classifier);
-			String extenstion = FileUtility.getExtension(artifactFile);
-			Artifact clsArtifact = pomArtifact.withClassifier(classifier, extenstion);
-			
-			System.out.println("upload ART: " + clsArtifact);
-			
-			URL clsurl = repository.artifactURL(clsArtifact, DataLevel.ARTIFACT, ArtifactFile.DATA);
-			
-			System.out.println("upload URL: " + clsurl);
-			
-		}
-		
-		return true;
-		
-	}
-	
+
 	public POM makePOM(Artifact coordinates, DependencyGraph graph) throws MavenException {
-		
 		
 		POM pom = new POM();
 		
@@ -180,6 +129,79 @@ public class MavenPublisher {
 		}
 		
 		return pom;
+		
+	}
+	
+	public static final String TIMESTAMP_FORMAT = "%04d%02d%02d-%02d%02d%02d-%d";
+	
+	public boolean uploadArtifacts(Repository repository, Map<String, File> artifacts, POM pom, ZonedDateTime timeOfCreation) throws MavenException {
+		
+		Artifact pomArtifact = pom.gavce().getPOMId();
+
+		logger().info("attempt upload '%s' to repository: [%s] %s", pomArtifact, repository.name, repository.baseURL);
+		
+		if (pomArtifact.isSnapshot()) {
+			
+			int buildNumber = 1;
+			try {
+				File snapshotMeta = this.resolver.downloadArtifact(repository, pomArtifact, DataLevel.META_VERSION);
+				if (snapshotMeta != null) {
+					MetaVersion versionMetadata = MetaVersion.fromXML(new FileInputStream(snapshotMeta));
+					buildNumber = versionMetadata.versioning.snapshot.buildNumber + 1;
+				}
+			} catch (FileNotFoundException | MavenException e) {
+				throw new MavenException(e, "exception while requesting version level meta data for snapshot upload: " + pomArtifact);
+			}
+			
+			String timestamp = String.format(TIMESTAMP_FORMAT, 
+					timeOfCreation.getYear(), 
+					timeOfCreation.getMonthValue(), 
+					timeOfCreation.getDayOfMonth(), 
+					timeOfCreation.getHour(), 
+					timeOfCreation.getMinute(), 
+					timeOfCreation.getSecond(), 
+					buildNumber);
+			
+			pomArtifact = pomArtifact.withSnapshotVersion(timestamp);
+			
+		}
+		
+		if (!uploadArtifactPOM(repository, pomArtifact, pom)) {
+			logger().warn("unable to upload pom: %s", pomArtifact);
+			return false;
+		}
+		
+		for (String classifier : artifacts.keySet()) {
+			File artifactFile = artifacts.get(classifier);
+			String extenstion = FileUtility.getExtension(artifactFile);
+			Artifact clsArtifact = pomArtifact.withClassifier(classifier, extenstion);
+			
+			try {
+				if (!uploadArtifact(repository, pomArtifact, new FileInputStream(artifactFile))) {
+					logger().warn("unable to upload artifact: %s", artifactFile);
+					return false;
+				}
+			} catch (IOException e) {
+				throw new MavenException("unable to open artifact for upload: %s", artifactFile);
+			}
+			
+		}
+		
+		return true;
+		
+	}
+	
+	public boolean uploadArtifactPOM(Repository repository, Artifact artifact, POM pom) {
+		
+		System.out.println("POM UPLOAD");
+		return true; // TODO
+		
+	}
+	
+	public boolean uploadArtifact(Repository repository, Artifact artifact, InputStream stream) {
+		
+		System.out.println("UPLOAD");
+		return true;
 		
 	}
 	

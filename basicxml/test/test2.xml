@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding='UTF-8'?>
-<testtype test = "true">
+<?xml version="1.0" encoding="UTF-8"?>
+<testtype test="true">
 	<testsubtype attribute1="value1" attribute2="value2"/>
 	<testlist>
 		<testitem>Test Text</testitem>
@@ -11,5 +11,5 @@ Test2
 Test2
 	</key2>
 	<key3>Test3</key3>
-	<zzz>TES22<![CDATA[dddddd<>|!dd]]d>sss]]></zzz>
+	<zzz>TES22ddddd&lt;&gt;|!dd]]d&gt;sss</zzz>
 </testtype>

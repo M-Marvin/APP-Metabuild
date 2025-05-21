@@ -56,7 +56,7 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 	}
 	
 	@Override
-	public void close() throws Exception {
+	public void close() throws IOException {
 		this.writer.close();
 		this.stream.close();
 	}

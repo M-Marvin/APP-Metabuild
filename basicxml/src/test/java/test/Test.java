@@ -13,6 +13,7 @@ import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.XMLOutputStream;
 import de.m_marvin.basicxml.XMLStream.DescType;
 import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
+import de.m_marvin.basicxml.marshalling.XMLMarshaler;
 import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
 
 public class Test {
@@ -29,30 +30,34 @@ public class Test {
 		
 		XMLInputStream xmlIn = new XMLInputStream(input);
 		
-		String text;
-		ElementDescriptor element;
-		do {
-			element = xmlIn.readNext();
-			xmlOut.writeNext(element);
-			text = xmlIn.readAllText();
-			if (text != null && !text.isBlank())
-				xmlOut.writeAllText(text, false);
-		} while (text != null);
+//		String text;
+//		ElementDescriptor element;
+//		do {
+//			element = xmlIn.readNext();
+//			xmlOut.writeNext(element);
+//			text = xmlIn.readAllText();
+//			if (text != null && !text.isBlank())
+//				xmlOut.writeAllText(text, false);
+//		} while (text != null);
+//		
+//		xmlIn.close();
+//		xmlOut.close();
 		
-		xmlIn.close();
-		xmlOut.close();
+		XMLUnmarshaler unmarshaller = new XMLUnmarshaler(false, TestType.class);
 		
-//		XMLUnmarshaler marshaller = new XMLUnmarshaler(false, TestType.class);
-//		
-//		var object = marshaller.unmarshall(xmlIn, TestType.class);
-//		
-//		System.out.println(object.testlist.testitem.get(0).value);
-//		
-//		for (String k : object.remaining.keySet()) {
-//			System.out.println(k + " = " + object.remaining.get(k));
-//		}
-//		
-//		System.out.println(object.zzz);
+		var object = unmarshaller.unmarshall(xmlIn, TestType.class);
+		
+		System.out.println(object.testlist.testitem.get(0).value);
+		
+		for (String k : object.remaining.keySet()) {
+			System.out.println(k + " = " + object.remaining.get(k));
+		}
+		
+		System.out.println(object.zzz);
+		
+		XMLMarshaler marshaler = new XMLMarshaler(false, TestType.class);
+		
+		marshaler.marshal(xmlOut, object);
 		
 //		System.out.println("Version: " + xmlIn.getVersion());
 //		System.out.println("Encoding: " + xmlIn.getEncoding());

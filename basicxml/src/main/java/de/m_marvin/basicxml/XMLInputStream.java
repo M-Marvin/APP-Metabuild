@@ -68,6 +68,10 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 		this.stream.close();
 	}
 	
+	public Map<String, URI> getNamespaces() {
+		return namespaces;
+	}
+	
 	/**
 	 * Attempts to fill the character buffer for parsing XML with the requested number of characters from the source stream or reader.<br>
 	 * If the source reader is not yet set, it will assume ASCII 1 byte per character.

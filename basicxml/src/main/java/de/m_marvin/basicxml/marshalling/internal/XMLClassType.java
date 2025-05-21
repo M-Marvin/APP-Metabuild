@@ -4,11 +4,17 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
+import de.m_marvin.basicxml.marshalling.annotations.XMLOrder;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 
 /**
@@ -26,9 +32,13 @@ public record XMLClassType<T, P>(
 		/** the classes which are defined by this class and also take part in XML marshaling **/
 		Set<Class<?>> subTypes,
 		/** the attribute fields defined in this class **/
-		NamespaceMap<XMLClassField<?, ?>> attributes,
+		Map<String, XMLClassField<?, ?>> attributes,
 		/** the element fields defined in this class **/
-		NamespaceMap<XMLClassField<?, ?>> elements
+		NamespaceMap<XMLClassField<?, ?>> elements,
+		/** order in which attributes are written to XML **/
+		List<String> attributeOrder,
+		/** order in which elements are written to XML **/
+		List<String> elementOrder
 		) {
 	
 	@FunctionalInterface
@@ -65,7 +75,11 @@ public record XMLClassType<T, P>(
 				}
 			};
 			
-			XMLClassType<T, P> xmlClassType = new XMLClassType<T, P>(isStatic, parentType, factory, new HashSet<>(), new NamespaceMap<>(ignoreNamespaces), new NamespaceMap<>(ignoreNamespaces));
+			XMLOrder xmlOrderAnnotation = type.getAnnotation(XMLOrder.class);
+			List<String> attributeOrder = xmlOrderAnnotation == null ? Collections.emptyList() : Arrays.asList(xmlOrderAnnotation.attributes());
+			List<String> elementOrder = xmlOrderAnnotation == null ? Collections.emptyList() : Arrays.asList(xmlOrderAnnotation.elements());
+			
+			XMLClassType<T, P> xmlClassType = new XMLClassType<T, P>(isStatic, parentType, factory, new HashSet<>(), new LinkedHashMap<>(), new NamespaceMap<>(ignoreNamespaces), attributeOrder, elementOrder);
 			findFieldsAndTypes(type, xmlClassType);
 			return xmlClassType;
 			
@@ -96,21 +110,20 @@ public record XMLClassType<T, P>(
 			
 			switch (xmlField.value()) {
 			case ATTRIBUTE: 
-			case ATTRIBUTE_COLLECTION:
-				xmlClassType.attributes.put(namespace, name, xmlClassField); 
+				xmlClassType.attributes.put(name, xmlClassField); 
 				break;
 			case ELEMENT: 
 			case ELEMENT_COLLECTION:
 				xmlClassType.elements.put(namespace, name, xmlClassField); 
 				break;
 			case REMAINING_ATTRIBUTE_MAP:
-				xmlClassType.attributes.put(namespace, REMAINING_MAP_FIELD, xmlClassField); 
+				xmlClassType.attributes.put(REMAINING_MAP_FIELD, xmlClassField); 
 				break;
 			case REMAINING_ELEMENT_MAP:
 				xmlClassType.elements.put(namespace, REMAINING_MAP_FIELD, xmlClassField); 
 				break;
 			case TEXT: 
-				xmlClassType.attributes.put(namespace, TEXT_VALUE_FIELD, xmlClassField); 
+				xmlClassType.attributes.put(TEXT_VALUE_FIELD, xmlClassField); 
 				break;
 			}
 		}

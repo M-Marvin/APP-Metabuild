@@ -8,6 +8,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 /**
- * Marks an class as being an XML type object which can be used by an (un)marshaler.
+ * Determines the order in which elements and attributes of this XML type class are written to an XML file.
  */
-public @interface XMLType {}
+public @interface XMLOrder {
+	
+	public String[] attributes() default {};
+	public String[] elements() default {};
+	
+}

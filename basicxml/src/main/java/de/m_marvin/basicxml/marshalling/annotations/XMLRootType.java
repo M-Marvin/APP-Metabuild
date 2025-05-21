@@ -8,6 +8,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 /**
- * Marks an class as being an XML type object which can be used by an (un)marshaler.
+ * Marks an type of being able to be serialized using an marshaler, and sets the root element namespace and name.
  */
-public @interface XMLType {}
+public @interface XMLRootType {
+	
+	public String value();
+	public String namespace() default XMLField.NULL_STR;
+	
+}

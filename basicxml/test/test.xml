@@ -10,6 +10,6 @@
 Test2
 Test2
 	</key2>
-	<key3>Test3</key3>
-	<zzz>TES22<![CDATA[dddddd<>|!dd]]d>sss]]></zzz>
+	<key3>Test3<![CDATA[dddddd<>|!dd]]d>sss]]></key3>
+	<zzz>TEST2</zzz>
 </testtype>

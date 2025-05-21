@@ -1,6 +1,7 @@
 package de.m_marvin.basicxml.marshalling;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,14 +32,20 @@ public class XMLUnmarshaler {
 		}
 	}
 	
-	public <T> T unmarshall(XMLInputStream xmlStream, Class<T> objectType) throws IOException, XMLException, XMLMarshalingException {
+	public <T> T unmarshall(XMLInputStream xmlStream, Class<T> objectType, URI fallbackNamespace) throws IOException, XMLException, XMLMarshalingException {
 		
+		if (fallbackNamespace != null)
+			xmlStream.getNamespaces().put("", fallbackNamespace);
 		ElementDescriptor element = xmlStream.readNext();
 		if (element == null) return null;
 		T xmlObject = makeObjectFromXML(xmlStream, element, objectType, new StackList<Object>());
 		xmlStream.close();
 		return xmlObject;
 		
+	}
+	
+	public <T> T unmarshall(XMLInputStream xmlStream, Class<T> objectType) throws IOException, XMLException, XMLMarshalingException {
+		return unmarshall(xmlStream, objectType, null);
 	}
 	
 	protected <T, P> void fillAttributeFromXML(Object xmlClassObject, XMLClassField<T, P> attributeField, String attributeName, XMLInputStream xmlStream, String valueStr, StackList<Object> objectStack) throws XMLMarshalingException {
@@ -91,9 +98,9 @@ public class XMLUnmarshaler {
 		T xmlClassObject = xmlClassType.factory().makeType(parentObject);
 		
 		for (String attributeName : openingElement.attributes().keySet()) {
-			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(openingElement.namespace(), attributeName);
+			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(attributeName);
 			if (attributeField == null) {
-				attributeField = xmlClassType.attributes().get(openingElement.namespace(), XMLClassType.REMAINING_MAP_FIELD);
+				attributeField = xmlClassType.attributes().get(XMLClassType.REMAINING_MAP_FIELD);
 				if (attributeField == null) {
 					Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: attribute unknown in java: " + openingElement.namespace() + " > " + openingElement.name() + " > " + attributeName);
 					continue;
@@ -164,7 +171,7 @@ public class XMLUnmarshaler {
 				
 			}
 			
-			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(openingElement.namespace(), XMLClassType.TEXT_VALUE_FIELD);
+			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(XMLClassType.TEXT_VALUE_FIELD);
 			if (xmlTextField != null) {
 				fillAttributeFromXML(xmlClassObject, xmlTextField, null, xmlStream, elementText.toString(), objectStack);
 			} else if (!elementText.toString().isBlank()) {

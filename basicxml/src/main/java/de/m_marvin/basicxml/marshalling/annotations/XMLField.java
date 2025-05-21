@@ -1,9 +1,12 @@
 package de.m_marvin.basicxml.marshalling.annotations;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
 /**
  * Marks an field of an class as taking part in the XML (un)marshaling
  */
@@ -17,10 +20,6 @@ public @interface XMLField {
 		 * This field will be set from an XML attribute of this class's XML element
 		 */
 		ATTRIBUTE,
-		/**
-		 * This field will be set from one or more XML attributes of this class's XML element
-		 */
-		ATTRIBUTE_COLLECTION,
 		/**
 		 * This field will be set by all XML attributes of this class's XML element which did not have an dedicated field of ATTRIBUTE or ATTRIBUTE_COLLECTION type assigned
 		 */

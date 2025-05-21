@@ -7,6 +7,7 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
 import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
@@ -58,7 +59,6 @@ public record XMLClassField<V, P>(
 			fieldType = FieldType.SINGLE_VALUE;
 			dataType = (Class<V>) field.getType();
 			break;
-		case ATTRIBUTE_COLLECTION:
 		case ELEMENT_COLLECTION:
 			fieldType = FieldType.VALUE_COLLECTION;
 			dataType = (Class<V>) xmlFieldAnnotation.type();
@@ -163,6 +163,44 @@ public record XMLClassField<V, P>(
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public V[] query(Object xmlClassObject, String key) {
+		try {
+			switch (this.fieldType) {
+			case SINGLE_VALUE:
+				return (V[]) new Object[] { this.field.get(xmlClassObject) };
+			case VALUE_COLLECTION:
+				Collection<V> collection = (Collection<V>) this.field.get(xmlClassObject);
+				if (collection == null) return (V[]) new Object[0];
+				return (V[]) collection.toArray();
+			case REMAINING_MAP:
+				Map<String, V> map = (Map<String, V>) this.field.get(xmlClassObject);
+				if (map == null) return (V[]) new Object[0];
+				return (V[]) new Object[] { map.get(key) };
+			default:
+				throw new IllegalStateException();	
+			}
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("the supplied type does not match the fields type", e);
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException("the field is not accessible", e);
+		}
+	}
+	
+	public Set<String> queryKeys(Object xmlClassObject) {
+		try {
+			if (this.fieldType != FieldType.REMAINING_MAP)
+				throw new UnsupportedOperationException("field is not of type map");
+			@SuppressWarnings("unchecked")
+			Map<String, V> map = (Map<String, V>) this.field.get(xmlClassObject);
+			return map.keySet();
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("the supplied type does not match the fields type", e);
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException("the field is not accessible", e);
+		}
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T adaptPrimitive(Class<T> primitive, String valueStr) {
 		if (primitive == String.class) {
@@ -185,6 +223,29 @@ public record XMLClassField<V, P>(
 				if (((Enum) e).name().equalsIgnoreCase(valueStr)) return e;
 			Log.defaultLogger().warn("warning: unknown enum constant in XML: " + primitive + "." + valueStr);
 			return null;
+		}
+		throw new IllegalArgumentException("supplied class is not an XML primitive");
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public static <T> String primitiveString(Class<T> primitive, T value) {
+		if (primitive == String.class) {
+			return (String) value;
+		} else if (primitive == Boolean.class || primitive == boolean.class) {
+			return Boolean.toString((Boolean) value);
+		} else if (primitive == Integer.class || primitive == int.class) {
+			return Integer.toString((Integer) value);
+		} else if (primitive == Short.class || primitive == short.class) {
+			return Short.toString((Short) value);
+		} else if (primitive == Long.class || primitive == long.class) {
+			return Long.toString((Long) value);
+		} else if (primitive == Double.class || primitive == double.class) {
+			return Double.toString((Double) value);
+		} else if (primitive == Float.class || primitive == float.class) {
+			return Float.toString((Float) value);
+		} else if (primitive.isEnum()) {
+			if (value == null) return null;
+			return (((Enum) value).name());
 		}
 		throw new IllegalArgumentException("supplied class is not an XML primitive");
 	}

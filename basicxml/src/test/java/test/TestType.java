@@ -5,11 +5,13 @@ import java.util.HashMap;
 
 import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
+import de.m_marvin.basicxml.marshalling.annotations.XMLRootType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
 
 @XMLType
+@XMLRootType("testtype")
 public class TestType {
 	
 	@XMLField(FieldType.ATTRIBUTE)
@@ -56,8 +58,7 @@ public class TestType {
 
 		@Override
 		public String typeString(TestDataClass value) {
-			// TODO Auto-generated method stub
-			return null;
+			return value.text;
 		}
 		
 	}

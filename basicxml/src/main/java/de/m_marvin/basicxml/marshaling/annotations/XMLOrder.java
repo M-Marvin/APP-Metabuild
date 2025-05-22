@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling.annotations;
+package de.m_marvin.basicxml.marshaling.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

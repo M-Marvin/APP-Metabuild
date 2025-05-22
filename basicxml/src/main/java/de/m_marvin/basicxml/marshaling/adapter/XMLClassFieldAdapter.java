@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling.adapter;
+package de.m_marvin.basicxml.marshaling.adapter;
 
 /**
  * An type adapter for converting between class field data type and XML data, there exist two versions of this interface, this one is only the super type of both

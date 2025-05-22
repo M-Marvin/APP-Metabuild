@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling;
+package de.m_marvin.basicxml.marshaling;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,15 +11,15 @@ import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLOutputStream;
 import de.m_marvin.basicxml.XMLStream.DescType;
 import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
-import de.m_marvin.basicxml.marshalling.annotations.XMLCDATA;
-import de.m_marvin.basicxml.marshalling.annotations.XMLField;
-import de.m_marvin.basicxml.marshalling.annotations.XMLRootType;
-import de.m_marvin.basicxml.marshalling.annotations.XMLType;
-import de.m_marvin.basicxml.marshalling.internal.NamespaceMap;
-import de.m_marvin.basicxml.marshalling.internal.NamespaceMap.Entry;
-import de.m_marvin.basicxml.marshalling.internal.NamespaceMap.Key;
-import de.m_marvin.basicxml.marshalling.internal.XMLClassField;
-import de.m_marvin.basicxml.marshalling.internal.XMLClassType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLCDATA;
+import de.m_marvin.basicxml.marshaling.annotations.XMLField;
+import de.m_marvin.basicxml.marshaling.annotations.XMLRootType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLType;
+import de.m_marvin.basicxml.marshaling.internal.NamespaceMap;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassField;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassType;
+import de.m_marvin.basicxml.marshaling.internal.NamespaceMap.Entry;
+import de.m_marvin.basicxml.marshaling.internal.NamespaceMap.Key;
 
 public class XMLMarshaler {
 

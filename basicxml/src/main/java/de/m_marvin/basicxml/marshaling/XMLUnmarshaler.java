@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling;
+package de.m_marvin.basicxml.marshaling;
 
 import java.io.IOException;
 import java.net.URI;
@@ -10,8 +10,8 @@ import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.XMLStream.DescType;
 import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.basicxml.internal.StackList;
-import de.m_marvin.basicxml.marshalling.internal.XMLClassField;
-import de.m_marvin.basicxml.marshalling.internal.XMLClassType;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassField;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassType;
 import de.m_marvin.simplelogging.Log;
 
 public class XMLUnmarshaler {

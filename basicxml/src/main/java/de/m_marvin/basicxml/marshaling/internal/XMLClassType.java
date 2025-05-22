@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling.internal;
+package de.m_marvin.basicxml.marshaling.internal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import de.m_marvin.basicxml.marshalling.annotations.XMLField;
-import de.m_marvin.basicxml.marshalling.annotations.XMLOrder;
-import de.m_marvin.basicxml.marshalling.annotations.XMLType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLField;
+import de.m_marvin.basicxml.marshaling.annotations.XMLOrder;
+import de.m_marvin.basicxml.marshaling.annotations.XMLType;
 
 /**
  * Describes information about an class type required for XML marshaling

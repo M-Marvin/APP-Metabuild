@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling.internal;
+package de.m_marvin.basicxml.marshaling.internal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -9,12 +9,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
-import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
-import de.m_marvin.basicxml.marshalling.annotations.XMLEnum;
-import de.m_marvin.basicxml.marshalling.annotations.XMLField;
-import de.m_marvin.basicxml.marshalling.annotations.XMLType;
-import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
+import de.m_marvin.basicxml.marshaling.XMLMarshalingException;
+import de.m_marvin.basicxml.marshaling.adapter.XMLClassFieldAdapter;
+import de.m_marvin.basicxml.marshaling.annotations.XMLEnum;
+import de.m_marvin.basicxml.marshaling.annotations.XMLField;
+import de.m_marvin.basicxml.marshaling.annotations.XMLType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLTypeAdapter;
 import de.m_marvin.simplelogging.Log;
 
 /**

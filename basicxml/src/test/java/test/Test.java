@@ -5,18 +5,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-
-import javax.xml.stream.XMLOutputFactory;
 
 import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.XMLOutputStream;
-import de.m_marvin.basicxml.XMLStream.DescType;
-import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
-import de.m_marvin.basicxml.marshalling.XMLMarshaler;
-import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
+import de.m_marvin.basicxml.marshaling.XMLMarshaler;
+import de.m_marvin.basicxml.marshaling.XMLUnmarshaler;
 
 public class Test {
 	

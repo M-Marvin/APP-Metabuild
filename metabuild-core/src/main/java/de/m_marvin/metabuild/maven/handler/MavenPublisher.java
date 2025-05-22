@@ -17,6 +17,7 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -77,7 +78,13 @@ public class MavenPublisher {
 	 * @return true if the artifacts could be uploaded to ALL remote repositories, false even if only one of them failed
 	 * @throws MavenException if an unexpected error occurred preventing from some of the uploads to even begin
 	 */
-	public boolean publishConfiguration(PublishConfiguration config, ZonedDateTime timeOfCreation) throws MavenException {
+	public boolean publishConfiguration(PublishConfiguration config) throws MavenException {
+		Objects.requireNonNull(config, "publish config can not be null");
+		Objects.requireNonNull(config.artifacts, "publish config artifacts can not be null");
+		Objects.requireNonNull(config.coordinates, "publish config coordinates can not be null");
+		Objects.requireNonNull(config.dependencies, "publish config dependencies can not be null");
+		Objects.requireNonNull(config.repositories, "publish config repositories can not be null");
+		Objects.requireNonNull(config.timeOfCreation, "publish config timeOfCreation can not be null");
 		
 		// force usage of remote files to prevent corruption trough cached files
 		this.resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
@@ -97,7 +104,7 @@ public class MavenPublisher {
 
 			this.statusCallback.accept("upload artifacts > " + repository.name + " " + repository.baseURL);
 			
-			if (!uploadArtifacts(repository, config.artifacts, pom, timeOfCreation))
+			if (!uploadArtifacts(repository, config.artifacts, pom, config.timeOfCreation))
 				failure = true;
 			
 		}

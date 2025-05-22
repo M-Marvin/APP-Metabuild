@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling;
+package de.m_marvin.basicxml.marshaling;
 
 import de.m_marvin.basicxml.XMLStream;
 

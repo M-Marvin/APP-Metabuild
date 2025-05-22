@@ -3,12 +3,12 @@ package test;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
-import de.m_marvin.basicxml.marshalling.annotations.XMLField;
-import de.m_marvin.basicxml.marshalling.annotations.XMLRootType;
-import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
-import de.m_marvin.basicxml.marshalling.annotations.XMLType;
-import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
+import de.m_marvin.basicxml.marshaling.adapter.XMLClassFieldAdapter;
+import de.m_marvin.basicxml.marshaling.annotations.XMLField;
+import de.m_marvin.basicxml.marshaling.annotations.XMLRootType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLType;
+import de.m_marvin.basicxml.marshaling.annotations.XMLTypeAdapter;
+import de.m_marvin.basicxml.marshaling.annotations.XMLField.FieldType;
 
 @XMLType
 @XMLRootType(value = "testtype", namespace = "")

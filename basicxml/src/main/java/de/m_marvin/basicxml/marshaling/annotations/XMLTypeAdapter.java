@@ -1,11 +1,11 @@
-package de.m_marvin.basicxml.marshalling.annotations;
+package de.m_marvin.basicxml.marshaling.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
+import de.m_marvin.basicxml.marshaling.adapter.XMLClassFieldAdapter;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})

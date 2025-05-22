@@ -1,4 +1,4 @@
-package de.m_marvin.basicxml.marshalling.internal;
+package de.m_marvin.basicxml.marshaling.internal;
 
 import java.net.URI;
 import java.net.URISyntaxException;

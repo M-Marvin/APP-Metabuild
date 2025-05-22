@@ -13,14 +13,12 @@ import java.util.List;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenPublisher;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
-import de.m_marvin.metabuild.maven.handler.MavenResolver.ResolutionStrategy;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.PublishConfiguration;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
-import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.Log;
 
 public class Test {
@@ -61,8 +59,9 @@ public class Test {
 		publish.coordinates = Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.1-SNAPSHOT").withSnapshotVersion("214135153");
 		publish.artifacts.put("", new File(local, "out.zip"));
 		publish.repositories.add(new Repository("Local Repo", new URL("http://192.168.178.21/maven")));
+		publish.timeOfCreation = Instant.now().atZone(ZoneOffset.UTC);
 		MavenPublisher publisher = new MavenPublisher(Log.defaultLogger(), resolver);
-		boolean success2 = publisher.publishConfiguration(publish, Instant.now().atZone(ZoneOffset.UTC));
+		boolean success2 = publisher.publishConfiguration(publish);
 		
 		System.out.println("=> " + success2);
 		

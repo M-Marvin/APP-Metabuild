@@ -16,6 +16,7 @@ import de.m_marvin.http.PathInfo;
 import de.m_marvin.http.ResponseInfo;
 import de.m_marvin.http.server.HttpServer;
 import de.m_marvin.simplelogging.Log;
+import de.m_marvin.simplelogging.impl.SynchronizedLogger;
 
 public class RepoServerTest {
 	
@@ -24,6 +25,8 @@ public class RepoServerTest {
 	public static void main(String... args) throws MalformedURLException, URISyntaxException {
 		
 		HttpServer httpServer = new HttpServer(80);
+		
+		Log.setDefaultLogger(new SynchronizedLogger(Log.defaultLogger()));
 		
 		httpServer.setGetHandler(RepoServerTest::handleGetRequest);
 		httpServer.setPutHandler(RepoServerTest::handlePutRequest);
@@ -63,6 +66,7 @@ public class RepoServerTest {
 	
 	public static ResponseInfo handlePutRequest(PathInfo path, Map<String, String> attributes, int contentLength, InputStream contentStream) {
 		try {
+			Log.defaultLogger().warn(path.getPath());
 			File file = new File(files, path.getPath());
 			file.getParentFile().mkdirs();
 			OutputStream fileStream = new FileOutputStream(file);

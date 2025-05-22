@@ -192,6 +192,16 @@ public class Artifact {
 		return new Artifact(this.groupId, this.artifactId, version, null, this.classifier, this.extension, false);
 	}
 	
+	public String getNumericVersion() throws MavenException {
+		if (isGAWildcard()) throw new MavenException("can not get specific numeric version from wildcard: %s", this.toString());
+		if (!hasGAV()) throw new MavenException("can not get specific numeric version from non GAV coordinates: %s", this.toString());
+		if (isSnapshot()) {
+			int i = this.baseVersion.lastIndexOf("-SNAPSHOT");
+			return this.baseVersion.substring(0, i);
+		}
+		return this.baseVersion;
+	}
+	
 	public Artifact withSnapshotVersion(String snapshotVersion) throws MavenException {
 		if (isGAWildcard()) throw new MavenException("can not get specific snapshot version from wildcard: %s", this.toString());
 		if (!isSnapshot()) throw new MavenException("can not get specific snapshot version from non snapshot: %s", this.toString());

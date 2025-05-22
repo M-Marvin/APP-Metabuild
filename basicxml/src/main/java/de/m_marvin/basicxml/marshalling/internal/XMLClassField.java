@@ -11,6 +11,7 @@ import java.util.Set;
 
 import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
 import de.m_marvin.basicxml.marshalling.adapter.XMLClassFieldAdapter;
+import de.m_marvin.basicxml.marshalling.annotations.XMLEnum;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
@@ -219,8 +220,17 @@ public record XMLClassField<V, P>(
 			return (T) Float.valueOf(valueStr);
 		} else if (primitive.isEnum()) {
 			if (valueStr == null) return null;
-			for (T e : primitive.getEnumConstants())
-				if (((Enum) e).name().equalsIgnoreCase(valueStr)) return e;
+			for (T e : primitive.getEnumConstants()) {
+				try {
+					Field enumField = e.getClass().getDeclaredField(((Enum) e).name());
+					XMLEnum enumAnnotation = enumField.getAnnotation(XMLEnum.class);
+					if (enumAnnotation == null) 
+						if (((Enum) e).name().equalsIgnoreCase(valueStr)) return e;
+					if (enumAnnotation.value().equals(valueStr)) return e;
+				} catch (NoSuchFieldError | NoSuchFieldException | SecurityException e1) {
+					throw new RuntimeException("enum field access error", e1);
+				}
+			}
 			Log.defaultLogger().warn("warning: unknown enum constant in XML: " + primitive + "." + valueStr);
 			return null;
 		}
@@ -245,7 +255,14 @@ public record XMLClassField<V, P>(
 			return Float.toString((Float) value);
 		} else if (primitive.isEnum()) {
 			if (value == null) return null;
-			return (((Enum) value).name());
+			try {
+				Field enumField = value.getClass().getDeclaredField(((Enum) value).name());
+				XMLEnum enumAnnotation = enumField.getAnnotation(XMLEnum.class) ;
+				if (enumAnnotation == null) return ((Enum) value).name();
+				return enumAnnotation.value();
+			} catch (NoSuchFieldError | NoSuchFieldException | SecurityException e) {
+				throw new RuntimeException("enum field access error", e);
+			}
 		}
 		throw new IllegalArgumentException("supplied class is not an XML primitive");
 	}

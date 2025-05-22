@@ -17,6 +17,7 @@ import de.m_marvin.basicxml.XMLOutputStream;
 import de.m_marvin.basicxml.marshalling.XMLMarshaler;
 import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
 import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
+import de.m_marvin.basicxml.marshalling.annotations.XMLEnum;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLRootType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
@@ -95,11 +96,17 @@ public class POM {
 		public String systemPath = null;
 		
 		public static enum Scope {
+			@XMLEnum("compile")
 			COMPILE(5),
+			@XMLEnum("provided")
 			PROVIDED(4),
+			@XMLEnum("runtime")
 			RUNTIME(2),
+			@XMLEnum("test")
 			TEST(1),
+			@XMLEnum("system")
 			SYSTEM(0),
+			@XMLEnum("import")
 			IMPORT(0);
 			
 			private final int priority;

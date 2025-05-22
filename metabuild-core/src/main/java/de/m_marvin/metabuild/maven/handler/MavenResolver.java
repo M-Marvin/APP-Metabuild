@@ -37,16 +37,16 @@ import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
-import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveEntry;
 import de.m_marvin.metabuild.maven.types.DependencyGraph.TransitiveGroup;
+import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
-import de.m_marvin.metabuild.maven.xml.MetaVersion;
 import de.m_marvin.metabuild.maven.xml.POM;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
+import de.m_marvin.metabuild.maven.xml.VersionMetadata;
 import de.m_marvin.simplelogging.api.Logger;
 import de.m_marvin.simplelogging.impl.TagLogger;
 
@@ -449,7 +449,7 @@ public class MavenResolver {
 			try {
 				
 				// parse metadata XML
-				MetaVersion snapshotMetadata = MetaVersion.fromXML(new FileInputStream(snapshotMetadataFile));
+				VersionMetadata snapshotMetadata = VersionMetadata.fromXML(new FileInputStream(snapshotMetadataFile));
 				if (snapshotMetadata.versioning == null)
 					throw new MavenException("malformed snapshot mave-metadata: %s", artifact);
 				
@@ -509,7 +509,7 @@ public class MavenResolver {
 			InputStream onlineStream = openURLConnection(artifactURL, repository.credentials);
 			
 			// if remote connection failed, check if cache is still available to return
-			if (onlineStream == null) return localArtifact.isFile() ? localArtifact : null;
+			if (onlineStream == null) return (localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) ? localArtifact : null;
 			
 			// get local cache file stream
 			OutputStream localStream = new FileOutputStream(localArtifact);

@@ -35,7 +35,7 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:sources:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:javadoc:2.2.4"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.1-SNAPSHOT"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.0"), null, null, false);
 //		graph.addTransitive(Scope.SYSTEM, Artifact.of("local:systemfile:1.0"), null, "C:/test.txt");
 		graph.addRepository(new Repository("Local Repo", new URL("http://192.168.178.21/maven")));
 		graph.addRepository(new Repository("Maven Central", new URL("https://repo.maven.apache.org/maven2")));

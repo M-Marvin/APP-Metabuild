@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 import de.m_marvin.basicxml.internal.StackList;
 
@@ -33,21 +32,36 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 	/** the namespaces defined inside the element the parser is currently reading from */
 	private Map<URI, String> namespaces = new HashMap<>();
 	
-	private final Function<URI, String> namespaceIdProvider;;
+	@FunctionalInterface
+	public static interface NamespaceIdProvider {
+		public String provide(URI namespace, Map<URI, String> namespaces);
+	}
 	
+	/** supplier for the id's used when declaring the namespaces in the XML file */
+	private final NamespaceIdProvider namespaceIdProvider;
+	/** true if only single line text was written to the currently open element */
 	private boolean singleLineText = true;
+
+	public XMLOutputStream(OutputStream stream) {
+		this(stream, true);
+	}
 	
-	public XMLOutputStream(OutputStream stream, boolean prettyPrinting, Function<URI, String> namespaceIdProvider) {
+	public XMLOutputStream(OutputStream stream, boolean prettyPrinting) {
+		this(stream, prettyPrinting, null);
+	}
+	
+	public XMLOutputStream(OutputStream stream, boolean prettyPrinting, NamespaceIdProvider namespaceIdProvider) {
 		Objects.requireNonNull(stream, "XML data stream can not be null");
 		this.stream = stream;
 		this.prettyPrinting = prettyPrinting;
 		if (namespaceIdProvider == null) {
-			this.namespaceIdProvider = url -> {
+			this.namespaceIdProvider = (url, namespaces) -> {
+				if (namespaces.isEmpty()) return "";
 				// make random alphanumeric id for namespace
 				String id;
 				do {
 					id = Integer.toHexString(Long.hashCode(System.nanoTime())).substring(0, 4);
-				} while (this.namespaces.containsValue(id));
+				} while (namespaces.containsValue(id));
 				return id;
 			};
 		} else {
@@ -110,7 +124,7 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 		ElementDescriptor element = new ElementDescriptor(DescType.OPEN, null, "xml", new LinkedHashMap<>());
 		element.attributes().put("version", this.version);
 		element.attributes().put("encoding", this.encoding);
-		String prolog = makeElementString(element);
+		String prolog = makeElementString(element, new LinkedHashMap<URI, String>());
 		
 		// write prolog
 		this.writer.write("<?" + prolog + "?>");
@@ -120,7 +134,7 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 	/** 
 	 * formats the string between the angled brackets for the provided element descriptor
 	 */
-	public String makeElementString(ElementDescriptor element) {
+	public String makeElementString(ElementDescriptor element, Map<URI, String> namespaces) {
 
 		StringBuffer elementStr = new StringBuffer();
 		if (element.type() == DescType.CLOSE)
@@ -129,12 +143,18 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 		HashMap<String, String> attributes = element.attributes() != null ? new LinkedHashMap<String, String>(element.attributes()) : new LinkedHashMap<String, String>();
 		if (element.namespace() != null) {
 			// if new namespace, register and define in attributes
-			if (!this.namespaces.containsKey(element.namespace())) {
-				this.namespaces.put(element.namespace(), this.namespaceIdProvider.apply(element.namespace()));
-				attributes.put(String.format("xlmns:%s", this.namespaces.get(element.namespace())), element.namespace().toString());
+			String namespaceId = namespaces.get(element.namespace());
+			if (namespaceId == null) {
+				namespaceId = this.namespaceIdProvider.provide(element.namespace(), namespaces);
+				if (element.type() == DescType.OPEN) namespaces.put(element.namespace(), namespaceId);
+				if (namespaceId.isEmpty())
+					attributes.put("xlmns", element.namespace().toString());
+				else
+					attributes.put(String.format("xlmns:%s", namespaceId), element.namespace().toString());
 			}
 			// write namespace
-			elementStr.append(this.namespaces.get(element.namespace())).append(':');
+			if (!namespaceId.isEmpty())
+				elementStr.append(namespaceId).append(':');
 		}
 		
 		// write name and attributes
@@ -191,10 +211,15 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 		if (this.writer == null)
 			writeProlog();
 		
+		Map<URI, String> namespaces = this.namespaces;
+		
 		if (element.type() == DescType.OPEN)
 			openTag(element.name());
 		else if (element.type() == DescType.CLOSE)
 			closeTag(element.name());
+		
+		if (element.type() == DescType.OPEN) namespaces = this.namespaces;
+		if (element.type() == DescType.SELF_CLOSING) namespaces = new LinkedHashMap<URI, String>(this.namespaces);
 		
 		if (element.type() == DescType.CLOSE && element.attributes() != null && !element.attributes().isEmpty())
 			throw new XMLException(this, "attributes should be empty on closing element: " + element.name());
@@ -205,7 +230,7 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 				this.writer.write('\t');
 		}
 		
-		this.writer.write("<" + makeElementString(element) + ">");
+		this.writer.write("<" + makeElementString(element, namespaces) + ">");
 		
 		// reset single line text to true if new element is opened, otherwise set to false since current element does obviously no longer contain only single line text
 		this.singleLineText = element.type() == DescType.OPEN;
@@ -237,7 +262,7 @@ public class XMLOutputStream implements XMLStream, AutoCloseable {
 
 		// check if this text is single line or multi-line
 		String text = new String(cbuf, off, len);
-		this.singleLineText = this.singleLineText && !useCData && text.lines().count() == 1;
+		this.singleLineText = this.singleLineText && !useCData && text.lines().count() <= 1;
 		
 		// write text in new line if it's not just single line text
 		if (!this.singleLineText)

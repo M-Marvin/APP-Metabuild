@@ -11,35 +11,37 @@ import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLTypeAdapter;
 
 @XMLType
-@XMLRootType("testtype")
+@XMLRootType(value = "testtype", namespace = "")
 public class TestType {
 	
-	@XMLField(FieldType.ATTRIBUTE)
+	public static final String NS = "";
+	
+	@XMLField(value = FieldType.ATTRIBUTE, namespace = NS)
 	public boolean test;
 	
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public TestSubType testsubtype;
 	
 	@XMLType
 	public class TestSubType {
 
-		@XMLField(FieldType.ATTRIBUTE)
+		@XMLField(value = FieldType.ATTRIBUTE, namespace = NS)
 		public String attribute1;
 
-		@XMLField(FieldType.ATTRIBUTE)
+		@XMLField(value = FieldType.ATTRIBUTE, namespace = NS)
 		public String attribute2;
 		
 	}
 
 	@XMLType
-	public class TestList { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = TestItem.class) public ArrayList<TestItem> testitem; }
-	@XMLField(FieldType.ELEMENT)
+	public class TestList { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = TestItem.class, namespace = NS) public ArrayList<TestItem> testitem; }
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public TestList testlist;
 	
 	@XMLType
 	public class TestItem extends TestSubType {
 
-		@XMLField(FieldType.TEXT)
+		@XMLField(value = FieldType.TEXT, namespace = NS)
 		public String value;
 		
 	}
@@ -63,10 +65,10 @@ public class TestType {
 		
 	}
 	
-	@XMLField(value = FieldType.REMAINING_ELEMENT_MAP, type = TestDataClass.class)
+	@XMLField(value = FieldType.REMAINING_ELEMENT_MAP, type = TestDataClass.class, namespace = NS)
 	public HashMap<String, TestDataClass> remaining;
 	
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public TestEnum zzz;
 	
 	public static enum TestEnum {

@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -18,13 +20,13 @@ import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
 
 public class Test {
 	
-	public static void main(String... args) throws Exception {
+	public static void main(String... args) throws Exception, URISyntaxException {
 		
 		File dir = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getPath(), "../../");
 		
 		OutputStream output = new FileOutputStream(new File(dir, "/test/test2.xml"));
 		
-		XMLOutputStream xmlOut = new XMLOutputStream(output, true, null);
+		XMLOutputStream xmlOut = new XMLOutputStream(output);
 		
 		InputStream input = new FileInputStream(new File(dir, "/test/test.xml"));
 		
@@ -43,7 +45,7 @@ public class Test {
 //		xmlIn.close();
 //		xmlOut.close();
 		
-		XMLUnmarshaler unmarshaller = new XMLUnmarshaler(false, TestType.class);
+		XMLUnmarshaler unmarshaller = new XMLUnmarshaler(true, TestType.class);
 		
 		var object = unmarshaller.unmarshall(xmlIn, TestType.class);
 		

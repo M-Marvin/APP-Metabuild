@@ -68,10 +68,10 @@ public class XMLMarshaler {
 		
 		if (xmlField.adapter() != null || xmlField.isPrimitive()) {
 			for (T elementValue : value) {
+				if (elementValue == null) continue;
 				String elementValueStr = xmlField.adapter() != null ? 
 						xmlField.adapter().typeString(elementValue) : 
 						XMLClassField.primitiveString(xmlField.type(), elementValue);
-				if (elementValueStr == null) continue;
 				
 				// write element text data
 				ElementDescriptor openingElement = new ElementDescriptor(DescType.OPEN, namespace, name, null);
@@ -83,6 +83,7 @@ public class XMLMarshaler {
 			}
 		} else {
 			for (T elementValue : value) {
+				if (elementValue == null) continue;
 				// write element
 				writeElementObject(xmlStream, namespace, name, elementValue);
 			}

@@ -18,11 +18,15 @@ public class NamespaceMap<T> {
 		this.map = new LinkedHashMap<URI, Map<String,T>>();
 	}
 
-	public T get(URI namespace, String name) {
-		return get(namespace == null ? null : namespace.toString(), name);
+	public T get(String namespace, String name) {
+		try {
+			return get(namespace == null ? null : new URI(namespace), name);
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException("supplied namespace is not a valid URI", e);
+		}
 	}
 	
-	public T get(String namespace, String name) {
+	public T get(URI namespace, String name) {
 		Map<String, T> m = this.map.get(this.ignoreNamespaces ? null : namespace);
 		if (m == null) return null;
 		return m.get(name);

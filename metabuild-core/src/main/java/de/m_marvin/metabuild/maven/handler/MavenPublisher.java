@@ -1,5 +1,6 @@
 package de.m_marvin.metabuild.maven.handler;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -114,6 +115,7 @@ public class MavenPublisher {
 						dependency.exclusions.exclusion.add(exclusion);
 					}
 				}
+				pom.dependencies.dependency.add(dependency);
 				
 				// Add repository
 				Repository r = tg.graph.getResolutionRepository();
@@ -191,9 +193,14 @@ public class MavenPublisher {
 		
 	}
 	
-	public boolean uploadArtifactPOM(Repository repository, Artifact artifact, POM pom) {
+	public boolean uploadArtifactPOM(Repository repository, Artifact artifact, POM pom) throws MavenException {
 		
-		System.out.println("POM UPLOAD");
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		POM.toXML(pom, out);
+		
+		String text = new String(out.toByteArray());
+		
+		System.out.println("POM UPLOAD\n" + text);
 		return true; // TODO
 		
 	}

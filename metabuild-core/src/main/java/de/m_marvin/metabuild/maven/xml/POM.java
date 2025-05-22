@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.maven.xml;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -12,9 +13,12 @@ import java.util.regex.Pattern;
 
 import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
+import de.m_marvin.basicxml.XMLOutputStream;
 import de.m_marvin.basicxml.marshalling.XMLMarshaler;
 import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
+import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
+import de.m_marvin.basicxml.marshalling.annotations.XMLRootType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
 import de.m_marvin.metabuild.maven.exception.MavenException;
@@ -22,15 +26,18 @@ import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.ImportOrderList;
 
 @XMLType
+@XMLRootType(value = "project", namespace = "http://maven.apache.org/POM/4.0.0")
 public class POM {
+	
+	public static final String NS = "http://maven.apache.org/POM/4.0.0";
 	
 	/* artifact coordinates of this POM file */
 	
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public String groupId; // required
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public String artifactId; // required
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public String version; // required
 
 	public Artifact gavce() throws MavenException {
@@ -46,10 +53,10 @@ public class POM {
 	/* transitive dependency declarations (including POM imports) */
 	
 	@XMLType
-	public class Dependencies { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = Dependency.class) public ImportOrderList<Dependency> dependency = new ImportOrderList<POM.Dependency>(); }
-	@XMLField(FieldType.ELEMENT)
+	public class Dependencies { @XMLField(value = FieldType.ELEMENT_COLLECTION, namespace = NS, type = Dependency.class) public ImportOrderList<Dependency> dependency = new ImportOrderList<POM.Dependency>(); }
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Dependencies dependencies;
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Dependencies dependencyManagement; // NOTE: ORDER OF IMPORTS IN XML
 	
 	@XMLType
@@ -57,15 +64,15 @@ public class POM {
 		
 		/* artifact coordinates of the dependency */
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String groupId; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String artifactId; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String version = null;
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String classifier = "";
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String type = "jar";
 
 		public Artifact gavce() throws MavenException {
@@ -82,9 +89,9 @@ public class POM {
 		
 		/* scope of the dependency, and path to look for SYSTEM scope dependencies */
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public Scope scope = Scope.COMPILE;
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String systemPath = null;
 		
 		public static enum Scope {
@@ -147,22 +154,22 @@ public class POM {
 		
 		/* if this dependency is optional */
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public boolean optional = false;
 		
 		/* transitive dependencies to exclude */
 		
 		@XMLType
 		public class Exclusions { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = Exclusion.class) public List<Exclusion> exclusion = new ArrayList<POM.Dependency.Exclusion>(); }
-		@XMLField(FieldType.ELEMENT) 
+		@XMLField(value = FieldType.ELEMENT, namespace = NS) 
 		public Exclusions exclusions = null;
 		
 		@XMLType
 		public class Exclusion {
 			
-			@XMLField(FieldType.ELEMENT)
+			@XMLField(value = FieldType.ELEMENT, namespace = NS)
 			public String groupId; // required
-			@XMLField(FieldType.ELEMENT)
+			@XMLField(value = FieldType.ELEMENT, namespace = NS)
 			public String artifactId; // required
 
 			public Artifact ga() throws MavenException {
@@ -182,23 +189,24 @@ public class POM {
 	
 	@XMLType
 	public class Repositories { @XMLField(value = FieldType.ELEMENT_COLLECTION, type = Repositories.class) public ImportOrderList<Repository> repository = new ImportOrderList<Repository>(); }
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Repositories repositories;// NOTE: ORDER OF IMPORTS IN XML
 
+	@XMLType
 	public class Repository {
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String id; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String name; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String url; // required
 		
 	}
 	
 	/* parent POM to import dependencies and repositories from */
 	
-	@XMLField(FieldType.ELEMENT)
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Parent parent = null;
 
 	@XMLType
@@ -206,11 +214,11 @@ public class POM {
 		
 		/* artifact id of POM to import */
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String groupId; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String artifactId; // required
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String version; // required
 
 		public Artifact gavce() throws MavenException {
@@ -225,7 +233,7 @@ public class POM {
 		
 		/* optional relative path to look for the POM, before resolving using coordinates */
 		
-		@XMLField(FieldType.ELEMENT)
+		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String relativePath = null;
 		
 	}
@@ -233,8 +241,8 @@ public class POM {
 	/* key value pairs to replace in all other property strings in this POM */
 	
 	@XMLType
-	public class Properties { @XMLField(value = FieldType.REMAINING_ELEMENT_MAP, type = String.class) Map<String, String> property = new HashMap<String, String>(); }
-	@XMLField(FieldType.ELEMENT)
+	public class Properties { @XMLField(value = FieldType.REMAINING_ELEMENT_MAP, namespace = NS, type = String.class) Map<String, String> property = new HashMap<String, String>(); }
+	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Properties properties;
 	
 	protected static final Pattern PROP_PATTERN = Pattern.compile("\\$\\{([^\\$\\{\\}]+)\\}");
@@ -285,15 +293,26 @@ public class POM {
 		
 	}
 	
-	public static final XMLMarshaler MARSHALER = new XMLMarshaler(true, POM.class);
+	public static final XMLUnmarshaler UNMARSHALER = new XMLUnmarshaler(true, POM.class);
+	public static final XMLMarshaler MARSHALER = new XMLMarshaler(false, POM.class);
 	
 	public static POM fromXML(InputStream xmlStream) throws MavenException {
 		try {
-			return MARSHALER.unmarshall(new XMLInputStream(xmlStream), POM.class);
+			return UNMARSHALER.unmarshall(new XMLInputStream(xmlStream), POM.class);
 		} catch (IOException e) {
 			throw new MavenException(e, "unable to read POM XML because of IO exception");
 		} catch (XMLException | XMLMarshalingException e) {
 			throw new MavenException(e, "unable to read POM XML because of XML exception");
+		}
+	}
+	
+	public static void toXML(POM pom, OutputStream xmlStream) throws MavenException {
+		try {
+			MARSHALER.marshal(new XMLOutputStream(xmlStream), pom);
+		} catch (IOException e) {
+			throw new MavenException(e, "unable to write POM XML because of IO exception");
+		} catch (XMLException | XMLMarshalingException e) {
+			throw new MavenException(e, "unable to write POM XML because of XML exception");
 		}
 	}
 	

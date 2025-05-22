@@ -9,6 +9,7 @@ import de.m_marvin.basicxml.XMLException;
 import de.m_marvin.basicxml.XMLInputStream;
 import de.m_marvin.basicxml.marshalling.XMLMarshaler;
 import de.m_marvin.basicxml.marshalling.XMLMarshalingException;
+import de.m_marvin.basicxml.marshalling.XMLUnmarshaler;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField;
 import de.m_marvin.basicxml.marshalling.annotations.XMLField.FieldType;
 import de.m_marvin.basicxml.marshalling.annotations.XMLType;
@@ -97,11 +98,12 @@ public class MetaVersion {
 
 	/* POM serialization and de-serialization */
 
+	public static final XMLUnmarshaler UNMARSHALER = new XMLUnmarshaler(true, MetaVersion.class);
 	public static final XMLMarshaler MARSHALER = new XMLMarshaler(true, MetaVersion.class);
 	
 	public static MetaVersion fromXML(InputStream xmlStream) throws MavenException {
 		try {
-			return MARSHALER.unmarshall(new XMLInputStream(xmlStream), MetaVersion.class);
+			return UNMARSHALER.unmarshall(new XMLInputStream(xmlStream), MetaVersion.class);
 		} catch (IOException e) {
 			throw new MavenException(e, "unable to read meta version XML because of IO exception");
 		} catch (XMLException | XMLMarshalingException e) {

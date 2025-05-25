@@ -5,19 +5,14 @@ import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.exception.MavenException;
-import de.m_marvin.metabuild.maven.handler.MavenPublisher;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
-import de.m_marvin.metabuild.maven.types.PublishConfiguration;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
@@ -26,10 +21,6 @@ import de.m_marvin.simplelogging.Log;
 public class Test {
 	
 	public static void main(String... args) throws MavenException, FileNotFoundException, MalformedURLException, URISyntaxException {
-		
-//		System.out.println(Maven.MAVEN_LOCAL.baseURL);
-		
-//		System.exit(0);
 		
 		File local = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getFile(), "../../temp");
 		

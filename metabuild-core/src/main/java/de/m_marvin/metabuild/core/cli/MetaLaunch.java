@@ -85,6 +85,10 @@ public class MetaLaunch {
 		if (args.flag("prepare"))
 			mb.setSkipTaskRun(true);
 		boolean printLogs = args.get("info");
+
+		// Parse build threads
+		if (args.get("threads") != null)
+			mb.setTaskThreads(Integer.parseInt(args.get("threads")));
 		
 		mb.setTerminalOutput(System.out, !printLogs);
 		
@@ -95,10 +99,6 @@ public class MetaLaunch {
 		if (args.get("build-file") != null)
 			buildFile = args.get("build-file");
 		if (!mb.initBuild(buildFile)) return -1;
-		
-		// Parse build threads
-		if (args.get("threads") != null)
-			mb.setTaskThreads(Integer.parseInt(args.get("threads")));
 		
 		// Run tasks
 		boolean buildState = mb.runTasks(taskList);

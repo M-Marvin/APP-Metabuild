@@ -655,7 +655,7 @@ public final class Metabuild implements IMeta {
 			throw BuildScriptException.msg("task '%s' does not exist", taskName);
 		}
 		
-		Set<String> dependencies = this.taskDependencies.get(taskName);
+		Set<String> dependencies = this.taskDependencies.get(task.fullName());
 		Set<TaskNode> dependendNodes = new HashSet<>();
 		if (dependencies != null) {
 			for (String depTask : dependencies) {

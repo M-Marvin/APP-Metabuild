@@ -106,6 +106,9 @@ public class JavaBuildScript extends BuildScript {
 		sourcesJar.archive = new File(String.format("build/libs/%s-sources.jar", projectName));
 		sourcesJar.dependencyOf("build");
 		
+		publishMaven.artifacts.put("sources", sourcesJar.archive);
+		publishMaven.dependsOn(sourcesJar);
+		
 	}
 	
 	public void manifest() {

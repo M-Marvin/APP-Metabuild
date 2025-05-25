@@ -48,6 +48,8 @@ public class Buildfile extends JavaBuildScript {
 		
 		//compileJava.options.add("-Xlint:deprecation");
 		
+		withSourcesJar();
+		
 	}
 	
 	@Override

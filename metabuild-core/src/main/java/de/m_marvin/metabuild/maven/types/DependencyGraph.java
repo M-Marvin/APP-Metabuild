@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
@@ -39,12 +40,12 @@ public class DependencyGraph {
 	}
 	
 	/* the list of repositories available to resolve the transitive dependencies of this task */
-	protected List<Repository> repositories;
+	protected final List<Repository> repositories;
 	/* the repository which was used to resolve the POM describing this graph */
 	protected Repository resolutionRepository;
 	/* the transitive dependency artifacts of this graph, sorted by their GAV (group, artifact and version) */
-	protected Map<Artifact, Map<Scope, TransitiveGroup>> transitives;
-	
+	protected final Map<Artifact, Map<Scope, TransitiveGroup>> transitives;
+
 	public DependencyGraph() {
 		this(Collections.emptyList(), Collections.emptyList());
 	}
@@ -58,28 +59,31 @@ public class DependencyGraph {
 				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
 			}
 		}
-		this.transitives = new HashMap<>();
 	}
 
 	public DependencyGraph(DependencyGraph other) {
 		this();
+		Objects.requireNonNull(other);
 		importFrom(other);
 		this.resolutionRepository = other.resolutionRepository;
 	}
 	
 	public void importFrom(DependencyGraph graph) {
+		Objects.requireNonNull(graph);
 		for (var r : graph.repositories)
 			if (!this.repositories.contains(r))
 				this.repositories.add(r);
 		for (var g : graph.getTransitiveGroups()) {
 			for (var a : g.artifacts) {
 				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
-				this.transitives.get(a.artifact.getGAV()).get(g.scope).graph = new DependencyGraph(g.graph);
+				if (g.graph != null)
+					this.transitives.get(a.artifact.getGAV()).get(g.scope).graph = new DependencyGraph(g.graph);
 			}
 		}
 	}
 	
 	public void importAll(Set<DependencyGraph> dependencies) {
+		Objects.requireNonNull(dependencies);
 		dependencies.forEach(this::importFrom);
 	}
 	

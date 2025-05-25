@@ -52,6 +52,7 @@ public class MavenPublishTask extends BuildTask {
 	
 	public void dependencies(MavenResolveTask dependencyTask) {
 		Objects.requireNonNull(dependencyTask);
+		Objects.requireNonNull(dependencyTask.graph);
 		this.dependencies.add(dependencyTask.graph);
 	}
 	

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -30,8 +31,8 @@ public class MavenResolveTask extends BuildTask {
 	public File cpRunttime = new File("runtime.classpath");
 	public File cpTestCompiletime = new File("testcompile.classpath");
 	public File cpTestRuntime = new File("testruntime.classpath");
-	protected DependencyGraph graph;
-	protected MavenResolver resolver;
+	protected final DependencyGraph graph;
+	protected final MavenResolver resolver;
 	
 	public MavenResolveTask(String name) {
 		super(name);
@@ -47,6 +48,7 @@ public class MavenResolveTask extends BuildTask {
 	}
 	
 	public void repository(Repository repository) {
+		Objects.requireNonNull(repository);
 		this.graph.addRepository(repository);
 	}
 	
@@ -55,10 +57,14 @@ public class MavenResolveTask extends BuildTask {
 	}
 	
 	protected void dependency(Scope scope, Artifact artifact, String systemPath, boolean optional) {
+		Objects.requireNonNull(artifact);
+		Objects.requireNonNull(scope);
 		this.graph.addTransitive(scope.mavenScope(), artifact, null, systemPath, optional);
 	}
 	
 	protected void dependency(Scope scope, String artifact, String systemPath, boolean optional) {
+		Objects.requireNonNull(scope);
+		Objects.requireNonNull(artifact);
 		try {
 			dependency(scope, Artifact.of(artifact), systemPath, optional);
 		} catch (MavenException e) {
@@ -107,6 +113,7 @@ public class MavenResolveTask extends BuildTask {
 	}
 	
 	public void extendsFrom(MavenResolveTask task) {
+		Objects.requireNonNull(task);
 		for (var repo : task.graph.getRepositories()) {
 			this.graph.addRepository(repo);
 		}

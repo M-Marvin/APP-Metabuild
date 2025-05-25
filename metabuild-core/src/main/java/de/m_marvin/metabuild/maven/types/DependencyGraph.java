@@ -60,6 +60,22 @@ public class DependencyGraph {
 		}
 		this.transitives = new HashMap<>();
 	}
+
+	public void importFrom(DependencyGraph graph) {
+		for (var r : graph.repositories)
+			if (!this.repositories.contains(r))
+				this.repositories.add(r);
+		for (var g : graph.getTransitiveGroups()) {
+			for (var a : g.artifacts) {
+				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
+				this.transitives.get(a.artifact.getGAV()).get(g.scope).graph = g.graph;
+			}
+		}
+	}
+	
+	public void importAll(Set<DependencyGraph> dependencies) {
+		dependencies.forEach(this::importFrom);
+	}
 	
 	public void addRepository(Repository repository) {
 		if (!this.repositories.contains(repository))

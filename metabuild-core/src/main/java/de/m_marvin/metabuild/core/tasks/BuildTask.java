@@ -1,5 +1,6 @@
 package de.m_marvin.metabuild.core.tasks;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -28,12 +29,14 @@ public class BuildTask {
 	 * @param name The name of the task
 	 */
 	public BuildTask(String name) {
+		Objects.requireNonNull(name, "task name can not be null");
 		this.name = name;
 		if (this.getClass() != RootTask.class && !Metabuild.get().registerTask(this))
 			throw BuildScriptException.msg("failed to construct new task '%s'", name);
 	}
 	
 	public void setBuildscript(BuildScript buildscript) {
+		Objects.requireNonNull(buildscript);
 		this.buildscript = buildscript;
 	}
 	

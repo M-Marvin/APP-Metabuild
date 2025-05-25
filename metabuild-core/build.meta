@@ -7,7 +7,6 @@ import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.maven.types.Artifact;
-import de.m_marvin.metabuild.maven.types.MavenException;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Scope;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
@@ -45,6 +44,8 @@ public class Buildfile extends JavaBuildScript {
 		var install = new BuildTask("install");
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
+		
+		//compileJava.options.add("-Xlint:deprecation");
 		
 	}
 	
@@ -129,6 +130,16 @@ public class Buildfile extends JavaBuildScript {
 		apiJar.metainfo.put("Implementation-Version", version);
 		apiJar.metainfo.put("Implementation-Title", projectName + "-api");
 		apiJar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		
+	}
+	
+	public void publishing() {
+		
+		super.publishing();
+		
+		publishMaven.repository(new Repository("Publish Repo", "http://192.168.178.21/maven"));
+		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:0.1_build1");
+		publishMaven.artifact("", jar.archive);
 		
 	}
 	

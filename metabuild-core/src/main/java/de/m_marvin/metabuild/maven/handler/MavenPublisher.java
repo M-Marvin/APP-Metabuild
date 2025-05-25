@@ -157,7 +157,8 @@ public class MavenPublisher {
 				repository.id = r.name.toLowerCase().replace(' ' , '-');
 				repository.name = r.name;
 				repository.url = r.baseURL.toString();
-				pom.repositories.repository.add(repository);
+				if (!pom.repositories.repository.contains(repository))
+					pom.repositories.repository.add(repository);
 				
 			}
 		}

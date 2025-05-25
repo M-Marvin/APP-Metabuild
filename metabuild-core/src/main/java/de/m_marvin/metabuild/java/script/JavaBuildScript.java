@@ -10,6 +10,7 @@ import de.m_marvin.metabuild.java.JavaSourceIncludes;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
 import de.m_marvin.metabuild.java.tasks.JavaRunClasspathTask;
+import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
 import de.m_marvin.metabuild.maven.tasks.MavenResolveTask;
 
 public class JavaBuildScript extends BuildScript {
@@ -17,6 +18,7 @@ public class JavaBuildScript extends BuildScript {
 	public String projectName = "Project";
 	
 	public MavenResolveTask dependencies;
+	public MavenPublishTask publishMaven;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
 	public BuildTask build;
@@ -52,6 +54,12 @@ public class JavaBuildScript extends BuildScript {
 		build = new BuildTask("build");
 		build.group = "build";
 		build.dependsOn(jar);
+
+		publishMaven = new MavenPublishTask("publishMaven");
+		publishMaven.group = "publish";
+		publishMaven.dependsOn(jar);
+		
+		publishing();
 		
 		new FileTask("clean", Action.DELETE, new File("build"));
 		
@@ -101,6 +109,13 @@ public class JavaBuildScript extends BuildScript {
 	}
 	
 	public void manifest() {
+		
+	}
+	
+	public void publishing() {
+		
+		publishMaven.dependencies(this.dependencies);
+		publishMaven.artifact("", jar.archive);
 		
 	}
 	

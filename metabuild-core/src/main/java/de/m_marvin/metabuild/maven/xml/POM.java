@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,6 +63,22 @@ public class POM {
 	
 	@XMLType
 	public class Dependency {
+
+		@Override
+		public boolean equals(Object obj) {
+			if (obj instanceof Dependency other)
+				return 	Objects.equals(other.groupId, this.groupId) &&
+						Objects.equals(other.artifactId, this.artifactId) &&
+						Objects.equals(other.version, this.version) &&
+						Objects.equals(other.classifier, this.classifier) &&
+						Objects.equals(other.type, this.type);
+			return false;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Objects.hash(this.groupId, this.artifactId, this.version, this.classifier, this.type);
+		}
 		
 		/* artifact coordinates of the dependency */
 		
@@ -187,6 +204,18 @@ public class POM {
 				this.groupId = coordinates.groupId;
 				this.artifactId = coordinates.artifactId;
 			}
+
+			@Override
+			public boolean equals(Object obj) {
+				if (obj instanceof Exclusion other)
+					return Objects.equals(other.groupId, this.groupId) && Objects.equals(this.artifactId, other.artifactId);
+				return false;
+			}
+			
+			@Override
+			public int hashCode() {
+				return Objects.hash(this.groupId, this.artifactId);
+			}
 			
 		}
 		
@@ -208,6 +237,18 @@ public class POM {
 		public String name; // required
 		@XMLField(value = FieldType.ELEMENT, namespace = NS)
 		public String url; // required
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (obj instanceof Repository other)
+				return Objects.equals(other.url, this.url);
+			return false;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Objects.hash(this.url);
+		}
 		
 	}
 	

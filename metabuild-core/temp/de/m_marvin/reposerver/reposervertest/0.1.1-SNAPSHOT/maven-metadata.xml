@@ -5,71 +5,21 @@
 	<version>0.1.1-SNAPSHOT</version>
 	<versioning>
 		<snapshot>
-			<timestamp>20250522-164913</timestamp>
-			<buildNumber>6</buildNumber>
+			<timestamp>20250525-110921</timestamp>
+			<buildNumber>1</buildNumber>
 		</snapshot>
 		<snapshotVersions>
 			<snapshotVersion>
 				<extension>zip</extension>
-				<value>0.1.1-20250522-153919-1</value>
-				<updated>20250522-153919</updated>
+				<value>0.1.1-20250525-110921-1</value>
+				<updated>20250525-110921</updated>
 			</snapshotVersion>
 			<snapshotVersion>
 				<extension>pom</extension>
-				<value>0.1.1-20250522-153919-1</value>
-				<updated>20250522-153919</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>zip</extension>
-				<value>0.1.1-20250522-154000-2</value>
-				<updated>20250522-154000</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>pom</extension>
-				<value>0.1.1-20250522-154000-2</value>
-				<updated>20250522-154000</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>zip</extension>
-				<value>0.1.1-20250522-154113-3</value>
-				<updated>20250522-154113</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>pom</extension>
-				<value>0.1.1-20250522-154113-3</value>
-				<updated>20250522-154113</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>zip</extension>
-				<value>0.1.1-20250522-164119-4</value>
-				<updated>20250522-164119</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>pom</extension>
-				<value>0.1.1-20250522-164119-4</value>
-				<updated>20250522-164119</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>zip</extension>
-				<value>0.1.1-20250522-164658-5</value>
-				<updated>20250522-164658</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>pom</extension>
-				<value>0.1.1-20250522-164658-5</value>
-				<updated>20250522-164658</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>zip</extension>
-				<value>0.1.1-20250522-164913-6</value>
-				<updated>20250522-164913</updated>
-			</snapshotVersion>
-			<snapshotVersion>
-				<extension>pom</extension>
-				<value>0.1.1-20250522-164913-6</value>
-				<updated>20250522-164913</updated>
+				<value>0.1.1-20250525-110921-1</value>
+				<updated>20250525-110921</updated>
 			</snapshotVersion>
 		</snapshotVersions>
-		<lastUpdated>20250522-164913</lastUpdated>
+		<lastUpdated>20250525-110921</lastUpdated>
 	</versioning>
 </metadata>

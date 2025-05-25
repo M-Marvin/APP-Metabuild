@@ -6,6 +6,7 @@ import de.m_marvin.metabuild.core.tasks.FileTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
+import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Scope;
@@ -137,7 +138,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.publishing();
 		
-		publishMaven.repository(new Repository("Publish Repo", "http://192.168.178.21/maven"));
+		publishMaven.repository(Maven.mavenLocal());
 		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:0.1_build1");
 		publishMaven.artifact("", jar.archive);
 		

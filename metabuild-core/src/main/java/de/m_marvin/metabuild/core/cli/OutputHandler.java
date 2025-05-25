@@ -46,7 +46,7 @@ public class OutputHandler {
 			
 			@Override
 			public void taskStarted(String task) {
-				if (!task.equals("root")) {
+				if (!task.equals("root") && !task.equals(":root")) {
 					tasksCompleted++;
 					if (OutputHandler.this.printUI) {
 						cleanStatusUI();

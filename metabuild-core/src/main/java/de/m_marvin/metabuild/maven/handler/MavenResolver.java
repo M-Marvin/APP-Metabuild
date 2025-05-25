@@ -547,13 +547,13 @@ public class MavenResolver {
 						
 						// verify checksum
 						if (Arrays.compare(localChecksum, onlineChecksum) != 0)
-							throw new MavenException("artifact checksum error: online %s != local %s", HexFormat.of().formatHex(onlineChecksum), HexFormat.of().formatHex(localChecksum));
+							throw new MavenException("artifact checksum error: online %s != local %s > %s", HexFormat.of().formatHex(onlineChecksum), HexFormat.of().formatHex(localChecksum), checksumURL.toString());
 						
 						return localArtifact;
 					} catch (IllegalArgumentException e) {
 						localStream.close();
 						localArtifact.delete();
-						throw new MavenException(e, "checksum error, received malformed checksum: '%s'", checksumStr);
+						throw new MavenException(e, "checksum error, received malformed checksum: '%s' > %s", checksumStr, checksumURL.toExternalForm());
 					}
 					
 				} catch (NoSuchAlgorithmException e) {

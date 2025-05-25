@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -197,7 +198,7 @@ public class MavenPublisher {
 			
 			// query meta information and calculate new build timestamp
 			int buildNumber = 1;
-			VersionMetadata versionMetadata = new VersionMetadata();
+			VersionMetadata versionMetadata = null;
 			try {
 				File snapshotMeta = this.resolver.downloadArtifact(repository, pomArtifact, DataLevel.META_VERSION);
 				if (snapshotMeta != null) {
@@ -207,6 +208,8 @@ public class MavenPublisher {
 			} catch (FileNotFoundException | MavenException e) {
 				throw new MavenException(e, "exception while requesting version level meta data for snapshot upload: " + pomArtifact);
 			}
+			if (versionMetadata == null)
+				versionMetadata = new VersionMetadata();
 			String buildTimestamp = timestamp + "-" + Integer.toString(buildNumber);
 			
 			// update version metadata
@@ -267,7 +270,7 @@ public class MavenPublisher {
 		}
 		
 		// download artifact metadata
-		ArtifactMetadata artifactMetadata = new ArtifactMetadata();
+		ArtifactMetadata artifactMetadata = null;
 		try {
 			File artifactMeta = this.resolver.downloadArtifact(repository, pomArtifact, DataLevel.META_ARTIFACT);
 			if (artifactMeta != null) {
@@ -276,6 +279,8 @@ public class MavenPublisher {
 		} catch (IOException e) {
 			throw new MavenException(e, "unable to load artifact metadata: %s", pomArtifact.getGAV());
 		}
+		if (artifactMetadata == null)
+			artifactMetadata = new ArtifactMetadata();
 		
 		// update artifact metadata
 		artifactMetadata.ga(pomArtifact);
@@ -376,7 +381,14 @@ public class MavenPublisher {
 			// open remote connection
 			URL remoteURL = repository.artifactURL(artifact, dataLevel, ArtifactFile.DATA);
 			URLConnection connection = openURLConnection(remoteURL, repository.credentials);
-			OutputStream onlineStream = connection.getOutputStream();
+			OutputStream onlineStream;
+			if (connection.getURL().getProtocol().equals("file")) {
+				File f = new File(connection.getURL().getPath());
+				f.getParentFile().mkdirs();
+				onlineStream = new FileOutputStream(f);
+			} else {
+				onlineStream = connection.getOutputStream();
+			}
 			
 			// transfer bytes to remote repository, compute hash for checksums
 			byte[] buffer = new byte[1024];
@@ -402,7 +414,14 @@ public class MavenPublisher {
 					// open remote connection
 					URL remoteChecksumURL = repository.artifactURL(artifact, dataLevel, checksum);
 					URLConnection checksumConnection = openURLConnection(remoteChecksumURL, repository.credentials);
-					OutputStream onlineChecksumStream = checksumConnection.getOutputStream();
+					OutputStream onlineChecksumStream;
+					if (connection.getURL().getProtocol().equals("file")) {
+						File f = new File(checksumConnection.getURL().getPath());
+						f.getParentFile().mkdirs();
+						onlineChecksumStream = new FileOutputStream(f);
+					} else {
+						onlineChecksumStream = checksumConnection.getOutputStream();
+					}
 					
 					// upload checksum string
 					onlineChecksumStream.write(checksumStr.getBytes());

@@ -61,6 +61,12 @@ public class DependencyGraph {
 		this.transitives = new HashMap<>();
 	}
 
+	public DependencyGraph(DependencyGraph other) {
+		this();
+		importFrom(other);
+		this.resolutionRepository = other.resolutionRepository;
+	}
+	
 	public void importFrom(DependencyGraph graph) {
 		for (var r : graph.repositories)
 			if (!this.repositories.contains(r))
@@ -68,7 +74,7 @@ public class DependencyGraph {
 		for (var g : graph.getTransitiveGroups()) {
 			for (var a : g.artifacts) {
 				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
-				this.transitives.get(a.artifact.getGAV()).get(g.scope).graph = g.graph;
+				this.transitives.get(a.artifact.getGAV()).get(g.scope).graph = new DependencyGraph(g.graph);
 			}
 		}
 	}

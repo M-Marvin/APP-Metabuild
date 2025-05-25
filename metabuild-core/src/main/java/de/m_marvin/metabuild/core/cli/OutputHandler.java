@@ -28,24 +28,26 @@ public class OutputHandler {
 			mb.setLogStreamOutput(print);
 		}
 
+		// disable line wrap
+		print.print("\033[7l");
+		
 		meta.addStatusCallback(new IStatusCallback() {
 			
 			@Override
-			public void taskStatus(String task, String status) {
+			public synchronized void taskStatus(String task, String status) {
 				if (OutputHandler.this.printUI) cleanStatusUI();
 				taskStates.put(task, status);
 				if (OutputHandler.this.printUI) printStatusUI();
-
 			}
 			
 			@Override
-			public void taskCount(int taskCount) {
+			public synchronized void taskCount(int taskCount) {
 				tasksCount = taskCount;
 				if (OutputHandler.this.printUI) printStatusUI();
 			}
 			
 			@Override
-			public void taskStarted(String task) {
+			public synchronized void taskStarted(String task) {
 				if (!task.equals("root") && !task.equals(":root")) {
 					tasksCompleted++;
 					if (OutputHandler.this.printUI) {
@@ -58,14 +60,14 @@ public class OutputHandler {
 			}
 			
 			@Override
-			public void taskCompleted(String task) {
+			public synchronized void taskCompleted(String task) {
 				if (OutputHandler.this.printUI) cleanStatusUI();
 				taskStates.remove(task);
 				if (OutputHandler.this.printUI) printStatusUI();
 			}
 			
 			@Override
-			public void buildCompleted(boolean success) {
+			public synchronized void buildCompleted(boolean success) {
 				printFinish(success);
 			}
 			

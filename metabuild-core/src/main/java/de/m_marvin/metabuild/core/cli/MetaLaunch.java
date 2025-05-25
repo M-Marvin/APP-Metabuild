@@ -32,9 +32,9 @@ public class MetaLaunch {
 		parser.addOption("log", Metabuild.DEFAULT_BUILD_LOG_NAME, "file to write build log to");
 		parser.addOption("threads", Integer.toString(Metabuild.DEFAULT_TASK_THREADS), "number of threads to utilize for executing build tasks");
 		parser.addOption("refresh-dependencies", false, "if set, re-download all dependencies and replace current cache");
-		parser.addOption("info", false, "Print additional log information to the terminal during build process");
+		parser.addOption("info", false, "print additional log information to the terminal during build process");
 		parser.addOption("force", false, "if set, all tasks are run even if they are up to date");
-		parser.addOption("prepare", false, "Skip actual run phase and only run prepare phase");
+		parser.addOption("prepare", false, "skip actual run phase and only run prepare phase");
 		
 		try {
 			

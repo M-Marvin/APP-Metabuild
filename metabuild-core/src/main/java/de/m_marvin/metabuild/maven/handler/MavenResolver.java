@@ -171,7 +171,7 @@ public class MavenResolver {
 
 			// if artifact output configured, download artifacts and add local cache paths
 			if (artifactOutput != null && artifactScope != null) {
-				
+
 				for (TransitiveEntry transitive : transitiveGroup.artifacts) {
 					
 					if (!artifactScope.includes(transitiveGroup.scope)) continue;
@@ -190,7 +190,7 @@ public class MavenResolver {
 						artifactOutput.add(systemFile);
 						
 					} else {
-
+						
 						Repository repository = transitiveGroup.graph.getResolutionRepository();
 						File localArtifact = downloadArtifact(repository, transitive.artifact);
 						if (localArtifact == null) {
@@ -334,15 +334,7 @@ public class MavenResolver {
 				logger().info("attempt resolve '%s' on [%s]", artifact, repository.name == null ? repository.baseURL : repository.name);
 			
 			POM pom = downloadArtifactPOM(repository, artifact);
-			
-			// abort resolution if offline mode, further attempts will fail anyway
-			if (pom == null) {
-				if (this.resolutionStrategy == ResolutionStrategy.OFFLINE) {
-					return null;
-				} else {
-					continue;
-				}
-			}
+			if (pom == null) continue;
 			
 			// parse repositories for imports
 			List<Repository> repositories2 = new ArrayList<Repository>();
@@ -481,8 +473,8 @@ public class MavenResolver {
 		
 		// assemble remote URL and local path
 		URL artifactURL = repository.artifactURL(artifact, dataLevel, ArtifactFile.DATA);
-		File localArtifact = new File(this.localCache, artifact.getLocalPath(dataLevel));
-		
+		File localArtifact = new File(this.localCache, repository.getCacheFolder() +"/" + artifact.getLocalPath(dataLevel));
+
 		// check for existing file in cache, ignore if metadata category and refresh interval expired, check for resolution strategy
 		if (localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) {
 			if (!dataLevel.isMetadata()) return localArtifact;
@@ -500,9 +492,6 @@ public class MavenResolver {
 		}
 		if (!localArtifact.isFile() && this.resolutionStrategy == ResolutionStrategy.OFFLINE) return null;
 		
-		// create directories in cache
-		localArtifact.getParentFile().mkdirs();
-		
 		try {
 			
 			// get remote connection stream
@@ -512,6 +501,7 @@ public class MavenResolver {
 			if (onlineStream == null) return (localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) ? localArtifact : null;
 			
 			// get local cache file stream
+			localArtifact.getParentFile().mkdirs();
 			OutputStream localStream = new FileOutputStream(localArtifact);
 			
 			// attempt to request one of the checksums from remote repository

@@ -58,6 +58,10 @@ public class Repository {
 		return "Repositiry{url=" + this.baseURL + ",credentials=" + (this.credentials != null ? "yes" : "no") + "}";
 	}
 	
+	public String getCacheFolder() {
+		return String.format("rrp_%s", Integer.toHexString(this.baseURL.hashCode()));
+	}
+	
 	public static record Credentials(Supplier<String> username, Supplier<String> password, Supplier<String> token) {
 		
 		public Credentials(Supplier<String> username, Supplier<String> password) {

@@ -20,6 +20,7 @@ import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.PublishConfiguration;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.Log;
 
 public class Test {
@@ -39,8 +40,26 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:sources:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:javadoc:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.0"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:2.3"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:sources:2.3"), null, null, false);
+		
+//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
+//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
+//		
+//		// SimpleLogging
+//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3");
+//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3");
+//		
+//		// JavaRun
+//		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
+//		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
+//		
+//		// BasicXML
+//		dependencies.implementation("de.m_marvin.metabuild:basicxml:0.1_build1");
+		
+		
 //		graph.addTransitive(Scope.SYSTEM, Artifact.of("local:systemfile:1.0"), null, "C:/test.txt");
-		graph.addRepository(new Repository("Local Repo", new URL("http://192.168.178.21/maven")));
+//		graph.addRepository(new Repository("Local Repo", new URL("http://192.168.178.21/maven")));
 		graph.addRepository(new Repository("Maven Central", new URL("https://repo.maven.apache.org/maven2")));
 		graph.addRepository(new Repository("GitHub Packages", new URL("https://maven.pkg.github.com/m-marvin/app-httpserver"),
 				new Credentials(
@@ -59,16 +78,18 @@ public class Test {
 			System.out.println("-> " + f);
 		}
 		
-		PublishConfiguration publish = new PublishConfiguration();
-		publish.dependencies = graph;
-		publish.coordinates = Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.1-SNAPSHOT").withSnapshotVersion("214135153");
-		publish.artifacts.put("", new File(local, "out.zip"));
-		publish.repositories.add(Maven.mavenLocal());
-		publish.timeOfCreation = Instant.now().atZone(ZoneOffset.UTC);
-		MavenPublisher publisher = new MavenPublisher(Log.defaultLogger(), resolver);
-		boolean success2 = publisher.publishConfiguration(publish);
+		System.out.println(artifacts);
 		
-		System.out.println("=> " + success2);
+//		PublishConfiguration publish = new PublishConfiguration();
+//		publish.dependencies = graph;
+//		publish.coordinates = Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.1-SNAPSHOT").withSnapshotVersion("214135153");
+//		publish.artifacts.put("", new File(local, "out.zip"));
+//		publish.repositories.add(Maven.mavenLocal());
+//		publish.timeOfCreation = Instant.now().atZone(ZoneOffset.UTC);
+//		MavenPublisher publisher = new MavenPublisher(Log.defaultLogger(), resolver);
+//		boolean success2 = publisher.publishConfiguration(publish);
+//		
+//		System.out.println("=> " + success2);
 		
 		
 		

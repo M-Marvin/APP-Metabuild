@@ -15,7 +15,6 @@ import de.m_marvin.basicxml.marshaling.annotations.XMLEnum;
 import de.m_marvin.basicxml.marshaling.annotations.XMLField;
 import de.m_marvin.basicxml.marshaling.annotations.XMLType;
 import de.m_marvin.basicxml.marshaling.annotations.XMLTypeAdapter;
-import de.m_marvin.simplelogging.Log;
 
 /**
  * Describes information about an class field required for XML marshaling
@@ -231,7 +230,6 @@ public record XMLClassField<V, P>(
 					throw new RuntimeException("enum field access error", e1);
 				}
 			}
-			Log.defaultLogger().warn("warning: unknown enum constant in XML: " + primitive + "." + valueStr);
 			return null;
 		}
 		throw new IllegalArgumentException("supplied class is not an XML primitive");

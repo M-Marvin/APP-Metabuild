@@ -97,7 +97,7 @@ public class DependencyGraph {
 	public void addTransitive(Scope scope, Artifact artifact, Set<Artifact> excludes, String systemPath, boolean optional) {
 		if (!artifact.hasGAVCE()) return;
 		Artifact group = artifact.getGAV();
-		Map<Scope, TransitiveGroup> scopes = this.transitives.get(artifact);
+		Map<Scope, TransitiveGroup> scopes = this.transitives.get(group);
 		if (scopes == null) {
 			scopes = new HashMap<Scope, TransitiveGroup>();
 			this.transitives.put(group, scopes);

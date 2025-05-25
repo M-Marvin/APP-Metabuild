@@ -52,6 +52,7 @@ public class JavaSourceIncludes implements IJavaSourceIncludes {
 		Map<File, File> javadocs = new HashMap<File, File>();
 		
 		for (File[] depFiles : includes) {
+			
 			Stream.of(depFiles)
 					.filter(f-> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
 					.filter(f -> {

@@ -12,7 +12,6 @@ import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.basicxml.internal.StackList;
 import de.m_marvin.basicxml.marshaling.internal.XMLClassField;
 import de.m_marvin.basicxml.marshaling.internal.XMLClassType;
-import de.m_marvin.simplelogging.Log;
 
 public class XMLUnmarshaler {
 	
@@ -101,10 +100,7 @@ public class XMLUnmarshaler {
 			XMLClassField<?, ?> attributeField = xmlClassType.attributes().get(attributeName);
 			if (attributeField == null) {
 				attributeField = xmlClassType.attributes().get(XMLClassType.REMAINING_MAP_FIELD);
-				if (attributeField == null) {
-					Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: attribute unknown in java: " + openingElement.namespace() + " > " + openingElement.name() + " > " + attributeName);
-					continue;
-				}
+				if (attributeField == null) continue;
 			}
 			fillAttributeFromXML(xmlClassObject, attributeField, openingElement.name(), xmlStream, openingElement.attributes().get(attributeName), objectStack);
 		}
@@ -125,8 +121,6 @@ public class XMLUnmarshaler {
 						if (xmlElementField == null) {
 							xmlElementField = xmlClassType.elements().get(element.namespace(), XMLClassType.REMAINING_MAP_FIELD);
 							if (xmlElementField == null) {
-								Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: unknown field in XML: " + element.namespace() + " > " + element.name());
-								
 								if (element.type() == DescType.OPEN) {
 									// skip the element, read until close reached
 									skipelement: while (true) {
@@ -174,8 +168,6 @@ public class XMLUnmarshaler {
 			XMLClassField<?, ?> xmlTextField = xmlClassType.attributes().get(XMLClassType.TEXT_VALUE_FIELD);
 			if (xmlTextField != null) {
 				fillAttributeFromXML(xmlClassObject, xmlTextField, null, xmlStream, elementText.toString(), objectStack);
-			} else if (!elementText.toString().isBlank()) {
-				Log.defaultLogger().warnt("XML: " + xmlStream.xmlStackPath() + " ", "warning: unknown element text data: " + openingElement.namespace() + " > " + openingElement.name());
 			}
 		}
 		

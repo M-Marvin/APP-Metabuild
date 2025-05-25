@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.maven.tasks;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -180,7 +181,9 @@ public class MavenResolveTask extends BuildTask {
 		String classpathStr = FileUtility.readFileUTF(FileUtility.absolute(classpathFile));
 		if (classpathStr == null) return false;
 		String classpathStr2 = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
-		return classpathStr.equals(classpathStr2);
+		List<String> cp1 = Stream.of(classpathStr.split(";")).sorted().toList();
+		List<String> cp2 = Stream.of(classpathStr2.split(";")).sorted().toList();
+		return cp1.equals(cp2);
 	}
 	
 	protected void writeClasspathFile(File classpathFile, List<File> classpath) {

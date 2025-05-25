@@ -16,10 +16,10 @@ import de.m_marvin.basicxml.marshaling.annotations.XMLField;
 import de.m_marvin.basicxml.marshaling.annotations.XMLRootType;
 import de.m_marvin.basicxml.marshaling.annotations.XMLType;
 import de.m_marvin.basicxml.marshaling.internal.NamespaceMap;
-import de.m_marvin.basicxml.marshaling.internal.XMLClassField;
-import de.m_marvin.basicxml.marshaling.internal.XMLClassType;
 import de.m_marvin.basicxml.marshaling.internal.NamespaceMap.Entry;
 import de.m_marvin.basicxml.marshaling.internal.NamespaceMap.Key;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassField;
+import de.m_marvin.basicxml.marshaling.internal.XMLClassType;
 
 public class XMLMarshaler {
 

@@ -64,17 +64,16 @@ public class ZipTask extends BuildTask {
 	
 	protected boolean archiveInclude(ZipOutputStream zstream, ZipInputStream archive, ZipEntry entry) throws IOException {
 		try {
-			long size = entry.getSize();
-			zstream.putNextEntry(entry);
+			zstream.putNextEntry(new ZipEntry(entry.getName()));
 			byte[] buffer = new byte[2048];
-			while (size > 0) {
-				int len = archive.read(buffer, 0, (int) Math.min(size, buffer.length));
+			int len;
+			while ((len = archive.read(buffer)) > 0)
 				zstream.write(buffer, 0, len);
-				size -= len;
-			}
 			zstream.closeEntry();
+			archive.closeEntry();
 		} catch (ZipException e) {
 			if (e.getMessage().startsWith("duplicate entry")) {
+				zstream.closeEntry();
 				logger().debugt(logTag(), "ignore duplicate entry: %s", entry.getName());
 			} else {
 				throw e;
@@ -88,7 +87,7 @@ public class ZipTask extends BuildTask {
 		for (var entry : files.entrySet()) {
 			try {
 				status("archive > " + entry.getValue());
-				logger().debugt(logTag(), "archive file: %s", entry.getValue());
+				logger().debugt(logTag(), "archive file: %s - %s", entry.getValue(), entry.getKey());
 				if (!archiveFile(zstream, entry.getValue(), entry.getKey())) {
 					logger().errort(logTag(), "failed to archive file: %s", entry.getValue());
 					return false;

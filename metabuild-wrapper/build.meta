@@ -1,30 +1,77 @@
-import de.m_marvin.metabuild.java.maven.MavenResolver;
+import java.io.File;
+
+import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.FileTask;
+import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
+import de.m_marvin.metabuild.java.tasks.JarTask;
+import de.m_marvin.metabuild.maven.Maven;
+import de.m_marvin.metabuild.maven.types.Artifact;
+import de.m_marvin.metabuild.maven.types.Repository;
+import de.m_marvin.metabuild.maven.types.Scope;
+import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.simplelogging.Log;
 
 public class Buildfile extends JavaBuildScript {
 	
+	// version declaration of t metabuild runtime
+	public String wrapperVersion = "1.0-SNAPSHOT";
+	public String version = "0.1-SNAPSHOT";
+	
 	@Override
 	public void init() {
+		
+		importBuild("core", new File("../metabuild-core"));
 		
 		projectName = "metabuild-wrapper";
 		
 		super.init();
 		
+		dependencies.dependsOn(taskNamed("core:publishMaven"));
+		
+		withSourcesJar();
+		
 	}
 	
 	@Override
 	public void repositories() {
-		
-//		implementation.repository(MavenResolver.MavenRepository.mavenLocal());
+
+		dependencies.repository(Maven.mavenLocal());
 		
 	}
 	
 	@Override
 	public void dependencies() {
 		
-//		implementation.add("de.m_marvin.metabuild:metabuild-core:0.1_build2", "api", "sources");
+		super.dependencies();
+		
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:api:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:sources:" + version);
+		
+		// package only metabuild-core-X-api.jar
+		packageExecutable();
+		jar.classpathPredicate = f -> f.getName().contains("metabuild-core") && f.getName().endsWith("-api.jar");
 		
 	}
 	
+	@Override
+	public void manifest() {
+
+		jar.metainfo.put("Main-Class", "de.m_marvin.metabuild.wrapper.MetaWrapper");
+		jar.metainfo.put("Implementation-Version", wrapperVersion);
+		jar.metainfo.put("Implementation-Title", projectName);
+		jar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		
+	}
+	
+	public void publishing() {
+		
+		super.publishing();
+		
+		publishMaven.repository(Maven.mavenLocal());
+		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-wrapper:" + wrapperVersion);
+		
+	}
 	
 }

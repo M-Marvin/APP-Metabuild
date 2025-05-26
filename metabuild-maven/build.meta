@@ -1,0 +1,78 @@
+import java.io.File;
+
+import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.FileTask;
+import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.java.script.JavaBuildScript;
+import de.m_marvin.metabuild.java.tasks.JarTask;
+import de.m_marvin.metabuild.maven.Maven;
+import de.m_marvin.metabuild.maven.types.Artifact;
+import de.m_marvin.metabuild.maven.types.Repository;
+import de.m_marvin.metabuild.maven.types.Scope;
+import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+import de.m_marvin.simplelogging.Log;
+
+public class Buildfile extends JavaBuildScript {
+	
+	// version declaration of t metabuild runtime
+	public String version = "0.1-SNAPSHOT";
+	
+	// local system directory to install metabuild to
+	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
+	
+	JarTask apiJar;
+	
+	@Override
+	public void init() {
+		
+		importBuild("core", new File("../metabuild-core"));
+		
+		projectName = "metabuild-core";
+		
+		super.init();
+		
+		dependencies.dependsOn(taskNamed("core:publishMaven"));
+		
+		//compileJava.options.add("-Xlint:deprecation");
+		
+		withSourcesJar();
+		
+	}
+	
+	@Override
+	public void repositories() {
+
+		dependencies.repository(Maven.mavenLocal());
+		
+	}
+	
+	@Override
+	public void dependencies() {
+		
+		super.dependencies();
+		
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:sources:" + version);
+		
+	}
+	
+	@Override
+	public void manifest() {
+		
+		jar.metainfo.put("Implementation-Version", version);
+		jar.metainfo.put("Implementation-Title", projectName);
+		jar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		
+	}
+	
+	public void publishing() {
+		
+		super.publishing();
+		
+		publishMaven.repository(Maven.mavenLocal());
+		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-maven:" + version);
+		
+	}
+	
+}

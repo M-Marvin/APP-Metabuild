@@ -85,7 +85,7 @@ public class BuildTask {
 	}
 	
 	protected String logTag() {
-		return String.format("%s/%s", this.type.toString(), this.name);
+		return String.format("%s/%s/%s", this.buildscript().buildName, this.type.toString(), this.name);
 	}
 	
 	public void reset() {

@@ -15,9 +15,13 @@ import de.m_marvin.simplelogging.Log;
 
 public class Buildfile extends JavaBuildScript {
 	
-	public String version = "0.1_build2";
+	// version declaration of this metabuild runtime
+	public String version = "0.1-SNAPSHOT";
 	
+	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
+	
+	JarTask apiJar;
 	
 	@Override
 	public void init() {
@@ -26,14 +30,17 @@ public class Buildfile extends JavaBuildScript {
 		super.init();
 		
 		// Make metabuild API jar
-		var apiJar = new JarTask("apiJar");
+		apiJar = new JarTask("apiJar");
 		apiJar.group = "build";
 		apiJar.entries.put(compileJava.classesDir, "");
 		apiJar.filePredicate = f -> FileUtility.isIn(f, new File("build/classes/main/java/de/m_marvin/metabuild/api"));
 		apiJar.archive = new File(jar.archive.getParentFile(), FileUtility.getNameNoExtension(jar.archive) + "-api.jar");
 		apiJar.dependsOn(compileJava);
 		apiJar.dependencyOf(build);
+		apiJar.dependencyOf(publishMaven);
+		publishMaven.artifact("api", apiJar.archive);
 		manifestApi(apiJar);
+
 		
 		// Install metabuild instance on local system
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
@@ -88,11 +95,7 @@ public class Buildfile extends JavaBuildScript {
 				null
 		));
 
-		dependencies.repository(new Repository(
-				"Maven Local",
-				"file:///C:/Users/marvi/.m2/repository",
-				null
-		));
+		dependencies.repository(Maven.mavenLocal());
 		
 	}
 	
@@ -145,8 +148,7 @@ public class Buildfile extends JavaBuildScript {
 		super.publishing();
 		
 		publishMaven.repository(Maven.mavenLocal());
-		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:0.1_build1");
-		publishMaven.artifact("", jar.archive);
+		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
 		
 	}
 	

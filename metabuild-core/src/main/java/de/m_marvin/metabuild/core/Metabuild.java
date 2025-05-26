@@ -360,7 +360,7 @@ public final class Metabuild implements IMeta {
 	 * @return The task with the name or null if none was found
 	 */
 	public BuildTask taskNamed(String name) {
-		if (!name.contains(":")) name = ":" + name;
+		if (!name.contains(":")) name = peekBuild().buildName + ":" + name;
 		if (!this.registeredTasks.containsKey(name)) {
 			throw BuildScriptException.msg("no task named '%s' is registered!", name);
 		}

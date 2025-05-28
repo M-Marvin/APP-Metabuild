@@ -25,6 +25,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	@Override
 	public void init() {
+		
 		projectName = "metabuild-core";
 		
 		super.init();
@@ -40,7 +41,15 @@ public class Buildfile extends JavaBuildScript {
 		apiJar.dependencyOf(publishMaven);
 		publishMaven.artifact("api", apiJar.archive);
 		manifestApi(apiJar);
-
+		
+		importBuild("wrapper", new File("../metabuild-wrapper"));
+		
+		if (this.buildName.isBlank()) {
+			jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), "wrapper/wrapper.jar");
+		}
+		
+		importBuild("java", new File("../metabuild-java"));
+		importBuild("maven", new File("../metabuild-maven"));
 		
 		// Install metabuild instance on local system
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
@@ -52,6 +61,8 @@ public class Buildfile extends JavaBuildScript {
 		var install = new BuildTask("install");
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
+		install.dependsOn("java:copyBinary");
+		install.dependsOn("maven:copyBinary");
 		
 		//compileJava.options.add("-Xlint:deprecation");
 		

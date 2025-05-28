@@ -64,7 +64,8 @@ public interface IMeta {
 	public static final Pattern TASK_NAME_FILTER = Pattern.compile("((?<buildname>[\\d\\w]*):|)(?<taskname>[\\d\\w]+)");
 
 	public static final String DEPENDENCY_TASK_GROUP = "depend";
-	public static final String META_PLUGIN_LOCATION = "meta/plugins";
+	public static final String META_PROJECT_PLUGIN_LOCATION = "meta/plugins";
+	public static final String META_SYSTEM_PLUGIN_LOCATION = "plugins";
 	
 	/**
 	 * Get a new instance of the metabuild main class.<br>
@@ -90,7 +91,7 @@ public interface IMeta {
 	public void terminate();
 	
 	/**
-	 * Closes the metabuild instance, but does not release the static instance variable (still no new instance can be created after closing)
+	 * Closes the metabuild instances resources, but does not release the static instance variable it can still be used for an another session (still no new instance can be created after closing)
 	 */
 	public void close();
 	

@@ -92,6 +92,10 @@ public class BuildTask {
 		this.state = null;
 	}
 	
+	public boolean didRun() {
+		return this.state != null;
+	}
+	
 	/**
 	 * Returns the current state of the task.<br>
 	 * If the task was not yet prepared, a preparation is performed to query the task state.

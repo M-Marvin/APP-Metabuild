@@ -3,10 +3,13 @@ package de.m_marvin.metabuild.maven.types;
 import java.net.Authenticator;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import de.m_marvin.metabuild.core.util.HashUtility;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 
@@ -23,10 +26,10 @@ public class Repository {
 	public Repository(String name, String baseURL, Credentials credentials) {
 		try {
 			this.name = name;
-			this.baseURL = new URL(baseURL);
+			this.baseURL = new URI(baseURL.replace('\\', '/')).toURL();
 			this.credentials = credentials;
-		} catch (MalformedURLException e) {
-			throw new RuntimeException(e);
+		} catch (MalformedURLException | URISyntaxException e) {
+			throw new IllegalArgumentException("invalid repository URL", e);
 		}
 	}
 	
@@ -59,7 +62,7 @@ public class Repository {
 	}
 	
 	public String getCacheFolder() {
-		return String.format("rrp_%s", Integer.toHexString(this.baseURL.hashCode()));
+		return String.format("rrp_%s", HashUtility.hash(this.baseURL.toString()));
 	}
 	
 	public static record Credentials(Supplier<String> username, Supplier<String> password, Supplier<String> token) {
@@ -89,8 +92,8 @@ public class Repository {
 	
 	public URL artifactURL(Artifact artifact, DataLevel dataLevel, ArtifactFile artifactFile) throws MavenException {
 		try {
-			return new URL(this.baseURL.getProtocol(), this.baseURL.getHost(), this.baseURL.getPort(), this.baseURL.getFile() + artifact.getLocalPath(dataLevel) + artifactFile.getExtension());
-		} catch (MalformedURLException e) {
+			return new URI(this.baseURL.getProtocol(), null, this.baseURL.getHost(), this.baseURL.getPort(), this.baseURL.getFile() + artifact.getLocalPath(dataLevel) + artifactFile.getExtension(), null, null).toURL();
+		} catch (MalformedURLException | URISyntaxException e) {
 			throw new MavenException("unable to format artifact URL: %s + %s", this.baseURL, artifact);
 		}
 	}

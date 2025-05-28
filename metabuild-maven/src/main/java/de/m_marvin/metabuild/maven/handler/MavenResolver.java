@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -243,8 +245,8 @@ public class MavenResolver {
 				String urlStr = pom.fillPoperties(r.url);
 				if (!ndrepo.add(urlStr)) continue; // avoid duplicate repositories, pick first in order of import
 				try {
-					graph.addRepository(new Repository(pom.fillPoperties(r.name), new URL(urlStr)));
-				} catch (MalformedURLException e) {
+					graph.addRepository(new Repository(pom.fillPoperties(r.name), new URI(urlStr).toURL()));
+				} catch (URISyntaxException | MalformedURLException e) {
 					throw new MavenException("malformed repository URL in fully resolved POM: %s (%s)", urlStr, pomArtifact);
 				}
 			}
@@ -346,8 +348,8 @@ public class MavenResolver {
 			if (pom.repositories != null) {	
 				pom.repositories.repository.stream().map(r -> {
 					try {
-						return new Repository(pom.fillPoperties(r.name), new URL(pom.fillPoperties(r.url)));
-					} catch (MalformedURLException e) {
+						return new Repository(pom.fillPoperties(r.name), new URI(pom.fillPoperties(r.url)).toURL());
+					} catch (MalformedURLException | URISyntaxException e) {
 						logger().warn("malformed URL in POM repository: %s", artifact, e);
 						return null;
 					}

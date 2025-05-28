@@ -140,7 +140,9 @@ public class ZipTask extends BuildTask {
 					timestamp = filetime;
 				
 				File floc = FileUtility.concat(eloc, FileUtility.relative(file, oloc));
-				this.toArchive.put(file, floc.getPath().substring(1).replace('\\', '/'));
+				String ename = floc.getPath().replace('\\', '/');
+				if (ename.startsWith("/")) ename = ename.substring(1);
+				this.toArchive.put(file, ename);
 			}
 		}
 		

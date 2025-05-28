@@ -17,7 +17,7 @@ public class BuildScript {
 	 * Filled out by the metabuild main class when importing the build file */
 	public String buildName = "";
 	public File workspace = new File("");
-	
+
 	protected void importBuild(File locationOrBuildFile) {
 		importBuild(null, locationOrBuildFile);
 	}

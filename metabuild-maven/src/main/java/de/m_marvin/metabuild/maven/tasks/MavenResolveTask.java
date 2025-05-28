@@ -31,7 +31,7 @@ public class MavenResolveTask extends BuildTask {
 	public File cpRunttime = new File("runtime.classpath");
 	public File cpTestCompiletime = new File("testcompile.classpath");
 	public File cpTestRuntime = new File("testruntime.classpath");
-	protected final DependencyGraph graph;
+	public final DependencyGraph graph;
 	protected final MavenResolver resolver;
 	
 	public MavenResolveTask(String name) {

@@ -35,8 +35,7 @@ public class XMLInputStream implements XMLStream, AutoCloseable {
 	private String version = null;
 	/** character encoding from prolog entry */
 	private String encoding = null;
-
-	// TODO
+	
 	private static record TagEntry(String name, Map<String, URI> previousNamespaces) {}
 	
 	/** character data buffer for parsing from stream */

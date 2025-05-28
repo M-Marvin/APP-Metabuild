@@ -46,7 +46,7 @@ public class JavaSourceIncludes implements IJavaSourceIncludes {
 	 * Files part of the same dependency are grouped to arrays, and sorted for binaries, sources and javadoc by this method by the configuration extension names.
 	 */
 	public static void include(Collection<File[]> includes) {
-		
+		// FIXME special configurations are not grouped with sources
 		List<File> binaries = new ArrayList<File>();
 		Map<File, File> sources = new HashMap<File, File>();
 		Map<File, File> javadocs = new HashMap<File, File>();

@@ -51,7 +51,7 @@ public class ScriptCompiler {
 		return this.mb.logger();
 	}
 	
-	public BuildScript loadBuildFile(File buildFile) {
+	public BuildScript loadBuildFile(File buildFile, ClassLoader pluginLoader) {
 		
 		String hash = null;
 		try {
@@ -98,8 +98,8 @@ public class ScriptCompiler {
 		}
 		
 		try {
-			ClassLoader loader = new SingleFileClassLoader(Thread.currentThread().getContextClassLoader(), Metabuild.BUILD_SCRIPT_CLASS_NAME, classCache);
-			Class<?> buildfileClass = loader.loadClass(Metabuild.BUILD_SCRIPT_CLASS_NAME);
+			ClassLoader buildfileLoader = new SingleFileClassLoader(pluginLoader, Metabuild.BUILD_SCRIPT_CLASS_NAME, classCache);
+			Class<?> buildfileClass = buildfileLoader.loadClass(Metabuild.BUILD_SCRIPT_CLASS_NAME);
 			Object buildScriptObject = buildfileClass.getConstructor().newInstance();
 			if (buildScriptObject instanceof BuildScript buildScript) return buildScript;
 			

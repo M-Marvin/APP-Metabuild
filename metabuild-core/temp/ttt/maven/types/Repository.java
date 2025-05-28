@@ -7,6 +7,7 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import de.m_marvin.metabuild.core.util.HashUtility;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
 
@@ -59,7 +60,7 @@ public class Repository {
 	}
 	
 	public String getCacheFolder() {
-		return String.format("rrp_%s", Integer.toHexString(this.baseURL.hashCode()));
+		return String.format("rrp_%s", HashUtility.hash(this.baseURL.toString()));
 	}
 	
 	public static record Credentials(Supplier<String> username, Supplier<String> password, Supplier<String> token) {

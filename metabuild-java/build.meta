@@ -27,14 +27,19 @@ public class Buildfile extends JavaBuildScript {
 	public void init() {
 		
 		importBuild("core", new File("../metabuild-core"));
+		importBuild("maven", new File("../metabuild-maven"));
 		
-		projectName = "metabuild-core";
+		projectName = "metabuild-java";
 		
 		super.init();
 		
 		dependencies.dependsOn(taskNamed("core:publishMaven"));
+		dependencies.dependsOn(taskNamed("maven:publishMaven"));
 		
-		//compileJava.options.add("-Xlint:deprecation");
+		// Install metabuild java plugin on local system
+		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
+		copyBinary.group = "install";
+		copyBinary.dependsOn(jar);
 		
 		withSourcesJar();
 		
@@ -54,6 +59,9 @@ public class Buildfile extends JavaBuildScript {
 		
 		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:" + version);
 		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:sources:" + version);
+
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-maven:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-maven:sources:" + version);
 		
 	}
 	
@@ -63,6 +71,7 @@ public class Buildfile extends JavaBuildScript {
 		jar.metainfo.put("Implementation-Version", version);
 		jar.metainfo.put("Implementation-Title", projectName);
 		jar.metainfo.put("Implementation-Vendor-Id", "de.m_marvin");
+		jar.metainfo.put("Metabuild-Plugin-Name", projectName);
 		
 	}
 	

@@ -152,6 +152,7 @@ public class JavaCompileTask extends BuildTask {
 			})
 			.toList();
 		
+		// FIXME not working any more
 		// List class files that need to be removed
 		this.removed = this.sourceMetadata.entrySet().stream()
 			.filter(e -> !sourceFiles.contains(e.getKey()))
@@ -332,6 +333,9 @@ public class JavaCompileTask extends BuildTask {
 		classpathBuf.append(FileUtility.absolute(this.sourcesDir));
 		this.options.add("-classpath");
 		this.options.add(classpathBuf.toString());
+		
+		this.options.add("-sourcepath");
+		this.options.add(FileUtility.absolute(this.sourcesDir).toString());
 		
 		logger().infot(logTag(), "compiling source files in: %s", this.sourcesDir);
 		

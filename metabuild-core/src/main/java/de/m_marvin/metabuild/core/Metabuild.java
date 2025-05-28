@@ -27,6 +27,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,6 +46,7 @@ import de.m_marvin.metabuild.core.script.compile.ScriptCompiler;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.BuildTask.TaskState;
 import de.m_marvin.metabuild.core.tasks.RootTask;
+import de.m_marvin.metabuild.core.util.DynamicFileListClassLoader;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.simplelogging.Log;
 import de.m_marvin.simplelogging.api.Logger;
@@ -113,6 +116,8 @@ public final class Metabuild implements IMeta {
 	private List<ISourceIncludes> sourceIncludes = new ArrayList<>();
 	/* An handler for printing the command line inteface, can be null if not configured */
 	private OutputHandler outputHandler = null;
+	/* ClassLoader able to load all plugins found in any project which has been loaded in this session */
+	private DynamicFileListClassLoader pluginLoader = new DynamicFileListClassLoader(Thread.currentThread().getContextClassLoader());
 	
 	/**
 	 * Instantiates a new metabuild instance.<br>
@@ -151,18 +156,24 @@ public final class Metabuild implements IMeta {
 	
 	@Override
 	public void close() {
+		try {
+			this.pluginLoader.close();
+		} catch (IOException e) {
+			logger().errort(LOG_TAG, "unable to close plugin class loader", e);
+		}
 		if (this.logStream != null) {
 			try {
 				this.logStream.close();
 			} catch (IOException e) {}
 			this.logFile = null;
+			this.logger = new StreamLogger(OutputStream.nullOutputStream());
 		}
 		this.task2node.clear();
 		this.taskDependencies.clear();
 		this.sourceIncludes.clear();
 		this.taskTree = null;
 		this.buildstack.clear();
-		stateTransition(MetaState.IDLE, MetaState.PREINIT, MetaState.READY);
+		stateTransition(MetaState.IDLE, MetaState.PREINIT, MetaState.READY, MetaState.ERROR);
 	}
 	
 	private void stateTransition(MetaState to, MetaState... from) {
@@ -193,6 +204,7 @@ public final class Metabuild implements IMeta {
 		if (instance != null) {
 			if (instance != this)
 				throw MetaInitError.msg("termination call on non active instance of metabuild!");
+			close();
 		}
 		instance = null;
 	}
@@ -413,6 +425,18 @@ public final class Metabuild implements IMeta {
 		}
 	}
 	
+	private boolean checkPlugin(File pluginFile) {
+		try {
+			JarFile jar = new JarFile(pluginFile);
+			Attributes attributes = jar.getManifest().getMainAttributes();
+			String pluginName = attributes.getValue("Metabuild-Plugin-Name");
+			jar.close();
+			return pluginName != null;
+		} catch (IOException e) {
+			return false;
+		}
+	}
+	
 	/**
 	 * Initialized directories and files such as the cache directory and the log file and ensures the instance to be in IDLE state
 	 * @return true if and only if all necessary directories and files could be created and the meta instacne if now in IDLE state
@@ -461,6 +485,17 @@ public final class Metabuild implements IMeta {
 			logger().debug("Meta home: %s", this.metaHome);
 		}
 		
+		// load system plugins
+		File[] pluginFiles = this.metaHome.listFiles();
+		if (pluginFiles != null) {
+			logger().infot(LOG_TAG, "search system plugins: %s", this.metaHome);
+			for (File pluginFile : pluginFiles) {
+				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
+				if (!checkPlugin(pluginFile)) continue;
+				this.pluginLoader.addFile(pluginFile);
+				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
+			}
+		}
 		stateTransition(MetaState.IDLE, MetaState.PREINIT);
 		return true;
 	}
@@ -476,15 +511,7 @@ public final class Metabuild implements IMeta {
 	public Collection<File> getBuildfileClasspath() {
 		List<File> classpathFiles = new ArrayList<File>();
 		classpathFiles.add(new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().getFile()));
-		File[] pluginFiles = new File(this.workingDirectory, META_PLUGIN_LOCATION).listFiles();
-		Stream.of(this.metaHome.listFiles())
-			.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
-			.forEach(classpathFiles::add);
-		if (pluginFiles != null) {
-			Stream.of(pluginFiles)
-				.filter(f -> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
-				.forEach(classpathFiles::add);
-		}
+		classpathFiles.addAll(pluginLoader.getFiles());
 		return classpathFiles;
 	}
 	
@@ -541,7 +568,7 @@ public final class Metabuild implements IMeta {
 				stateTransition(MetaState.IDLE, MetaState.INIT);
 				return false;
 			} catch (Throwable e) {
-				logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
+				logger().errort(LOG_TAG, "buildfile init threw uncatched exception:", e);
 				stateTransition(MetaState.ERROR);
 				return false;
 			}
@@ -557,14 +584,29 @@ public final class Metabuild implements IMeta {
 			logger().errort(LOG_TAG, "attempt to load buildfile outside INIT phase: %s", buildFile);
 			return null;
 		}
+
+		// load project plugins
+		File[] pluginFiles = new File(workingDir(), META_PROJECT_PLUGIN_LOCATION).listFiles();
+		if (pluginFiles != null) {
+			logger().infot(LOG_TAG, "load project plugins: %s", workingDir());
+			for (File pluginFile : pluginFiles) {
+				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
+				if (this.pluginLoader.getFiles().contains(buildFile)) continue;
+				if (!checkPlugin(pluginFile)) continue;
+				this.pluginLoader.addFile(pluginFile);
+				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
+			}
+		}
 		
-		BuildScript buildscript = this.buildCompiler.loadBuildFile(buildFile);
+		BuildScript buildscript = this.buildCompiler.loadBuildFile(buildFile, this.pluginLoader);
 		if (buildscript == null) {
 			logger().errort(LOG_TAG, "failed to load buildfile, build aborted!");
 			return null;
 		}
 		
 		logger().infot(LOG_TAG, "loaded buildfile: %s", buildFile);
+		
+		
 		return buildscript;
 	}
 	
@@ -618,6 +660,7 @@ public final class Metabuild implements IMeta {
 		buildFile = FileUtility.absolute(buildFile);
 		if (importName == null)
 			importName = location.getParentFile().getName();
+		if (this.imports.containsKey(importName)) return;
 		if (!buildFile.isFile()) {
 			throw BuildScriptException.msg("imported '%s' build file does not exist: %s", importName, buildFile);
 		}
@@ -786,12 +829,15 @@ public final class Metabuild implements IMeta {
 		
 		int upToDate = 0;
 		int	failed = 0;
+		int taskCount = 0;
 		for (BuildTask task : this.registeredTasks.values()) {
+			if (!task.didRun()) continue;
 			if (task.state() == TaskState.UPTODATE) upToDate++;
 			if (task.state() == TaskState.FAILED) failed++;
+			taskCount++;
 		}
 		
-		logger().infot(LOG_TAG, "TASKS: %d  UP_TO_DATE: %s  FAILED: %d", this.registeredTasks.size() - 1, upToDate, failed);
+		logger().infot(LOG_TAG, "TASKS: %d  UP_TO_DATE: %s  FAILED: %d", taskCount, upToDate, failed);
 		
 	}
 	
@@ -850,7 +896,7 @@ public final class Metabuild implements IMeta {
 				logger().errort(LOG_TAG, "buildfile finish phase failed!");
 				e.printStack(logger().errorPrinter(LOG_TAG));
 			} catch (Throwable e) {
-				logger().errort(LOG_TAG, "buildfile threw uncatched exception:", e);
+				logger().errort(LOG_TAG, "buildfile finish threw uncatched exception:", e);
 
 				this.refreshDependencies = false;
 				this.forceRunTasks = false;

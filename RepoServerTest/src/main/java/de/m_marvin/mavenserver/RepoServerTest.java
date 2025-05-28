@@ -30,8 +30,6 @@ public class RepoServerTest {
 		
 		httpServer.setGetHandler(RepoServerTest::handleGetRequest);
 		httpServer.setPutHandler(RepoServerTest::handlePutRequest);
-		httpServer.setPostHandler(RepoServerTest::handlePostRequest);
-		httpServer.setDeleteHandler(RepoServerTest::handleDeleteRequest);
 		
 		files = new File(RepoServerTest.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getPath(), "../../files");
 		
@@ -78,16 +76,4 @@ public class RepoServerTest {
 		}
 	}
 
-	public static ResponseInfo handlePostRequest(PathInfo path, Map<String, String> attributes, int contentLength, InputStream contentStream) {
-		System.out.println("POST -> " + path);
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public static ResponseInfo handleDeleteRequest(PathInfo path, Map<String, String> attributes) {
-		System.out.println("DEL -> " + path);
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
 }

@@ -207,7 +207,14 @@ public class MavenResolveTask extends BuildTask {
 		String classpathStr2 = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
 		List<String> cp1 = Stream.of(classpathStr.split(";")).sorted().distinct().toList();
 		List<String> cp2 = Stream.of(classpathStr2.split(";")).sorted().distinct().toList();
-		return cp1.size() == cp2.size() && cp1.stream().filter(cp2::contains).count() == cp1.size();
+		
+		boolean b = cp1.size() == cp2.size() && cp1.stream().filter(cp2::contains).count() == cp1.size();
+		if (!b) {
+			// TODO remove classpath mismatch debug print
+			logger().error("CP1 " + cp1);
+			logger().error("CP2 " + cp2);
+		}
+		return b;
 	}
 	
 	protected void writeClasspathFile(File classpathFile, List<File> classpath) {

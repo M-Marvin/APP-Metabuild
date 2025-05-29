@@ -28,7 +28,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.init();
 		
-		dependencies.dependsOn(taskNamed("core:publishMaven"));
+		dependencies.dependsOn(taskNamed("core:publishMavenApi"));
 		
 		withSourcesJar();
 		

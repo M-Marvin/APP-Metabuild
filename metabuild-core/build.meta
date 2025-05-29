@@ -7,6 +7,7 @@ import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.maven.Maven;
+import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Repository;
 import de.m_marvin.metabuild.maven.types.Scope;
@@ -20,8 +21,12 @@ public class Buildfile extends JavaBuildScript {
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
+
+	// see Metabuild class
+	public String wrapperIncludeDir = "wrapper/wrapper.zip";
 	
 	JarTask apiJar;
+	MavenPublishTask publishMavenApi;
 	
 	@Override
 	public void init() {
@@ -29,6 +34,8 @@ public class Buildfile extends JavaBuildScript {
 		projectName = "metabuild-core";
 		
 		super.init();
+
+		withSourcesJar();
 		
 		// Make metabuild API jar
 		apiJar = new JarTask("apiJar");
@@ -42,10 +49,15 @@ public class Buildfile extends JavaBuildScript {
 		publishMaven.artifact("api", apiJar.archive);
 		manifestApi(apiJar);
 		
+		// publish metabuild API jar only
+		publishMavenApi = new MavenPublishTask("publishMavenApi");
+		publishMavenApi.dependsOn(apiJar, sourcesJar);
+		publishingApi();
+		
 		importBuild("wrapper", new File("../metabuild-wrapper"));
 		
 		if (this.buildName.isBlank()) {
-			jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), "wrapper/wrapper.jar");
+			jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), wrapperIncludeDir);
 		}
 		
 		importBuild("java", new File("../metabuild-java"));
@@ -65,8 +77,6 @@ public class Buildfile extends JavaBuildScript {
 		install.dependsOn("maven:copyBinary");
 		
 		//compileJava.options.add("-Xlint:deprecation");
-		
-		withSourcesJar();
 		
 	}
 	
@@ -160,6 +170,17 @@ public class Buildfile extends JavaBuildScript {
 		
 		publishMaven.repository(Maven.mavenLocal());
 		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
+		
+	}
+
+	public void publishingApi() {
+		
+		super.publishing();
+		
+		publishMavenApi.artifact("api", apiJar.archive);
+		publishMavenApi.artifact("sources", sourcesJar.archive);
+		publishMavenApi.repository(Maven.mavenLocal());
+		publishMavenApi.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
 		
 	}
 	

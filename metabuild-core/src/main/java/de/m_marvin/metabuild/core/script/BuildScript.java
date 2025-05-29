@@ -4,6 +4,7 @@ import java.io.File;
 
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
+import de.m_marvin.metabuild.core.tasks.InitTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.simplelogging.api.Logger;
 
@@ -39,7 +40,12 @@ public class BuildScript {
 	 * Called once after the build file was successfully compiled and laoded.<br>
 	 * Creates and registers all tasks.
 	 */
-	public void init() {}
+	public void init() {
+		
+		InitTask task = new InitTask("init");
+		task.group = "setup";
+		
+	}
 	
 	/**
 	 * Called after all tasks that where started finished successfully.

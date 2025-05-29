@@ -83,6 +83,10 @@ public interface IMeta {
 		}
 	}
 	
+	public String getMetabuildVersion();
+	
+	public String getMetabuildTitle();
+	
 	public MetaState getState();
 
 	/**

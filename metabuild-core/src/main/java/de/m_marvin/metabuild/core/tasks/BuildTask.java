@@ -45,7 +45,7 @@ public class BuildTask {
 	}
 	
 	public String fullName() {
-		return this.buildscript.buildName + ":" + this.name;
+		return buildscript().buildName + ":" + this.name;
 	}
 	
 	/**
@@ -127,7 +127,7 @@ public class BuildTask {
 	 */
 	public boolean runTask(Consumer<String> statusCallback) {
 		this.statusCallback = statusCallback;
-		if (!prepare().requiresBuild()) {
+		if (!prepare().requiresBuild() && !Metabuild.get().isForceRunTasks()) {
 			this.state = TaskState.UPTODATE;
 			return true;
 		}

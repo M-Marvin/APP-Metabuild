@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -32,6 +31,7 @@ import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import de.m_marvin.basicxml.internal.StackList;
 import de.m_marvin.metabuild.api.core.IMeta;
 import de.m_marvin.metabuild.api.core.devenv.ISourceIncludes;
 import de.m_marvin.metabuild.api.core.tasks.MetaGroup;
@@ -61,7 +61,7 @@ import de.m_marvin.simplelogging.impl.SystemLogger;
 public final class Metabuild implements IMeta {
 	
 	public static final String LOG_TAG = "Metabuild";
-	
+
 	private static Metabuild instance;
 	
 	/* Working directory of metabuild, normally the project root */
@@ -93,7 +93,7 @@ public final class Metabuild implements IMeta {
 	/* Current state of this metabuild instance */
 	private MetaState phase = MetaState.PREINIT;
 	/* Currently active build script instance */
-	private List<BuildScript> buildstack = new ArrayList<>();
+	private StackList<BuildScript> buildstack = new StackList<>();
 	/* Imported build script instances */
 	private Map<String, BuildScript> imports = new HashMap<String, BuildScript>();
 	/* Task to TaskNode map, nodes combine one BuildTask and its dependent tasks */
@@ -119,6 +119,9 @@ public final class Metabuild implements IMeta {
 	/* ClassLoader able to load all plugins found in any project which has been loaded in this session */
 	private DynamicFileListClassLoader pluginLoader = new DynamicFileListClassLoader(Thread.currentThread().getContextClassLoader());
 	
+	private String metabuildTitle;
+	private String metabuildVersion;
+	
 	/**
 	 * Instantiates a new metabuild instance.<br>
 	 * Only one instance can be created in the runtime environment at a time
@@ -133,12 +136,12 @@ public final class Metabuild implements IMeta {
 		this.buildCompiler = new ScriptCompiler(this);
 		
 		// Set meta properties
-		String titleInfo = Metabuild.class.getPackage().getImplementationTitle();
-		String versionInfo = Metabuild.class.getPackage().getImplementationVersion();
-		if (titleInfo == null) titleInfo = "N/A";
-		if (versionInfo == null) versionInfo = "N/A";
-		System.setProperty(META_TITLE_PROPERTY, titleInfo);
-		System.setProperty(META_VERSION_PROPERTY, versionInfo);
+		this.metabuildTitle = Metabuild.class.getPackage().getImplementationTitle();
+		this.metabuildVersion = Metabuild.class.getPackage().getImplementationVersion();
+		if (this.metabuildTitle == null) this.metabuildTitle = "N/A";
+		if (this.metabuildVersion == null) this.metabuildVersion = "N/A";
+		System.setProperty(META_TITLE_PROPERTY, this.metabuildTitle);
+		System.setProperty(META_VERSION_PROPERTY, this.metabuildVersion);
 		
 		// Set meta bin directory
 		try {
@@ -173,7 +176,7 @@ public final class Metabuild implements IMeta {
 		this.sourceIncludes.clear();
 		this.taskTree = null;
 		this.buildstack.clear();
-		stateTransition(MetaState.IDLE, MetaState.PREINIT, MetaState.READY, MetaState.ERROR);
+		stateTransition(MetaState.IDLE, MetaState.values());
 	}
 	
 	private void stateTransition(MetaState to, MetaState... from) {
@@ -325,6 +328,16 @@ public final class Metabuild implements IMeta {
 	public static Metabuild get() {
 		if (instance == null) throw MetaInitError.msg("metabuild instance not yet created in this VM!");
 		return instance;
+	}
+	
+	@Override
+	public String getMetabuildVersion() {
+		return metabuildVersion;
+	}
+
+	@Override
+	public String getMetabuildTitle() {
+		return metabuildTitle;
 	}
 	
 	public Logger logger() {
@@ -554,8 +567,12 @@ public final class Metabuild implements IMeta {
 		if (!buildFile.isFile()) {
 
 			// Initialize dummy build script to allow call to built in tasks
-			this.buildstack.add(new BuildScript());
-			pushBuild("").init(); // should never fail
+			this.imports.put("", new BuildScript());
+			pushBuild("");
+			peekBuild().buildName = "";
+			peekBuild().workspace = workingDir();
+			peekBuild().init(); // should never fail
+			RootTask.TASK.setBuildscript(peekBuild());
 			popBuild();
 			
 		} else {
@@ -584,19 +601,6 @@ public final class Metabuild implements IMeta {
 			logger().errort(LOG_TAG, "attempt to load buildfile outside INIT phase: %s", buildFile);
 			return null;
 		}
-
-		// load project plugins
-		File[] pluginFiles = new File(workingDir(), META_PROJECT_PLUGIN_LOCATION).listFiles();
-		if (pluginFiles != null) {
-			logger().infot(LOG_TAG, "load project plugins: %s", workingDir());
-			for (File pluginFile : pluginFiles) {
-				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
-				if (this.pluginLoader.getFiles().contains(buildFile)) continue;
-				if (!checkPlugin(pluginFile)) continue;
-				this.pluginLoader.addFile(pluginFile);
-				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
-			}
-		}
 		
 		BuildScript buildscript = this.buildCompiler.loadBuildFile(buildFile, this.pluginLoader);
 		if (buildscript == null) {
@@ -605,7 +609,6 @@ public final class Metabuild implements IMeta {
 		}
 		
 		logger().infot(LOG_TAG, "loaded buildfile: %s", buildFile);
-		
 		
 		return buildscript;
 	}
@@ -630,25 +633,17 @@ public final class Metabuild implements IMeta {
 	public BuildScript pushBuild(String name) {
 		BuildScript imp = this.imports.get(name);
 		if (imp == null) throw BuildScriptException.msg("attempt to access not imported build: %s", name);
-		this.buildstack.add(imp);
+		this.buildstack.push(imp);
 		return imp;
 	}
 	
 	public void popBuild() {
-		int s = this.buildstack.size();
-		if (s == 0) throw BuildScriptException.msg("build stack underflow error!");
-		this.buildstack.remove(this.buildstack.size() - 1);
+		if (this.buildstack.pop() == null)
+			throw BuildScriptException.msg("build stack underflow error!");
 	}
 	
 	public BuildScript peekBuild() {
-		int s = this.buildstack.size();
-		if (s > 0) {
-			BuildScript imp = this.buildstack.get(s - 1);
-			for (Entry<String, BuildScript> e : this.imports.entrySet()) {
-				if (e.getValue() == imp) return imp;
-			}
-		}
-		return null;
+		return this.buildstack.peek();
 	}
 	
 	public void importBuild(String importName, File location, File buildFile) {
@@ -672,6 +667,20 @@ public final class Metabuild implements IMeta {
 		buildscript.workspace = location;
 		this.imports.put(importName, buildscript);
 		if (importName.isEmpty()) RootTask.TASK.setBuildscript(buildscript);
+		
+		// load project plugins
+		File[] pluginFiles = new File(location, META_PROJECT_PLUGIN_LOCATION).listFiles();
+		if (pluginFiles != null) {
+			logger().infot(LOG_TAG, "load project plugins: %s", location);
+			for (File pluginFile : pluginFiles) {
+				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
+				if (this.pluginLoader.getFiles().contains(buildFile)) continue;
+				if (!checkPlugin(pluginFile)) continue;
+				this.pluginLoader.addFile(pluginFile);
+				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
+			}
+		}
+		
 		try {
 			pushBuild(importName);
 			buildscript.init();
@@ -693,7 +702,7 @@ public final class Metabuild implements IMeta {
 	 */
 	protected void prepareTask(String taskName, Deque<String> taskTrace) {
 		
-		BuildTask task = taskNamed(taskName);
+		BuildTask task = taskNamed(taskName.contains(":") ? taskName : ":" + taskName);
 		if (task == null) {
 			throw BuildScriptException.msg("task '%s' does not exist", taskName);
 		}

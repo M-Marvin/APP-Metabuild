@@ -21,10 +21,13 @@ public class JavaBuildScript extends BuildScript {
 	public MavenPublishTask publishMaven;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
+	public JarTask sourcesJar;
 	public BuildTask build;
 	
 	@Override
 	public void init() {
+		
+		super.init();
 		
 		dependencies = new MavenResolveTask("javaDependencies");
 		dependencies.group = "dependencies";
@@ -43,7 +46,7 @@ public class JavaBuildScript extends BuildScript {
 		jar = new JarTask("jar");
 		jar.group = "build";
 		jar.entries.put(compileJava.classesDir, "");
-		jar.entries.put(new File("src/main/resource"), "");
+		jar.entries.put(new File("src/main/resources"), "");
 		jar.archive = new File(String.format("build/libs/%s.jar", projectName));
 		jar.dependsOn(compileJava);
 		
@@ -100,7 +103,7 @@ public class JavaBuildScript extends BuildScript {
 	
 	public void withSourcesJar() {
 
-		var sourcesJar = new JarTask("sourcesJar");
+		sourcesJar = new JarTask("sourcesJar");
 		sourcesJar.group = "build";
 		sourcesJar.entries.put(new File("src/main/java"), "");
 		sourcesJar.archive = new File(String.format("build/libs/%s-sources.jar", projectName));

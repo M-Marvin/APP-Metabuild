@@ -21,6 +21,5 @@
 	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/commandlineparser/commandlineutility/2.0/commandlineutility-2.0.jar" sourcepath="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/commandlineparser/commandlineutility/2.0/commandlineutility-2.0-sources.jar"/>
 	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/javarun/javarun/1.2/javarun-1.2.jar" sourcepath="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/javarun/javarun/1.2/javarun-1.2-sources.jar"/>
 	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/metabuild/basicxml/0.1_build1/basicxml-0.1_build1.jar"/>
-	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/metabuild/metabuild-core/0.1-SNAPSHOT/metabuild-core-0.1-20250528-103241-42-api.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>

@@ -13,6 +13,7 @@
 			<attribute name="test" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/"/>
 	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
 	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_48987a9687fd76dcf33b5f1e5a93cd15/de/m_marvin/simplelogging/simplelogging/2.3/simplelogging-2.3.jar" sourcepath="C:/Users/marvi/.meta/files/rrp_48987a9687fd76dcf33b5f1e5a93cd15/de/m_marvin/simplelogging/simplelogging/2.3/simplelogging-2.3-sources.jar"/>

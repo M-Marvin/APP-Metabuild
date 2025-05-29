@@ -136,8 +136,8 @@ public class Buildfile extends JavaBuildScript {
 		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
 		
 		// BasicXML
-		dependencies.implementation("de.m_marvin.metabuild:basicxml:0.1_build1");
-		//dependencies.implementation("de.m_marvin.metabuild:basicxml:sources:0.1_build1");
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.0");
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.0");
 		
 		// Include dependencies into final binary jar
 		packageExecutable();

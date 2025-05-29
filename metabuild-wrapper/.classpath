@@ -17,6 +17,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/metabuild/metabuild-core-api/0.1-SNAPSHOT/metabuild-core-api-0.1-20250529-202450-1-api.jar"/>
+	<classpathentry kind="lib" path="C:/Users/marvi/.meta/files/rrp_cbf2121a7940579828308e5b8003467d/de/m_marvin/metabuild/metabuild-core-api/0.1-SNAPSHOT/metabuild-core-api-0.1-20250529-204851-2-api.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>

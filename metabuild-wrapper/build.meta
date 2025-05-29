@@ -22,15 +22,14 @@ public class Buildfile extends JavaBuildScript {
 	@Override
 	public void init() {
 		
-		importBuild("core", new File("../metabuild-core"));
-		
 		projectName = "metabuild-wrapper";
 		
 		super.init();
 		
-		dependencies.dependsOn(taskNamed("core:publishMavenApi"));
-		
 		withSourcesJar();
+
+		importBuild("core", new File("../metabuild-core"));
+		dependencies.dependsOn(taskNamed("core:publishMavenApi"));
 		
 	}
 	
@@ -46,8 +45,8 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.dependencies();
 		
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:api:" + version);
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:sources:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core-api:api:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core-api:sources:" + version);
 		
 		// package only metabuild-core-X-api.jar
 		packageExecutable();

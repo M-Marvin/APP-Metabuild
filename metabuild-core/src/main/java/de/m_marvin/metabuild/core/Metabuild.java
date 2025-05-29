@@ -8,11 +8,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,7 +26,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import de.m_marvin.basicxml.internal.StackList;
@@ -96,6 +93,8 @@ public final class Metabuild implements IMeta {
 	private StackList<BuildScript> buildstack = new StackList<>();
 	/* Imported build script instances */
 	private Map<String, BuildScript> imports = new HashMap<String, BuildScript>();
+	/* Import aliases */
+	private Map<String, String> importAlias = new HashMap<String, String>();
 	/* Task to TaskNode map, nodes combine one BuildTask and its dependent tasks */
 	private Map<BuildTask, TaskNode> task2node = new HashMap<>();
 	/* Root TaskNode for the current build task tree */
@@ -385,7 +384,14 @@ public final class Metabuild implements IMeta {
 	 * @return The task with the name or null if none was found
 	 */
 	public BuildTask taskNamed(String name) {
-		if (!name.contains(":")) name = peekBuild().buildName + ":" + name;
+		if (!name.contains(":"))
+			name = peekBuild().buildName + ":" + name;
+		else {
+			int i = name.indexOf(':');
+			String buildName = name.substring(0, i);
+			if (this.importAlias.containsKey(buildName))
+				name = this.importAlias.get(buildName) + ":" + name.substring(i + 1);
+		}
 		if (!this.registeredTasks.containsKey(name)) {
 			throw BuildScriptException.msg("no task named '%s' is registered!", name);
 		}
@@ -531,7 +537,7 @@ public final class Metabuild implements IMeta {
 	public File buildWorkingDir() {
 		BuildScript buildscript = peekBuild();
 		if (buildscript == null) return workingDir();
-		return FileUtility.absolute(buildscript.workspace, this.workingDirectory);
+		return FileUtility.absolute(buildscript.buildfileLocation.getParentFile(), this.workingDirectory);
 	}
 
 	@Override
@@ -570,7 +576,7 @@ public final class Metabuild implements IMeta {
 			this.imports.put("", new BuildScript());
 			pushBuild("");
 			peekBuild().buildName = "";
-			peekBuild().workspace = workingDir();
+			peekBuild().buildfileLocation = new File(workingDir(), "builtin");
 			peekBuild().init(); // should never fail
 			RootTask.TASK.setBuildscript(peekBuild());
 			popBuild();
@@ -656,6 +662,18 @@ public final class Metabuild implements IMeta {
 		if (importName == null)
 			importName = location.getParentFile().getName();
 		if (this.imports.containsKey(importName)) return;
+		
+		// detect duplicates and create alias
+		File f_buildFile = buildFile;
+		String duplicateName = this.imports.entrySet().stream()
+				.filter(e -> e.getValue().buildfileLocation.equals(f_buildFile))
+				.map(Map.Entry::getKey).findAny().orElse(null);
+		if (duplicateName != null) {
+			this.importAlias.put(importName, duplicateName);
+			return;
+		}
+		
+		// import build file
 		if (!buildFile.isFile()) {
 			throw BuildScriptException.msg("imported '%s' build file does not exist: %s", importName, buildFile);
 		}
@@ -664,7 +682,7 @@ public final class Metabuild implements IMeta {
 			throw BuildScriptException.msg("failed to load import '%s' build file: %s", importName, buildFile);
 		}
 		buildscript.buildName = importName;
-		buildscript.workspace = location;
+		buildscript.buildfileLocation = buildFile;
 		this.imports.put(importName, buildscript);
 		if (importName.isEmpty()) RootTask.TASK.setBuildscript(buildscript);
 		
@@ -681,6 +699,7 @@ public final class Metabuild implements IMeta {
 			}
 		}
 		
+		// run init on buildfile to register tasks
 		try {
 			pushBuild(importName);
 			buildscript.init();
@@ -700,7 +719,7 @@ public final class Metabuild implements IMeta {
 	 * Also performs the same operations for all registered dependencies of that task.
 	 * @param taskName The name of the task to prepare
 	 */
-	protected void prepareTask(String taskName, Deque<String> taskTrace) {
+	protected void prepareTask(String taskName, StackList<String> taskTrace) {
 		
 		BuildTask task = taskNamed(taskName.contains(":") ? taskName : ":" + taskName);
 		if (task == null) {
@@ -714,21 +733,24 @@ public final class Metabuild implements IMeta {
 				try {
 					if (taskTrace.contains(taskName))
 						throw BuildScriptException.msg("recursive task dependency detected: %s", taskTrace.toString());
-					taskTrace.addFirst(taskName);
+					taskTrace.push(taskName);
 					prepareTask(depTask, taskTrace);
-					taskTrace.poll();
+					taskTrace.pop();
 				} catch (MetaScriptException e) {
 					throw BuildScriptException.msg(e, "problem with task '%s' required by '%s'", depTask, taskName);
 				}
-				if (this.taskTree.task().isPresent()) dependendNodes.add(this.taskTree);
+				if (this.taskTree != null) dependendNodes.add(this.taskTree);
 			}
 		}
+		
+		this.taskTree = this.task2node.get(task);
+		if (this.taskTree != null) return;
 		
 		pushBuild(task.buildscript().buildName);
 		
 		try {
 			if (!task.state().requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
-				this.taskTree = new TaskNode(Optional.empty(), new HashSet<>());
+				this.taskTree = null;
 				return;
 			}
 		} catch (MetaScriptException e) {
@@ -737,8 +759,8 @@ public final class Metabuild implements IMeta {
 			popBuild();
 		}
 		
-		if (!this.task2node.containsKey(task)) this.task2node.put(task, new TaskNode(Optional.of(task), dependendNodes));
-		this.taskTree = this.task2node.get(task);
+		this.taskTree = new TaskNode(Optional.of(task), dependendNodes);
+		this.task2node.put(task, this.taskTree);
 		
 	}
 	
@@ -759,13 +781,13 @@ public final class Metabuild implements IMeta {
 			
 			for (String task : tasks) {
 				try {
-					prepareTask(task, new ArrayDeque<String>());
+					prepareTask(task, new StackList<String>());
 				} catch (MetaScriptException e) {
 					logger().errort(LOG_TAG, "failed to build task tree for task: %s", task);
 					e.printStack(logger().errorPrinter(LOG_TAG));
 					return false;
 				}
-				dependencies.add(this.taskTree);
+				if (this.taskTree != null) dependencies.add(this.taskTree);
 			}
 			
 			this.taskTree = new TaskNode(Optional.of(RootTask.TASK), dependencies);
@@ -788,28 +810,16 @@ public final class Metabuild implements IMeta {
 	 * @param node The node in the task tree to run
 	 * @return true if and only if all the tasks from the node upward have completed successfully
 	 */
-	private CompletableFuture<Void> runTaskTree(TaskNode node) {	
-		return CompletableFuture.runAsync(() -> {
-			Map<TaskNode, CompletableFuture<Void>> tasks = node.dep().stream().collect(Collectors.toMap(tn -> tn, tn -> runTaskTree(tn)));
-			try {
-				CompletableFuture.allOf(tasks.values().toArray(CompletableFuture[]::new)).join();
-			} catch (Exception ea) {
-				for (var task : tasks.entrySet()) {
-					try {
-						task.getValue().join();
-					} catch (CompletionException e) {
-						if (e.getCause() instanceof MetaScriptException me) {
-							String thisName = task.getKey().task().isPresent() ? task.getKey().task().get().fullName() : "nothing";
-							String parentName = node.task().isPresent() ? node.task().get().fullName() : "nothing";
-							if (!node.task().isEmpty()) node.task().get().failedDependency();
-							throw BuildException.msg(me, "problem with task '%s' required by '%s'!", thisName, parentName);
-						} else if (e != null) {
-							throw BuildException.msg(e.getCause(), "uncatched exception: %s", e.getMessage());
-						}
-					}
-				}
-			}
-		}).thenAcceptAsync(v -> {
+	private CompletableFuture<Void> runTaskTree(TaskNode node, Map<TaskNode, CompletableFuture<Void>> taskFutures) {
+		
+		return CompletableFuture.allOf(
+			node.dep().stream().map(task -> {
+				CompletableFuture<Void> future = taskFutures.get(task);
+				if (future == null)
+					taskFutures.put(task, (future = runTaskTree(task, taskFutures)));
+				return future;
+			}).toArray(CompletableFuture[]::new)
+		).thenRunAsync(() -> {
 			if (node.task().isEmpty()) return;
 			asyncEnterBuild(node.task().get().buildscript().buildName);
 			try {
@@ -824,6 +834,7 @@ public final class Metabuild implements IMeta {
 				asyncLeaveBuild();
 			}
 		}, this.taskExecutor);
+		
 	}
 	
 	@Override
@@ -878,7 +889,7 @@ public final class Metabuild implements IMeta {
 			
 			try {
 				stateTransition(MetaState.RUN, MetaState.PREPARE);
-				runTaskTree(this.taskTree).join();
+				runTaskTree(this.taskTree, new HashMap<Metabuild.TaskNode, CompletableFuture<Void>>()).join();
 				success = true;
 			} catch (CompletionException e)  {
 				if (e.getCause() instanceof MetaScriptException me) {

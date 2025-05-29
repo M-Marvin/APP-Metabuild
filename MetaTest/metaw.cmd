@@ -1,1 +1,0 @@
-java -jar %~dp0meta/metabuild-wrapper.jar %*

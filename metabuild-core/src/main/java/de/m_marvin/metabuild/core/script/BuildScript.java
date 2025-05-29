@@ -17,7 +17,7 @@ public class BuildScript {
 	/* Contains multi-project management information about this build script
 	 * Filled out by the metabuild main class when importing the build file */
 	public String buildName = "";
-	public File workspace = new File("");
+	public File buildfileLocation = new File("");
 
 	protected void importBuild(File locationOrBuildFile) {
 		importBuild(null, locationOrBuildFile);

@@ -41,7 +41,7 @@ public class MavenPublishTask extends BuildTask {
 	protected final Set<DependencyGraph> dependencies = new HashSet<>();
 	protected final MavenResolver resolver;
 	protected final MavenPublisher publisher;
-	public final Set<Repository> repositoriesToUpdate = new HashSet<Repository>();
+	protected final Set<Repository> repositoriesToUpdate = new HashSet<Repository>();
 	
 	public MavenPublishTask(String name) {
 		super(name);

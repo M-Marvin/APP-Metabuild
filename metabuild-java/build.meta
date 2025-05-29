@@ -26,22 +26,21 @@ public class Buildfile extends JavaBuildScript {
 	@Override
 	public void init() {
 		
-		importBuild("core", new File("../metabuild-core"));
-		importBuild("maven", new File("../metabuild-maven"));
-		
 		projectName = "metabuild-java";
 		
 		super.init();
-		
-		dependencies.dependsOn(taskNamed("core:publishMaven"));
-		dependencies.dependsOn(taskNamed("maven:publishMaven"));
-		
+
 		// Install metabuild java plugin on local system
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
 		copyBinary.group = "install";
 		copyBinary.dependsOn(jar);
 		
 		withSourcesJar();
+
+		importBuild("core", new File("../metabuild-core"));
+		importBuild("maven", new File("../metabuild-maven"));
+		dependencies.dependsOn(taskNamed("core:publishMaven"));
+		dependencies.dependsOn(taskNamed("maven:publishMaven"));
 		
 	}
 	

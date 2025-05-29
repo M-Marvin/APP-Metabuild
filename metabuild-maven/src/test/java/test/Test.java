@@ -19,6 +19,7 @@ import de.m_marvin.simplelogging.Log;
 
 public class Test {
 	
+	@SuppressWarnings("deprecation")
 	public static void main(String... args) throws MavenException, FileNotFoundException, MalformedURLException, URISyntaxException {
 		
 		File local = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getFile(), "../../temp");

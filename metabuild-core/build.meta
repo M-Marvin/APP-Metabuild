@@ -37,7 +37,7 @@ public class Buildfile extends JavaBuildScript {
 
 		withSourcesJar();
 		
-		// Make metabuild API jar
+		// make metabuild API jar
 		apiJar = new JarTask("apiJar");
 		apiJar.group = "build";
 		apiJar.entries.put(compileJava.classesDir, "");
@@ -54,16 +54,12 @@ public class Buildfile extends JavaBuildScript {
 		publishMavenApi.dependsOn(apiJar, sourcesJar);
 		publishingApi();
 		
+		// add wrapper jar into core jar
 		importBuild("wrapper", new File("../metabuild-wrapper"));
+		jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), wrapperIncludeDir);
+		jar.dependsOn("wrapper:jar");
 		
-		if (this.buildName.isBlank()) {
-			jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), wrapperIncludeDir);
-		}
-		
-		importBuild("java", new File("../metabuild-java"));
-		importBuild("maven", new File("../metabuild-maven"));
-		
-		// Install metabuild instance on local system
+		// install metabuild instance on local system
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
 		copyBinary.group = "install";
 		copyBinary.dependsOn(jar);
@@ -73,6 +69,10 @@ public class Buildfile extends JavaBuildScript {
 		var install = new BuildTask("install");
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
+		
+		// install system plugins
+		importBuild("java", new File("../metabuild-java"));
+		importBuild("maven", new File("../metabuild-maven"));
 		install.dependsOn("java:copyBinary");
 		install.dependsOn("maven:copyBinary");
 		
@@ -180,7 +180,7 @@ public class Buildfile extends JavaBuildScript {
 		publishMavenApi.artifact("api", apiJar.archive);
 		publishMavenApi.artifact("sources", sourcesJar.archive);
 		publishMavenApi.repository(Maven.mavenLocal());
-		publishMavenApi.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
+		publishMavenApi.coordinates("de.m_marvin.metabuild:metabuild-core-api:" + version);
 		
 	}
 	

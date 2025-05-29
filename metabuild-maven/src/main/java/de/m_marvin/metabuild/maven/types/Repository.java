@@ -18,16 +18,22 @@ public class Repository {
 	public final String name;
 	public final URL baseURL;
 	public final Credentials credentials;
+	public final boolean isLocal;
 
 	public Repository(String name, String baseURL) {
 		this(name, baseURL, null);
 	}
-	
+
 	public Repository(String name, String baseURL, Credentials credentials) {
+		this(name, baseURL, credentials, false);
+	}
+	
+	public Repository(String name, String baseURL, Credentials credentials, boolean isLocal) {
 		try {
 			this.name = name;
 			this.baseURL = new URI(baseURL.replace('\\', '/')).toURL();
 			this.credentials = credentials;
+			this.isLocal = isLocal;
 		} catch (MalformedURLException | URISyntaxException e) {
 			throw new IllegalArgumentException("invalid repository URL", e);
 		}
@@ -36,11 +42,16 @@ public class Repository {
 	public Repository(String name, URL baseURL) {
 		this(name, baseURL, null);
 	}
-	
+
 	public Repository(String name, URL baseURL, Credentials credentials) {
+		this(name, baseURL, credentials, false);
+	}
+	
+	public Repository(String name, URL baseURL, Credentials credentials, boolean isLocal) {
 		this.name = name;
 		this.baseURL = baseURL;
 		this.credentials = credentials;
+		this.isLocal = isLocal;
 	}
 	
 	@Override

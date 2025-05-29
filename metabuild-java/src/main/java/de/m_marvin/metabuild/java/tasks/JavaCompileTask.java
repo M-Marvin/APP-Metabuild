@@ -152,7 +152,6 @@ public class JavaCompileTask extends BuildTask {
 			})
 			.toList();
 		
-		// FIXME not working any more
 		// List class files that need to be removed
 		this.removed = this.sourceMetadata.entrySet().stream()
 			.filter(e -> !sourceFiles.contains(e.getKey()))
@@ -294,6 +293,7 @@ public class JavaCompileTask extends BuildTask {
 		for (File outdatedSource : this.removed) {
 			for (File outdatedClass : this.sourceMetadata.get(outdatedSource).classFiles()) {
 				File f = FileUtility.absolute(outdatedClass, classPath);
+				logger().debugt(logTag(), "delete from removed source: %s", outdatedClass);
 				if (!f.delete()) {
 					logger().errort(logTag(), "could not remove outdated class file: %s", outdatedClass);
 					return false;

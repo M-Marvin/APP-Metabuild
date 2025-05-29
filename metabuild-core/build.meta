@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "0.1-SNAPSHOT";
+	public String version = "0.3-alpha";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -51,6 +51,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		// publish metabuild API jar only
 		publishMavenApi = new MavenPublishTask("publishMavenApi");
+		publishMavenApi.group = "publish";
 		publishMavenApi.dependsOn(apiJar, sourcesJar);
 		publishingApi();
 		
@@ -76,7 +77,8 @@ public class Buildfile extends JavaBuildScript {
 		install.dependsOn("java:copyBinary");
 		install.dependsOn("maven:copyBinary");
 		
-		//compileJava.options.add("-Xlint:deprecation");
+		var cleanAll = new BuildTask("cleanAll");
+		cleanAll.dependsOn(":clean", "java:clean", "maven:clean", "wrapper:clean");
 		
 	}
 	

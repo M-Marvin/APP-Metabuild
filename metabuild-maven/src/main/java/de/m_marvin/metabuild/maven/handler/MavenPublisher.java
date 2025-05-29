@@ -153,12 +153,14 @@ public class MavenPublisher {
 				if (tg.graph == null || tg.graph.getResolutionRepository() == null)
 					throw new MavenException("publishing graph not resolved: %s", coordinates);
 				Repository r = tg.graph.getResolutionRepository();
-				POM.Repository repository = pom.new Repository();
-				repository.id = r.name.toLowerCase().replace(' ' , '-');
-				repository.name = r.name;
-				repository.url = r.baseURL.toString();
-				if (!pom.repositories.repository.contains(repository))
-					pom.repositories.repository.add(repository);
+				if (!r.isLocal) { // local repositories (such as maven-local) are not written to the POM
+					POM.Repository repository = pom.new Repository();
+					repository.id = r.name.toLowerCase().replace(' ' , '-');
+					repository.name = r.name;
+					repository.url = r.baseURL.toString();
+					if (!pom.repositories.repository.contains(repository))
+						pom.repositories.repository.add(repository);
+				}
 				
 			}
 		}

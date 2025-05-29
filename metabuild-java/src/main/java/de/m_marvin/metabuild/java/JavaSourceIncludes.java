@@ -43,34 +43,33 @@ public class JavaSourceIncludes implements IJavaSourceIncludes {
 	
 	/**
 	 * Used to pass dependencies required by this project to external software running the metabuild system, usually an IDE.<br>
-	 * Files part of the same dependency are grouped to arrays, and sorted for binaries, sources and javadoc by this method by the configuration extension names.
+	 * Files part of the same dependency should be grouped to arrays, and are sorted for binaries, sources and javadoc by this method by the configuration extension names.
 	 */
 	public static void include(Collection<File[]> includes) {
-		// FIXME special configurations are not grouped with sources
+		
 		List<File> binaries = new ArrayList<File>();
 		Map<File, File> sources = new HashMap<File, File>();
 		Map<File, File> javadocs = new HashMap<File, File>();
 		
 		for (File[] depFiles : includes) {
 			
-			Stream.of(depFiles)
-					.filter(f-> FileUtility.getExtension(f).equalsIgnoreCase("jar"))
-					.filter(f -> {
-						String name = FileUtility.getNameNoExtension(f);
-						return 	!name.endsWith("-sources") &&
-								!name.endsWith("-javadoc");
-					})
-					.forEach(f -> {
-						Optional<File> source = Stream.of(depFiles)
-								.filter(s -> FileUtility.getNameNoExtension(s).equals(FileUtility.getNameNoExtension(f) + "-sources"))
-								.findAny();
-						Optional<File> javadoc = Stream.of(depFiles)
-								.filter(s -> FileUtility.getNameNoExtension(s).equals(FileUtility.getNameNoExtension(f) + "-javadoc"))
-								.findAny();
-						binaries.add(f);
-						if (source.isPresent()) sources.put(f, source.get());
-						if (javadoc.isPresent()) javadocs.put(f, javadoc.get());
-					});
+			Optional<File> sourcesFile = Stream.of(depFiles).filter(f -> FileUtility.getNameNoExtension(f).endsWith("-sources")).findFirst();
+			Optional<File> javadocFile = Stream.of(depFiles).filter(f -> FileUtility.getNameNoExtension(f).endsWith("-javadoc")).findFirst();
+			List<File> binFiles = Stream.of(depFiles).filter(f -> {
+				if (sourcesFile.isPresent() && sourcesFile.get().equals(f)) return false;
+				if (javadocFile.isPresent() && javadocFile.get().equals(f)) return false;
+				if (!FileUtility.getExtension(f).equals("jar")) return false;
+				return true;
+			}).toList();
+			
+			for (File binaryFile : binFiles) {
+				binaries.add(binaryFile);
+				if (sourcesFile.isPresent())
+					sources.put(binaryFile, sourcesFile.get());
+				if (javadocFile.isPresent())
+					javadocs.put(binaryFile, javadocFile.get());
+			}
+			
 		}
 		
 		Metabuild.get().addSourceInclude(new JavaSourceIncludes(binaries, sources, javadocs));

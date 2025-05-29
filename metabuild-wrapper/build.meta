@@ -16,8 +16,8 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
-	public String wrapperVersion = "1.0-SNAPSHOT";
-	public String version = "0.1-SNAPSHOT";
+	public String wrapperVersion = "0.1-alpha";
+	public String version = "0.3-alpha";
 	
 	@Override
 	public void init() {

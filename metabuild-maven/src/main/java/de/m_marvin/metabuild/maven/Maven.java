@@ -6,7 +6,7 @@ public class Maven {
 	
 	private Maven() {}
 	
-	public static final Repository MAVEN_LOCAL = new Repository("Maven Local", "file:///" + System.getProperty("user.home") + "/.m2/repository");
+	public static final Repository MAVEN_LOCAL = new Repository("Maven Local", "file:///" + System.getProperty("user.home") + "/.m2/repository", null, true);
 	public static Repository mavenLocal() {
 		return MAVEN_LOCAL;
 	}

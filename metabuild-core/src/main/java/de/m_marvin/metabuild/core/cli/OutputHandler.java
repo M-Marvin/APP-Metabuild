@@ -29,7 +29,7 @@ public class OutputHandler {
 		}
 
 		// disable line wrap
-		print.print("\033[7l");
+		//print.print("\033[7l");
 		
 		meta.addStatusCallback(new IStatusCallback() {
 			

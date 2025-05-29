@@ -749,7 +749,8 @@ public final class Metabuild implements IMeta {
 		pushBuild(task.buildscript().buildName);
 		
 		try {
-			if (!task.state().requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
+			TaskState state = task.state(); // make ABSOLUTELY sure it is called at least once
+			if (!state.requiresBuild() && dependendNodes.isEmpty() && !this.forceRunTasks) {
 				this.taskTree = null;
 				return;
 			}

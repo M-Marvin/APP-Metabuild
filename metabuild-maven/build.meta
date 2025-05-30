@@ -21,8 +21,6 @@ public class Buildfile extends JavaBuildScript {
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
 	
-	JarTask apiJar;
-	
 	@Override
 	public void init() {
 		

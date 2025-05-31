@@ -80,7 +80,7 @@ public class Buildfile extends JavaBuildScript {
 		install.dependsOn("cpp:copyBinary");
 		
 		var cleanAll = new BuildTask("cleanAll");
-		cleanAll.dependsOn(":clean", "java:clean", "maven:clean", "wrapper:clean");
+		cleanAll.dependsOn(":clean", "java:clean", "maven:clean", "wrapper:clean", "cpp:clean");
 		
 	}
 	

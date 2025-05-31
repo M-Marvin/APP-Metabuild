@@ -33,7 +33,6 @@ public class JavaRunClasspathTask extends BuildTask {
 	@Override
 	protected boolean run() {
 		
-//		File classpathFile = this.classpath != null ? FileUtility.absolute(this.classpath) : null;
 		File classesDir = FileUtility.absolute(this.classesDir);
 		File workingDir = this.workingDir != null ? FileUtility.absolute(this.workingDir) : classesDir;
 		

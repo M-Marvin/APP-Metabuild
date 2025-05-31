@@ -7,14 +7,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,10 +34,15 @@ import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
+import de.m_marvin.basicxml.XMLInputStream;
+import de.m_marvin.basicxml.XMLOutputStream;
+import de.m_marvin.basicxml.XMLStream.DescType;
+import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.core.util.HashUtility;
 
 public class JavaCompileTask extends BuildTask {
 
@@ -67,36 +69,83 @@ public class JavaCompileTask extends BuildTask {
 	protected File getMetaFile() {
 		return FileUtility.absolute(this.stateCache, FileUtility.absolute(this.classesDir));
 	}
+
+	public static final URI METABUILD_JAVA_CLASSMETA_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild/java/classmeta");
 	
 	protected void loadMetadata() {
 		this.sourceMetadata = new HashMap<>();
 		try {
 			File metaFile = getMetaFile();
 			if (!metaFile.isFile()) return;
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(metaFile)));
-			String line;
-			while ((line = reader.readLine()) != null) {
-				File sourceFile = new File(line);
-				FileTime timestamp = FileTime.fromMillis(Long.parseLong(reader.readLine()));
-				File[] classFiles = Stream.of(reader.readLine().split(";")).map(File::new).toArray(File[]::new);
-				this.sourceMetadata.put(sourceFile, new SourceMetaData(classFiles, timestamp));
+			
+			XMLInputStream xml = new XMLInputStream(new FileInputStream(metaFile));
+			ElementDescriptor classmetaTag = xml.readNext();
+			if (classmetaTag != null && classmetaTag.name().equals("classmeta") && classmetaTag.type() == DescType.OPEN) {
+				ElementDescriptor classfileTag;
+				while ((classfileTag = xml.readNext()) != null) {
+					if (classfileTag != null && classfileTag.name().equals("classfile") && classfileTag.type() == DescType.OPEN) {
+						List<File> classFiles = new ArrayList<File>();
+						ElementDescriptor classTag;
+						while ((classTag = xml.readNext()) != null) {
+							if (classTag != null && classTag.name().equals("class") && classTag.type() == DescType.OPEN) {
+								classFiles.add(new File(xml.readAllText()));
+								ElementDescriptor classTagClose = xml.readNext();
+								if (!classTagClose.isSameField(classTag) || classTagClose.type() != DescType.CLOSE) {
+									this.sourceMetadata.clear();
+									xml.close();
+									return;
+								}
+							} else if (classTag != null && classTag.name().equals("classfile") && classTag.type() == DescType.CLOSE) {
+								break;
+							}
+						}
+						
+						if (!classfileTag.attributes().containsKey("source") || !classfileTag.attributes().containsKey("timestamp")) {
+							this.sourceMetadata.clear();
+							xml.close();
+							return;
+						}
+						
+						try {
+							File sourceFile = new File(classfileTag.attributes().get("source"));
+							FileTime timestamp = FileTime.from(Instant.from(DateTimeFormatter.ISO_DATE_TIME.parse(classfileTag.attributes().get("timestamp"))));
+							this.sourceMetadata.put(sourceFile, new SourceMetaData(classFiles.toArray(File[]::new), timestamp));
+						} catch (Exception e) {
+							this.sourceMetadata.clear();
+							xml.close();
+							return;
+						}
+						
+					} else if (classfileTag != null && classfileTag.name().equals("classmeta") && classfileTag.type() == DescType.CLOSE) {
+						break;
+					}
+				}
 			}
-			reader.close();
-		} catch (IOException e) {
+			xml.close();
+		} catch (Exception e) {
 			throw BuildException.msg(e, "failed to load class meta data: %s", this.stateCache);
 		}
 	}
 	
 	protected void saveMetadata() {
 		try {
-			Writer writer = new OutputStreamWriter(new FileOutputStream(getMetaFile()));
+			XMLOutputStream xml = new XMLOutputStream(new FileOutputStream(getMetaFile()));
+			xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_JAVA_CLASSMETA_NAMESPACE, "classmeta", null));
 			for (var entry : this.sourceMetadata.entrySet()) {
-				writer.write(entry.getKey().getPath() + "\n");
-				writer.write(Long.toString(entry.getValue().timestamp().toMillis()) + "\n");
-				writer.write(Stream.of(entry.getValue().classFiles()).map(File::getPath).reduce((a, b) -> a + ";" + b).get() + "\n");
+				var tag = new ElementDescriptor(DescType.OPEN, METABUILD_JAVA_CLASSMETA_NAMESPACE, "classfile", new HashMap<String, String>());
+				tag.attributes().put("timestamp", entry.getValue().timestamp().toString());
+				tag.attributes().put("source", entry.getKey().getPath());
+				xml.writeNext(tag);
+				for (var cfile : entry.getValue().classFiles()) {
+					xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_JAVA_CLASSMETA_NAMESPACE, "class", null));
+					xml.writeAllText(cfile.getPath(), false);
+					xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_JAVA_CLASSMETA_NAMESPACE, "class", null));
+				}
+				xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_JAVA_CLASSMETA_NAMESPACE, "classfile", null));
 			}
-			writer.close();
-		} catch (IOException e) {
+			xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_JAVA_CLASSMETA_NAMESPACE, "classmeta", null));
+			xml.close();
+		} catch (Exception e) {
 			throw BuildException.msg(e, "failed to save class meta data: %s", this.stateCache);
 		}
 	}
@@ -106,16 +155,8 @@ public class JavaCompileTask extends BuildTask {
 		
 		File srcPath = FileUtility.absolute(this.sourcesDir);
 		
-		if (this.stateCache == null) {
-			String hash = "";
-			try {
-				ByteBuffer buf = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(this.sourcesDir.getPath().getBytes(StandardCharsets.UTF_8)));
-				hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-			} catch (NoSuchAlgorithmException e) {
-				logger().warnt(logTag(), "failed to generate hash name for class state cache: %s", this.classesDir, e);
-			}
-			this.stateCache = new File("../" + hash + ".classmeta");
-		}
+		if (this.stateCache == null)
+			this.stateCache = new File("../" + HashUtility.hash(this.sourcesDir.getPath()) + ".classmeta");
 		
 		loadMetadata();
 		

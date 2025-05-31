@@ -242,6 +242,7 @@ public class FileUtility {
 		String[] pathDirs = systemPath.split(File.pathSeparator);
 		for (String pathDir : pathDirs) {
 			File pathDirectory = new File(pathDir);
+			if (!pathDirectory.exists()) continue;
 			for (File file : pathDirectory.listFiles()) {
 				if (file.getName().equals(nameOrPath) || getNameNoExtension(file).equals(nameOrPath)) return Optional.of(file);
 			}
@@ -315,7 +316,7 @@ public class FileUtility {
 				.toList();
 	}
 	
-	public static final URI METABUILD_FILEPATH_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild");
+	public static final URI METABUILD_FILEPATH_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild/filepath");
 	
 	public static Collection<File> loadFilePath(File filepath) {
 		try {

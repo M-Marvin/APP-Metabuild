@@ -16,7 +16,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
-	public String version = "0.3-alpha";
+	public String version = "0.4-alpha-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -42,6 +42,15 @@ public class Buildfile extends JavaBuildScript {
 	
 	@Override
 	public void repositories() {
+
+		dependencies.repository(new Repository(
+				"GHP SimpleLogging",
+				"https://maven.pkg.github.com/m-marvin/library-basicxml",
+				new Credentials(
+						() -> System.getenv("GITHUB_ACTOR"), 
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
 
 		dependencies.repository(Maven.mavenLocal());
 		

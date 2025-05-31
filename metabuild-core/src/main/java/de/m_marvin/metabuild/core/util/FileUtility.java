@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -15,13 +16,22 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
+import de.m_marvin.basicxml.XMLException;
+import de.m_marvin.basicxml.XMLInputStream;
+import de.m_marvin.basicxml.XMLOutputStream;
+import de.m_marvin.basicxml.XMLStream.DescType;
+import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.metabuild.core.Metabuild;
 
 public class FileUtility {
@@ -275,6 +285,92 @@ public class FileUtility {
 		File f1 = absolute(path);
 		File f2 = absolute(parent);
 		return f1.toPath().startsWith(f2.toPath());
+	}
+	
+	public static Collection<File> parseFilePaths(Collection<File> filepath) {
+		return filepath.stream()
+				.flatMap(entry -> {
+					File fpath = absolute(entry);
+					Collection<File> entries;
+					if (fpath.isFile() && (entries = loadFilePath(fpath)) != null) {
+						return entries.stream().map(FileUtility::absolute);
+					}
+					return Stream.of(fpath);
+				})
+				.distinct()
+				.toList();
+	}
+	
+	public static Collection<File> parseFilePaths(Collection<File> filepath, File base) {
+		return filepath.stream()
+				.flatMap(entry -> {
+					File fpath = absolute(entry, base);
+					Collection<File> entries;
+					if (fpath.isFile() && (entries = loadFilePath(fpath)) != null) {
+						return entries.stream().map(f -> absolute(f, base));
+					}
+					return Stream.of(fpath);
+				})
+				.distinct()
+				.toList();
+	}
+	
+	public static final URI METABUILD_FILEPATH_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild");
+	
+	public static Collection<File> loadFilePath(File filepath) {
+		try {
+			Set<String> entries = new HashSet<>();
+			XMLInputStream xml = new XMLInputStream(new FileInputStream(filepath));
+			// read first tag, check if filepath start tag
+			ElementDescriptor filepathTag = xml.readNext();
+			if (filepathTag == null) {
+				xml.close();
+				return null;
+			}
+			if (filepathTag.name().equals("filepath") && filepathTag.type() == DescType.OPEN && Objects.equals(filepathTag.namespace(), METABUILD_FILEPATH_NAMESPACE)) {
+				ElementDescriptor pathTag;
+				while ((pathTag = xml.readNext()) != null) {
+					// if entry tag
+					if (pathTag.name().equals("path") && pathTag.type() == DescType.OPEN) {
+						String path = xml.readAllText();
+						var pathTagClose = xml.readNext();
+						if (!pathTagClose.isSameField(pathTag) && pathTagClose.type() != DescType.CLOSE) {
+							xml.close();
+							return null;
+						}
+						entries.add(path);
+					// if filepath end tag
+					} else if (pathTag.isSameField(filepathTag) && pathTag.type() == DescType.CLOSE) {
+						xml.close();
+						return entries.stream().map(s -> absolute(new File(s))).toList();
+					}
+				}
+				// unexpected EOF
+				xml.close();
+				return null;
+			}
+			xml.close();
+			return null;
+		} catch (IOException | XMLException e) {
+			return null;
+		}
+	}
+	
+	public static boolean writeFilePath(File filepathFile, Collection<File> entries) {
+		try {
+			XMLOutputStream xml = new XMLOutputStream(new FileOutputStream(filepathFile));
+			xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_FILEPATH_NAMESPACE, "filepath", null));
+			for (File entry : entries) {
+				xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_FILEPATH_NAMESPACE, "path", null));
+				xml.writeAllText(entry.toString(), false);
+				xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_FILEPATH_NAMESPACE, "path", null));
+			}
+			xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_FILEPATH_NAMESPACE, "filepath", null));
+			xml.close();
+			return true;
+		} catch (IOException | XMLException e) {
+			return false;
+		}
 	}
 	
 }

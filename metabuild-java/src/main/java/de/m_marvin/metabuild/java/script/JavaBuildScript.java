@@ -31,16 +31,16 @@ public class JavaBuildScript extends BuildScript {
 		
 		dependencies = new MavenResolveTask("javaDependencies");
 		dependencies.group = "dependencies";
-		dependencies.cpCompiletime = new File("build/compile.classpath");
-		dependencies.cpRunttime = new File("build/runtime.classpath");
-		dependencies.cpTestCompiletime = new File("build/testcompile.classpath");
-		dependencies.cpTestRuntime = new File("build/testruntime.classpath");
+		dependencies.fpCompiletime = new File("build/compile.classpath");
+		dependencies.fpRunttime = new File("build/runtime.classpath");
+		dependencies.fpTestCompiletime = new File("build/testcompile.classpath");
+		dependencies.fpTestRuntime = new File("build/testruntime.classpath");
 		
 		compileJava = new JavaCompileTask("compileJava");
 		compileJava.group = "build";
 		compileJava.sourcesDir = new File("src/main/java");
 		compileJava.classesDir = new File("build/classes/main/java");
-		compileJava.classpath.add(dependencies.cpCompiletime);
+		compileJava.classpath.add(dependencies.fpCompiletime);
 		compileJava.dependsOn(dependencies);
 		
 		jar = new JarTask("jar");
@@ -85,7 +85,7 @@ public class JavaBuildScript extends BuildScript {
 	
 	public void packageExecutable() {
 		
-		jar.classpathIncludes.add(dependencies.cpRunttime);
+		jar.includes.add(dependencies.fpRunttime);
 		
 	}
 	
@@ -93,7 +93,7 @@ public class JavaBuildScript extends BuildScript {
 
 		var runJava = new JavaRunClasspathTask("run");
 		runJava.group = "run";
-		runJava.classpath = dependencies.cpRunttime;
+		runJava.classpath.add(dependencies.fpRunttime);
 		runJava.classesDir = compileJava.classesDir;
 		runJava.mainClass = jar.metainfo.get("Main-Class");
 		runJava.dependsOn(jar);

@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "0.3-alpha";
+	public String version = "0.4-alpha-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -41,7 +41,7 @@ public class Buildfile extends JavaBuildScript {
 		apiJar = new JarTask("apiJar");
 		apiJar.group = "build";
 		apiJar.entries.put(compileJava.classesDir, "");
-		apiJar.filePredicate = f -> FileUtility.isIn(f, new File("build/classes/main/java/de/m_marvin/metabuild/api"));
+		apiJar.entryPredicate = f -> FileUtility.isIn(f, new File("build/classes/main/java/de/m_marvin/metabuild/api"));
 		apiJar.archive = new File(jar.archive.getParentFile(), FileUtility.getNameNoExtension(jar.archive) + "-api.jar");
 		apiJar.dependsOn(compileJava);
 		apiJar.dependencyOf(build);
@@ -74,8 +74,10 @@ public class Buildfile extends JavaBuildScript {
 		// install system plugins
 		importBuild("java", new File("../metabuild-java"));
 		importBuild("maven", new File("../metabuild-maven"));
+		importBuild("cpp", new File("../metabuild-cpp"));
 		install.dependsOn("java:copyBinary");
 		install.dependsOn("maven:copyBinary");
+		install.dependsOn("cpp:copyBinary");
 		
 		var cleanAll = new BuildTask("cleanAll");
 		cleanAll.dependsOn(":clean", "java:clean", "maven:clean", "wrapper:clean");
@@ -138,8 +140,8 @@ public class Buildfile extends JavaBuildScript {
 		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
 		
 		// BasicXML
-		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.0");
-		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.0");
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1");
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.1");
 		
 		// Include dependencies into final binary jar
 		packageExecutable();

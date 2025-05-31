@@ -1,10 +1,6 @@
 package de.m_marvin.metabuild.java.tasks;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +14,7 @@ import de.m_marvin.metabuild.core.util.ProcessUtility;
 
 public class JavaRunClasspathTask extends BuildTask {
 
-	public File classpath = new File(".classpath"); 
+	public final List<File> classpath = new ArrayList<>(); 
 	public File classesDir = new File("classes/default");
 	public File workingDir = null;
 	public String mainClass = null;
@@ -37,7 +33,7 @@ public class JavaRunClasspathTask extends BuildTask {
 	@Override
 	protected boolean run() {
 		
-		File classpathFile = this.classpath != null ? FileUtility.absolute(this.classpath) : null;
+//		File classpathFile = this.classpath != null ? FileUtility.absolute(this.classpath) : null;
 		File classesDir = FileUtility.absolute(this.classesDir);
 		File workingDir = this.workingDir != null ? FileUtility.absolute(this.workingDir) : classesDir;
 		
@@ -59,15 +55,8 @@ public class JavaRunClasspathTask extends BuildTask {
 		StringBuffer classpathBuf = new StringBuffer();
 		classpathBuf.append(classesDir).append(";");
 		
-		if (classpathFile != null) {
-			try {
-				InputStream is = new FileInputStream(classpathFile);
-				classpathBuf.append(new String(is.readAllBytes(), StandardCharsets.UTF_8));
-				is.close();
-			} catch (IOException e) {
-				throw BuildException.msg(e, "failed to acces classpath file: %s", this.classpath);
-			}
-		}
+		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
+		classpathBuf.append(classpathStr);
 		
 		Optional<String> javaExecutable = ProcessHandle.current().info().command();
 		if (javaExecutable.isEmpty()) {

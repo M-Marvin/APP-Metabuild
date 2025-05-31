@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
@@ -48,7 +47,6 @@ public class JavaCompileTask extends BuildTask {
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
 	public final List<String> options = new ArrayList<>();
-	public Predicate<File> classpathListPredicate = file -> FileUtility.getExtension(file).equals("classpath");
 	public final List<File> classpath = new ArrayList<>();
 	public File stateCache = null; // if not set, will be set by prepare
 	public String sourceCompatibility = null;
@@ -121,16 +119,17 @@ public class JavaCompileTask extends BuildTask {
 		
 		loadMetadata();
 		
-		for (File entry : this.classpath) {
+		for (File path : FileUtility.parseFilePaths(this.classpath)) {
 			
-			File path = FileUtility.absolute(entry);
-			if (path.isFile() && this.classpathListPredicate.test(path)) {
+			if (path.isFile()) {
 				
 				// Check for changed classpath file
 				Optional<SourceMetaData> oldest = this.sourceMetadata.size() > 0 ? this.sourceMetadata.values().stream().sorted((s, b) -> s.timestamp().compareTo(b.timestamp())).skip(this.sourceMetadata.size() - 1).findFirst() : Optional.empty();
 				Optional<FileTime> classpath = FileUtility.timestamp(path);
-				if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0)
+				if (oldest.isEmpty() || classpath.isEmpty() || classpath.get().compareTo(oldest.get().timestamp()) > 0) {
 					this.sourceMetadata.clear(); // clearing the metadata causes all files to be recompiled
+					break;
+				}
 				
 			}
 			
@@ -227,10 +226,12 @@ public class JavaCompileTask extends BuildTask {
 				try {
 					long lineNr = diagnostic.getLineNumber();
 					
-					BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
-					String line = "";
-					for (long i = 0; i < lineNr; i++) line = reader.readLine();
-					reader.close();
+					String line = "<not available>";
+					if (diagnostic.getSource() != null) {
+						BufferedReader reader = new BufferedReader(new InputStreamReader(diagnostic.getSource().openInputStream()));
+						for (long i = 0; i < lineNr; i++) line = reader.readLine();
+						reader.close();
+					}
 					
 					StringBuffer buff = new StringBuffer();
 					
@@ -318,25 +319,17 @@ public class JavaCompileTask extends BuildTask {
 		
 		// Add classpath options
 		StringBuffer classpathBuf = new StringBuffer();
-		for (File entry : this.classpath) {
-			File path = FileUtility.absolute(entry);
-			if (this.classpathListPredicate.test(path)) {
-				if (!path.isFile()) continue;
-				String classpath = FileUtility.readFileUTF(path);
-				if (classpath == null)
-					throw BuildException.msg("could not read classpath file: %s", entry);
-				classpathBuf.append(classpath).append(";");
-			} else {
-				classpathBuf.append(path.getAbsolutePath()).append(";");
-			}
-		}
-		classpathBuf.append(FileUtility.absolute(this.sourcesDir));
+		
+		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
+		classpathBuf.append(classpathStr);
+		classpathBuf.append(";" + FileUtility.absolute(this.sourcesDir));
 		this.options.add("-classpath");
 		this.options.add(classpathBuf.toString());
 		
 		this.options.add("-sourcepath");
 		this.options.add(FileUtility.absolute(this.sourcesDir).toString());
 		
+		logger().debugt(logTag(), "compillation options: %s", this.options.stream().reduce((a, b) -> a + " " + b).orElse("<empty>"));
 		logger().infot(logTag(), "compiling source files in: %s", this.sourcesDir);
 		
 		// Compile outdated files

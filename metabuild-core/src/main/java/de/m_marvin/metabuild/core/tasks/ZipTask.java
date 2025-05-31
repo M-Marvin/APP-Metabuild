@@ -27,7 +27,8 @@ public class ZipTask extends BuildTask {
 	public final Map<File, String> entries = new HashMap<>();
 	public final Set<File> includes = new HashSet<>();
 	public File archive = new File("out.zip");
-	public Predicate<File> filePredicate = f -> true;
+	public Predicate<File> entryPredicate = f -> true;
+	public Predicate<File> includePredicate = f -> true;
 	
 	protected Map<File, String> toArchive;
 	protected Set<File> toInclude;
@@ -99,27 +100,45 @@ public class ZipTask extends BuildTask {
 		return true;
 	}
 	
-	protected boolean archiveIncludes(ZipOutputStream zstream, Set<File> archives) {
-		for (File archiveFile : archives) {
-			try {
-				ZipInputStream archive = new ZipInputStream(new FileInputStream(archiveFile));
-				ZipEntry include;
-				while ((include = archive.getNextEntry()) != null) {
-					if (include.isDirectory()) continue;
-					status("include > " + include.getName() + " - " + archiveFile);
-					logger().debugt(logTag(), "archive included entries: %s - %s", include.getName(), archiveFile);
-					if (!archiveInclude(zstream, archive, include)) {
-						logger().errort(logTag(), "failed to include archive file entry: %s - %s", include.getName(), archiveFile);
-						return false;
+	protected boolean archiveIncludes(ZipOutputStream zstream, Set<File> includes) {
+		for (File includeFile : includes) {
+			if (FileUtility.isArchive(includeFile)) {
+				try {
+					ZipInputStream archive = new ZipInputStream(new FileInputStream(includeFile));
+					ZipEntry include;
+					while ((include = archive.getNextEntry()) != null) {
+						if (include.isDirectory()) continue;
+						status("include > " + include.getName() + " - " + includeFile);
+						logger().debugt(logTag(), "archive included entries: %s - %s", include.getName(), includeFile);
+						if (!archiveInclude(zstream, archive, include)) {
+							logger().errort(logTag(), "failed to include archive file entry: %s - %s", include.getName(), includeFile);
+							return false;
+						}
 					}
+					archive.close();
+				} catch (IOException e) {
+					throw BuildException.msg(e, "failed to include archive: %s", includeFile);
 				}
-				archive.close();
-			} catch (IOException e) {
-				throw BuildException.msg(e, "failed to include archive: %s", archiveFile);
+			} else {
+				try {
+					for (File archiveFile : FileUtility.deepList(includeFile, f -> f.isFile() && this.includePredicate.test(f))) {
+						File loc = FileUtility.relative(archiveFile.getParentFile(), includeFile);
+						status("include > " + loc + " - " + archiveFile);
+						if (!archiveFile(zstream, loc.toString(), archiveFile)) {
+							logger().errort(logTag(), "failed to include file entry: %s - %s", loc, archiveFile);
+							return false;
+						}
+					}
+				} catch (IOException e) {
+					throw BuildException.msg(e, "failed to include file or directory: %s", includeFile);
+				}
 			}
+			
 		}
 		return true;
 	}
+
+	protected boolean archiveAdditional(ZipOutputStream zstream) { return true; };
 	
 	@Override
 	public TaskState prepare() {
@@ -133,7 +152,7 @@ public class ZipTask extends BuildTask {
 		for (var entry : this.entries.entrySet()) {
 			File eloc = new File(entry.getValue());
 			File oloc = FileUtility.absolute(entry.getKey());
-			for (File file : FileUtility.deepList(oloc, f -> f.isFile() && this.filePredicate.test(f))) {
+			for (File file : FileUtility.deepList(oloc, f -> f.isFile() && this.entryPredicate.test(f))) {
 				
 				Optional<FileTime> filetime = FileUtility.timestamp(file);
 				if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
@@ -146,16 +165,14 @@ public class ZipTask extends BuildTask {
 			}
 		}
 		
-		// Get archives to include and determine timestamp
+		// Get archives and directories to include and determine timestamp
 		this.toInclude = new HashSet<>();
-		for (File entry : this.includes) {
-			File file = FileUtility.absolute(entry);
-			if (!FileUtility.isArchive(file)) continue;
-			
-			Optional<FileTime> filetime = FileUtility.timestamp(file);
-			if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
-				timestamp = filetime;
-			
+		for (File file : FileUtility.parseFilePaths(this.includes)) {
+			for (File file1 : FileUtility.deepList(file, f -> f.isFile() && this.includePredicate.test(f))) {
+				Optional<FileTime> filetime = FileUtility.timestamp(file1);
+				if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
+					timestamp = filetime;
+			}
 			this.toInclude.add(file);
 		}
 		
@@ -175,6 +192,7 @@ public class ZipTask extends BuildTask {
 			}
 			
 			ZipOutputStream zstream = new ZipOutputStream(new FileOutputStream(archiveFile));
+			if (!archiveAdditional(zstream)) return false;
 			if (!archiveFiles(zstream, this.toArchive)) return false;
 			if (!archiveIncludes(zstream, this.toInclude)) return false;
 			zstream.finish();

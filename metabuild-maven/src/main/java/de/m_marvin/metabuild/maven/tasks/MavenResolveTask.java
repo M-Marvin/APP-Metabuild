@@ -27,10 +27,10 @@ import de.m_marvin.simplelogging.impl.TagLogger;
 
 public class MavenResolveTask extends BuildTask {
 	
-	public File cpCompiletime = new File("compile.classpath");
-	public File cpRunttime = new File("runtime.classpath");
-	public File cpTestCompiletime = new File("testcompile.classpath");
-	public File cpTestRuntime = new File("testruntime.classpath");
+	public File fpCompiletime = new File("compile.filepath");
+	public File fpRunttime = new File("runtime.filepath");
+	public File fpTestCompiletime = new File("testcompile.filepath");
+	public File fpTestRuntime = new File("testruntime.filepath");
 	public final DependencyGraph graph;
 	protected final MavenResolver resolver;
 	
@@ -156,40 +156,40 @@ public class MavenResolveTask extends BuildTask {
 		// Test if dependencies are missing in cache
 		try {
 			this.resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
-			List<File> classpath = new ArrayList<File>();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.COMPILETIME)) {
+			List<File> filepath = new ArrayList<File>();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.COMPILETIME)) {
 				logger().infot(logTag(), "offline cache incomplete, COMPILETIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			if (!verifyClasspathFile(this.cpCompiletime, classpath)) {
-				logger().infot(logTag(), "offline cache incomplete, COMPILETIME classpath mismatch, request remote resolution");
+			if (!verifyFilepathFile(this.fpCompiletime, filepath)) {
+				logger().infot(logTag(), "offline cache incomplete, COMPILETIME filepath mismatch, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.RUNTIME)) {
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.RUNTIME)) {
 				logger().infot(logTag(), "offline cache incomplete, RUNTIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			if (!verifyClasspathFile(this.cpRunttime, classpath)) {
-				logger().infot(logTag(), "offline cache incomplete, RUNTIME classpath mismatch, request remote resolution");
+			if (!verifyFilepathFile(this.fpRunttime, filepath)) {
+				logger().infot(logTag(), "offline cache incomplete, RUNTIME filepath mismatch, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_COMPILETIME)) {
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.TEST_COMPILETIME)) {
 				logger().infot(logTag(), "offline cache incomplete, TEST_COMPILETIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			if (!verifyClasspathFile(this.cpTestCompiletime, classpath)) {
-				logger().infot(logTag(), "offline cache incomplete, TEST_COMPILETIME classpath mismatch, request remote resolution");
+			if (!verifyFilepathFile(this.fpTestCompiletime, filepath)) {
+				logger().infot(logTag(), "offline cache incomplete, TEST_COMPILETIME filepath mismatch, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_RUNTIME)) {
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.TEST_RUNTIME)) {
 				logger().infot(logTag(), "offline cache incomplete, TEST_RUNTIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
 			}
-			if (!verifyClasspathFile(this.cpTestRuntime, classpath)) {
-				logger().infot(logTag(), "offline cache incomplete, TEST_RUNTIME classpath mismatch, request remote resolution");
+			if (!verifyFilepathFile(this.fpTestRuntime, filepath)) {
+				logger().infot(logTag(), "offline cache incomplete, TEST_RUNTIME filepath mismatch, request remote resolution");
 				return TaskState.OUTDATED;
 			}
 		} catch (MavenException e) {
@@ -201,21 +201,20 @@ public class MavenResolveTask extends BuildTask {
 		return TaskState.UPTODATE;
 	}
 	
-	protected boolean verifyClasspathFile(File classpathFile, List<File> classpath) {
-		String classpathStr = FileUtility.readFileUTF(FileUtility.absolute(classpathFile));
-		if (classpathStr == null) return false;
-		String classpathStr2 = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
-		List<String> cp1 = Stream.of(classpathStr.split(";")).sorted().distinct().toList();
-		List<String> cp2 = Stream.of(classpathStr2.split(";")).sorted().distinct().toList();
-		return cp1.size() == cp2.size() && cp1.stream().filter(cp2::contains).count() == cp1.size();
+	protected boolean verifyFilepathFile(File filepathFile, List<File> filepath) {
+		Collection<File> filepath1 = FileUtility.loadFilePath(FileUtility.absolute(filepathFile));
+		if (filepath1 == null) return false;
+		long c1 = filepath.stream().distinct().count();
+		long c2 = filepath1.stream().distinct().count();
+		long m = filepath1.stream().filter(filepath::contains).distinct().count();
+		return c1 == c2 && c1 == m;
 	}
 	
-	protected void writeClasspathFile(File classpathFile, List<File> classpath) {
-		String classpathStr = classpath.stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
-		File f = FileUtility.absolute(classpathFile);
+	protected void writeFilepathFile(File filepathFile, List<File> filepath) {
+		File f = FileUtility.absolute(filepathFile);
 		if (!f.getParentFile().isDirectory() && !f.getParentFile().mkdirs())
-			throw BuildException.msg("unable to create destination folder for dependency classpath: %s", f);
-		FileUtility.writeFileUTF(f, classpathStr);
+			throw BuildException.msg("unable to create destination folder for dependency filepath: %s", f);
+		FileUtility.writeFilePath(f, filepath);
 	}
 	
 	@Override
@@ -223,30 +222,30 @@ public class MavenResolveTask extends BuildTask {
 		
 		try {
 			this.resolver.setResolutionStrategy(Metabuild.get().isRefreshDependencies() ? ResolutionStrategy.FORCE_REMOTE : ResolutionStrategy.REMOTE);
-			List<File> classpath = new ArrayList<File>();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.COMPILETIME)) {
+			List<File> filepath = new ArrayList<File>();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.COMPILETIME)) {
 				logger().errort(logTag(), "unable to resolve compiletime dependencies!");
 				return false;
 			}
-			writeClasspathFile(this.cpCompiletime, classpath);
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.RUNTIME)) {
+			writeFilepathFile(this.fpCompiletime, filepath);
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.RUNTIME)) {
 				logger().error(logTag(), "unable to resolve runtime dependencies!");
 				return false;
 			}
-			writeClasspathFile(this.cpRunttime, classpath);
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_COMPILETIME)) {
+			writeFilepathFile(this.fpRunttime, filepath);
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.TEST_COMPILETIME)) {
 				logger().error(logTag(), "unable to resolve test compiletime dependencies!");
 				return false;
 			}
-			writeClasspathFile(this.cpTestCompiletime, classpath);
-			classpath.clear();
-			if (!this.resolver.resolveGraph(this.graph, a -> false, classpath, DependencyScope.TEST_RUNTIME)) {
+			writeFilepathFile(this.fpTestCompiletime, filepath);
+			filepath.clear();
+			if (!this.resolver.resolveGraph(this.graph, a -> false, filepath, DependencyScope.TEST_RUNTIME)) {
 				logger().error(logTag(), "unable to resolve test runtime dependencies!");
 				return false;
 			}
-			writeClasspathFile(this.cpTestRuntime, classpath);
+			writeFilepathFile(this.fpTestRuntime, filepath);
 		} catch (MavenException e) {
 			throw BuildException.msg(e, "unexpected error while resolving maven dependencies!");
 		}

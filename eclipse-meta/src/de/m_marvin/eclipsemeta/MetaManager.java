@@ -49,6 +49,7 @@ public class MetaManager {
 				return Optional.empty();
 			}
 			
+			MetaWrapper.metaVersion = null;
 			if (!MetaWrapper.prepareMetabuild(wrapperURL)) {
 				MetaUI.openError("Meta Launch", "Could not prepare meta installation for version: %s", MetaWrapper.metaVersion);
 				return Optional.empty();

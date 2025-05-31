@@ -3,6 +3,7 @@ import java.io.File;
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.FileTask;
+import de.m_marvin.metabuild.core.tasks.FileTask.Action;
 import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.script.JavaBuildScript;
 import de.m_marvin.metabuild.java.tasks.JarTask;
@@ -17,7 +18,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
 	public String wrapperVersion = "0.1-alpha";
-	public String version = "0.3-alpha";
+	public String version = "0.4-alpha-SNAPSHOT";
 	
 	@Override
 	public void init() {
@@ -30,6 +31,18 @@ public class Buildfile extends JavaBuildScript {
 
 		importBuild("core", new File("../metabuild-core"));
 		dependencies.dependsOn(taskNamed("core:publishMavenApi"));
+		
+		// copy wrapper intp plugin project
+		var copyPluginJar = new FileTask("copyPluginJar", Action.COPY, jar.archive, new File("../eclipse-meta/libs"));
+		copyPluginJar.group = "install";
+		copyPluginJar.dependsOn(jar);
+		var copyPluginSources = new FileTask("copyPluginSources", Action.COPY, sourcesJar.archive, new File("../eclipse-meta/libs"));
+		copyPluginSources.group = "install";
+		copyPluginSources.dependsOn(sourcesJar);
+		var copyPlugin = new BuildTask("copyPlugin");
+		copyPlugin.group = "install";
+		copyPlugin.dependsOn(copyPluginJar);
+		copyPlugin.dependsOn(copyPluginSources);
 		
 	}
 	
@@ -50,7 +63,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		// package only metabuild-core-X-api.jar
 		packageExecutable();
-		jar.classpathPredicate = f -> f.getName().contains("metabuild-core") && f.getName().endsWith("-api.jar");
+		jar.includePredicate = f -> f.getName().contains("metabuild-core") && f.getName().endsWith("-api.jar");
 		
 	}
 	

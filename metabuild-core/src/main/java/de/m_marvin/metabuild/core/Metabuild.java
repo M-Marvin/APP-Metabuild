@@ -279,12 +279,11 @@ public final class Metabuild implements IMeta {
 	}
 	
 	public void setConsoleInputTarget(OutputStream target) {
-		if (getState() != MetaState.PREINIT)
-			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
 		this.consoleStreamTarget = target;
 		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
 			ForkJoinPool.commonPool().execute(() -> {
 				try {
+					this.consolePipeClosed = false;
 					while (this.consoleStreamTarget != null) {
 						this.consoleStreamTarget.write(this.consoleStream.read());
 						this.consoleStreamTarget.flush();

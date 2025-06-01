@@ -30,7 +30,7 @@ public class CppLinkTask extends CommandLineTask {
 	
 	public CppLinkTask(String name) {
 		super(name);
-		this.type = TaskType.named("COMPILE_CPP");
+		this.type = TaskType.named("LINK_CPP");
 	}
 	
 	@Override
@@ -52,6 +52,9 @@ public class CppLinkTask extends CommandLineTask {
 			if (objectTime.isEmpty()) {
 				return TaskState.OUTDATED;
 			}
+			if (objectTime.get().compareTo(outputTime.get()) > 0) {
+				return TaskState.OUTDATED;
+			}
 		}
 		
 		return TaskState.UPTODATE;
@@ -69,14 +72,18 @@ public class CppLinkTask extends CommandLineTask {
 		this.arguments.add(output.getAbsolutePath());
 		this.arguments.addAll(this.options);
 		
-		for (File libraryDir : this.libraryDirs) {
-			File libPath = FileUtility.absolute(libraryDir);
-			this.arguments.add("-L\"" + libPath.getAbsolutePath() + "\"");
+		Set<File> libraryDirectories = new HashSet<File>();
+		Set<String> librariesFromPaths = new HashSet<>();
+		for (File libPath : FileUtility.parseFilePaths(this.libraryDirs)) {
+			if (libPath.isFile()) {
+				librariesFromPaths.add(libPath.getName());
+				libPath = libPath.getParentFile();
+			}
+			libraryDirectories.add(libPath);
 		}
-		
-		for (String library : this.libraries) {
-			this.arguments.add("-l" + library);
-		}
+		libraryDirectories.forEach(d -> this.arguments.add("-L\"" + d.getAbsolutePath() + "\""));
+		librariesFromPaths.forEach(l -> this.arguments.add("-l" + l));
+		this.libraries.forEach(l -> this.arguments.add("-l" + l));
 		
 		return super.buildCommand();
 	}

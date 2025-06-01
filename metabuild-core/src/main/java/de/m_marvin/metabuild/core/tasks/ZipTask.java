@@ -176,7 +176,8 @@ public class ZipTask extends BuildTask {
 			this.toInclude.add(file);
 		}
 		
-		return (timestamp.isEmpty() || lasttime.isEmpty() || timestamp.get().compareTo(lasttime.get()) > 0) ? TaskState.OUTDATED : TaskState.UPTODATE;
+		boolean outdatedFiles = lasttime.isEmpty() || !timestamp.isEmpty() && timestamp.get().compareTo(lasttime.get()) > 0;
+		return outdatedFiles ? TaskState.OUTDATED : TaskState.UPTODATE;
 	}
 	
 	@Override

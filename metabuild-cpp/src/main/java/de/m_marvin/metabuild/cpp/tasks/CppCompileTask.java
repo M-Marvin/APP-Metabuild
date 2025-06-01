@@ -9,41 +9,36 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.CommandLineTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.core.util.HashUtility;
 
 public class CppCompileTask extends CommandLineTask {
 
-	public File sourcesDir = new File("src/cpp");
-	public File objectsDir = new File("objects");
-	public final Set<File> includeDirs = new HashSet<>();
-	public Predicate<File> sourceFilePredicate = file -> {
+	public File sourcesDir = new File("src");
+	public Predicate<File> sourcePredicate = file -> {
 		String extension = FileUtility.getExtension(file);
 		return extension.equalsIgnoreCase("cpp") || extension.equalsIgnoreCase("c");
 	};
+	public File objectsDir = new File("objects");
+	public final List<File> includes = new ArrayList<File>();
 	public File stateCache = null; // if not set, will be set by prepare
 	public final List<String> options = new ArrayList<>();
 	public String sourceStandard = null; // if not set, let the compiler decide
@@ -62,6 +57,7 @@ public class CppCompileTask extends CommandLineTask {
 		return FileUtility.absolute(this.stateCache, FileUtility.absolute(this.objectsDir));
 	}
 	
+	// TODO XML format for object metadata
 	protected void loadMetadata() {
 		this.sourceMetadata = new HashMap<>();
 		try {
@@ -98,18 +94,11 @@ public class CppCompileTask extends CommandLineTask {
 		
 		// Search for source code files
 		File srcPath = FileUtility.absolute(this.sourcesDir);
-		List<File> sourceFiles = FileUtility.deepList(srcPath, this.sourceFilePredicate);
-
+		List<File> sourceFiles = FileUtility.deepList(srcPath, this.sourcePredicate);
+		
 		// Generate and load object meta data cache file name if not set
 		if (this.stateCache == null) {
-			String hash = "";
-			try {
-				ByteBuffer buf = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(this.sourcesDir.getPath().getBytes(StandardCharsets.UTF_8)));
-				hash = Stream.generate(() -> buf.get()).limit(buf.capacity()).mapToInt(b -> b & 0xFF).mapToObj(i -> String.format("%02x", i)).reduce(String::concat).get();
-			} catch (NoSuchAlgorithmException e) {
-				logger().warnt(logTag(), "failed to generate hash name for object state cache: %s", this.objectsDir, e);
-			}
-			this.stateCache = new File("../" + hash + ".objectmeta");
+			this.stateCache = new File("../" + HashUtility.hash(this.sourcesDir.toString()) + ".objectmeta");
 		}
 		loadMetadata();
 		
@@ -186,7 +175,7 @@ public class CppCompileTask extends CommandLineTask {
 	public Collection<File> allIncludes() {
 		List<File> includes = new ArrayList<File>();
 		includes.addAll(systemIncludes());
-		includes.addAll(this.includeDirs.stream().map(FileUtility::absolute).toList());
+		includes.addAll(FileUtility.parseFilePaths(this.includes));
 		return includes;
 	}
 	
@@ -211,7 +200,7 @@ public class CppCompileTask extends CommandLineTask {
 			this.arguments.add("-std=" + this.sourceStandard);
 		this.arguments.addAll(this.options);
 		
-		for (File include : this.includeDirs) {
+		for (File include : FileUtility.parseFilePaths(this.includes)) {
 			File includeDir = FileUtility.absolute(include);
 			this.arguments.add("-I\"" + includeDir.getAbsolutePath() + "\"");
 		}

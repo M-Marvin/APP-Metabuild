@@ -1,0 +1,35 @@
+import de.m_marvin.metabuild.cpp.script.CppMultiTargetBuildScript;
+import de.m_marvin.metabuild.maven.Maven;
+import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
+
+public class Buildfile extends CppMultiTargetBuildScript {
+	
+	@Override
+	public void init() {
+		
+		projectName = "cpp-test";
+		
+		withSourcesZip();
+		
+		TargetConfig target = makeTarget("WinAMD64", "cpp-test.exe");
+		target.compileCpp.compiler = "g++";
+		target.linkCpp.linker = "g++";
+		
+		target = makeTarget("LinAMD64", "cpp-test");
+		target.compileCpp.compiler = "x86_64-linux-gnu-g++";
+		target.linkCpp.linker = "x86_64-linux-gnu-g++";
+		
+		super.init();
+		
+	}
+	
+	@Override
+	public void publishing(MavenPublishTask publish, String config) {
+		
+		publish.repository(Maven.mavenLocal());
+		
+		publish.coordinates("de.m_marvin.test:cpp-test-" + config.toLowerCase() +":1.0");
+		
+	}
+	
+}

@@ -19,6 +19,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
+import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.util.FileUtility;
 
@@ -40,6 +41,9 @@ public class ZipTask extends BuildTask {
 	
 	protected boolean archiveFile(ZipOutputStream zstream, String eloc, File file) throws IOException {
 		try {
+
+			status("archiving > " + file.getPath());
+			
 			long size = file.length();
 			
 			ZipEntry zipEntry = new ZipEntry(eloc);
@@ -65,6 +69,9 @@ public class ZipTask extends BuildTask {
 	
 	protected boolean archiveInclude(ZipOutputStream zstream, ZipInputStream archive, ZipEntry entry) throws IOException {
 		try {
+
+			status("archiving > " + entry.getName());
+			
 			zstream.putNextEntry(new ZipEntry(entry.getName()));
 			byte[] buffer = new byte[2048];
 			int len;
@@ -143,6 +150,9 @@ public class ZipTask extends BuildTask {
 	@Override
 	public TaskState prepare() {
 		
+		if (this.toArchive != null)
+			return this.toArchive.isEmpty() ? TaskState.UPTODATE : TaskState.OUTDATED;
+		
 		File archiveFile = FileUtility.absolute(this.archive);
 		Optional<FileTime> lasttime = FileUtility.timestamp(archiveFile);
 		Optional<FileTime> timestamp = Optional.empty();
@@ -150,6 +160,8 @@ public class ZipTask extends BuildTask {
 		// Get files to archive and determine timestamp
 		this.toArchive = new HashMap<>();
 		for (var entry : this.entries.entrySet()) {
+			if (entry.getKey() == null || entry.getValue() == null)
+				throw BuildScriptException.msg("no null entries allowed in ZipTask: %s - %s", entry.getKey(), entry.getValue());
 			File eloc = new File(entry.getValue());
 			File oloc = FileUtility.absolute(entry.getKey());
 			for (File file : FileUtility.deepList(oloc, f -> f.isFile() && this.entryPredicate.test(f))) {
@@ -167,6 +179,8 @@ public class ZipTask extends BuildTask {
 		
 		// Get archives and directories to include and determine timestamp
 		this.toInclude = new HashSet<>();
+		if (this.includes.contains(null))
+			throw BuildScriptException.msg("no null entries allowed in ZipTask includes");
 		for (File file : FileUtility.parseFilePaths(this.includes)) {
 			for (File file1 : FileUtility.deepList(file, f -> f.isFile() && this.includePredicate.test(f))) {
 				Optional<FileTime> filetime = FileUtility.timestamp(file1);
@@ -205,6 +219,11 @@ public class ZipTask extends BuildTask {
 			throw BuildException.msg(e, "failed to create archive file: %s", this.archive);
 		}
 		
+	}
+	
+	@Override
+	protected void cleanup() {
+		this.toArchive = null;
 	}
 	
 }

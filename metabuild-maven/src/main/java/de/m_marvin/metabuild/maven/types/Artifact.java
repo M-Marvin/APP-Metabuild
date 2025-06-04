@@ -143,7 +143,7 @@ public class Artifact {
 		}
 	}
 	
-	private static final Pattern GAVCE_PATTERN = Pattern.compile("(?<group>[^: ]+):(?<artifact>[^: ]+)(:(?<classifier>[^: ]*)(:(?<extension>[^: ]+))?)?:(?<version>[^: ]+)");
+	private static final Pattern GAVCE_PATTERN = Pattern.compile("(?<group>[^: ]+):(?<artifact>[^: ]+)(:(?<classifier>[^: ]*)(:(?<extension>[^: ]*))?)?:(?<version>[^: ]+)");
 	
 	public static Artifact of(String gavce) throws MavenException {
 		Matcher m = GAVCE_PATTERN.matcher(gavce);

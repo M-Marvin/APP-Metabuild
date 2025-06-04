@@ -1,6 +1,7 @@
 import de.m_marvin.metabuild.cpp.script.CppMultiTargetBuildScript;
 import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
+import de.m_marvin.metabuild.maven.tasks.MavenResolveTask;
 
 public class Buildfile extends CppMultiTargetBuildScript {
 	
@@ -29,6 +30,22 @@ public class Buildfile extends CppMultiTargetBuildScript {
 		publish.repository(Maven.mavenLocal());
 		
 		publish.coordinates("de.m_marvin.test:cpp-test-" + config.toLowerCase() +":1.0");
+		
+	}
+	
+	@Override
+	public void repositories(MavenResolveTask dependencies, String config) {
+
+		dependencies.repository(Maven.mavenLocal());
+
+	}
+	
+	@Override
+	public void dependenciesa(MavenResolveTask dependencies, String config) {
+
+		dependencies.implementation("de.m_marvin.test:cpp-test-" + config.toLowerCase() + "::zip:1.0");
+		dependencies.implementation("de.m_marvin.test:cpp-test-" + config.toLowerCase() + ":sources:zip:1.0");
+		dependencies.implementation("de.m_marvin.test:cpp-test-" + config.toLowerCase() + ":headers:zip:1.0");
 		
 	}
 	

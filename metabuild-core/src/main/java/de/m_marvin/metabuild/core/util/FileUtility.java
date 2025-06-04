@@ -43,8 +43,8 @@ public class FileUtility {
 	}
 	
 	public static List<File> deepList(File path, Predicate<File> pred) {
-		Objects.requireNonNull(path);
-		Objects.requireNonNull(pred);
+		Objects.requireNonNull(path, "path can not be null");
+		Objects.requireNonNull(pred, "pred can not be null");
 		List<File> files = new ArrayList<>();
 		if (pred.test(path)) files.add(path);
 		if (path.isDirectory()) {
@@ -60,24 +60,24 @@ public class FileUtility {
 	}
 	
 	public static File absolute(File path) {
-		Objects.requireNonNull(path);
+		Objects.requireNonNull(path, "path can not be null");
 		return absolute(path, Metabuild.get().buildWorkingDir());
 	}
 
 	public static File absolute(File path, File base) {
-		Objects.requireNonNull(path);
-		Objects.requireNonNull(base);
+		Objects.requireNonNull(path, "path can not be null");
+		Objects.requireNonNull(base, "base can not be null");
 		return Paths.get(base.getPath()).resolve(path.getPath()).normalize().toFile();
 	}
 	
 	public static File relative(File path) {
-		Objects.requireNonNull(path);
+		Objects.requireNonNull(path, "from can not be null");
 		return relative(path, Metabuild.get().buildWorkingDir());
 	}
 	
 	public static File relative(File path, File base) {
-		Objects.requireNonNull(path);
-		Objects.requireNonNull(base);
+		Objects.requireNonNull(path, "path can not be null");
+		Objects.requireNonNull(base, "base can not be null");
 		return Paths.get(base.getPath()).relativize(Paths.get(path.getPath())).toFile();
 	}
 	
@@ -91,7 +91,7 @@ public class FileUtility {
 	}
 	
 	public static Optional<FileTime> timestamp(File file) {
-		Objects.requireNonNull(file);
+		Objects.requireNonNull(file, "file can not be null");
 		try {
 			if (!file.isFile()) return Optional.empty();
 			BasicFileAttributes atr = Files.readAttributes(Paths.get(file.getPath()), BasicFileAttributes.class);
@@ -102,6 +102,7 @@ public class FileUtility {
 	}
 	
 	public static Optional<FileTime> timestampDir(File directory) {
+		Objects.requireNonNull(directory, "directory can not be null");
 		if (directory.isFile()) return timestamp(directory);
 		var latest = deepList(directory).stream().map(FileUtility::timestamp).reduce(FileUtility::latest);
 		if (latest.isEmpty()) return Optional.empty();
@@ -135,13 +136,13 @@ public class FileUtility {
 	}
 	
 	public static void touch(File file) {
-		Objects.requireNonNull(file);
+		Objects.requireNonNull(file, "file can not be null");
 		touch(file, FileTime.fromMillis(System.currentTimeMillis()));
 	}
 	
 	public static void touch(File file, FileTime timestamp) {
-		Objects.requireNonNull(file);
-		Objects.requireNonNull(timestamp);
+		Objects.requireNonNull(file, "file can not be null");
+		Objects.requireNonNull(timestamp, "timestamp can not be null");
 		if (file.isFile()) {
 			try {
 				Files.setLastModifiedTime(Paths.get(file.getPath()), timestamp);
@@ -152,7 +153,7 @@ public class FileUtility {
 	}
 	
 	public static String getExtension(File path) {
-		Objects.requireNonNull(path);
+		Objects.requireNonNull(path, "path can not be null");
 		if (path.isDirectory()) return "";
 		String name = path.getName();
 		int i = name.lastIndexOf('.');
@@ -162,7 +163,7 @@ public class FileUtility {
 	
 	
 	public static String getNameNoExtension(File path) {
-		Objects.requireNonNull(path);
+		Objects.requireNonNull(path, "path can not be null");
 		if (path.isDirectory()) return path.getName();
 		String name = path.getName();
 		int i = name.lastIndexOf('.');
@@ -171,14 +172,17 @@ public class FileUtility {
 	}
 	
 	public static File changeExtension(File file, String ext) {
-		Objects.requireNonNull(file);
-		Objects.requireNonNull(ext);
+		Objects.requireNonNull(file, "file can not be null");
+		Objects.requireNonNull(ext, "ext can not be null");
 		File path = file.getParentFile();
 		String name = getNameNoExtension(file);
 		return new File(path, name + (ext.isBlank() ? "" : "." + ext));
 	}
 
 	protected static boolean relocate(File from, File to, boolean rename, boolean copy) {
+		Objects.requireNonNull(from, "from can not be null");
+		Objects.requireNonNull(to, "to can not be null");
+		
 		File t = rename ? to : new File(to, from.getName());
 		if (from.isDirectory()) {
 			if (!t.exists() && !t.mkdirs()) return false;
@@ -208,6 +212,8 @@ public class FileUtility {
 	}
 	
 	public static boolean delete(File file) {
+		Objects.requireNonNull(file, "file can not be null");
+		
 		if (file.isDirectory()) {
 			for (File f : file.listFiles()) {
 				if (!delete(f)) return false;
@@ -217,22 +223,36 @@ public class FileUtility {
 	}	
 
 	public static boolean move(File from, File to) {
+		Objects.requireNonNull(from, "from can not be null");
+		Objects.requireNonNull(to, "to can not be null");
+		
 		return move(from, to, false);
 	}
 
 	public static boolean move(File from, File to, boolean rename) {
+		Objects.requireNonNull(from, "from can not be null");
+		Objects.requireNonNull(to, "to can not be null");
+		
 		return relocate(from, to, rename, false);
 	}
 
 	public static boolean copy(File from, File to) {
+		Objects.requireNonNull(from, "from can not be null");
+		Objects.requireNonNull(to, "to can not be null");
+		
 		return copy(from, to, false);
 	}
 	
 	public static boolean copy(File from, File to, boolean rename) {
+		Objects.requireNonNull(from, "from can not be null");
+		Objects.requireNonNull(to, "to can not be null");
+		
 		return relocate(from, to, rename, true);
 	}
 	
 	public static Optional<File> locateOnPath(String nameOrPath) {
+		Objects.requireNonNull(nameOrPath, "nameOrPath can not be null");
+		
 		File f = new File(nameOrPath);
 		if (f.isFile()) return Optional.of(f);
 		f = absolute(f);
@@ -251,6 +271,8 @@ public class FileUtility {
 	}
 	
 	public static boolean isArchive(File file) {
+		Objects.requireNonNull(file, "file can not be null");
+		
 		if (!file.isFile()) return false;
 		try {
 			new ZipFile(file).close();
@@ -261,6 +283,8 @@ public class FileUtility {
 	}
 	
 	public static String readFileUTF(File file) {
+		Objects.requireNonNull(file, "file can not be null");
+		
 		try {
 			InputStream is = new FileInputStream(file);
 			String utf = new String(is.readAllBytes(), StandardCharsets.UTF_8);
@@ -272,6 +296,9 @@ public class FileUtility {
 	}
 	
 	public static boolean writeFileUTF(File file, String utf) {
+		Objects.requireNonNull(file, "file can not be null");
+		Objects.requireNonNull(utf, "utf can not be null");
+		
 		try {
 			OutputStream os = new FileOutputStream(file);
 			os.write(utf.getBytes(StandardCharsets.UTF_8));
@@ -289,6 +316,8 @@ public class FileUtility {
 	}
 	
 	public static Collection<File> parseFilePaths(Collection<File> filepath) {
+		Objects.requireNonNull(filepath, "filepath can not be null");
+		
 		return filepath.stream()
 				.flatMap(entry -> {
 					File fpath = absolute(entry);
@@ -303,6 +332,9 @@ public class FileUtility {
 	}
 	
 	public static Collection<File> parseFilePaths(Collection<File> filepath, File base) {
+		Objects.requireNonNull(filepath, "filepath can not be null");
+		Objects.requireNonNull(base, "base can not be null");
+		
 		return filepath.stream()
 				.flatMap(entry -> {
 					File fpath = absolute(entry, base);
@@ -319,6 +351,8 @@ public class FileUtility {
 	public static final URI METABUILD_FILEPATH_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild/filepath");
 	
 	public static Collection<File> loadFilePath(File filepath) {
+		Objects.requireNonNull(filepath, "filepath can not be null");
+
 		try {
 			Set<String> entries = new HashSet<>();
 			XMLInputStream xml = new XMLInputStream(new FileInputStream(filepath));
@@ -358,6 +392,9 @@ public class FileUtility {
 	}
 	
 	public static boolean writeFilePath(File filepathFile, Collection<File> entries) {
+		Objects.requireNonNull(filepathFile, "filepathFile can not be null");
+		Objects.requireNonNull(entries, "entries can not be null");
+		
 		try {
 			XMLOutputStream xml = new XMLOutputStream(new FileOutputStream(filepathFile));
 			xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_FILEPATH_NAMESPACE, "filepath", null));

@@ -136,6 +136,14 @@ public class CppCompileTask extends CommandLineTask {
 			}
 			this.compile.add(sourceFile);
 		}
+
+		// Try to locate compiler executable
+		Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
+		if (compilerPath.isEmpty()) {
+			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
+		}
+		this.executable = compilerPath.get();
+		logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
 		
 		return this.compile.size() > 0 ? TaskState.OUTDATED : TaskState.UPTODATE;
 		
@@ -210,14 +218,6 @@ public class CppCompileTask extends CommandLineTask {
 	
 	@Override
 	public boolean run() {
-
-		// Try to locate compiler executable
-		Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
-		if (compilerPath.isEmpty()) {
-			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
-		}
-		this.executable = compilerPath.get();
-		logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
 		
 		for (File removedObj : this.removed) {
 			this.sourceMetadata.remove(removedObj).delete();
@@ -235,6 +235,8 @@ public class CppCompileTask extends CommandLineTask {
 			if (!objectDir.isDirectory() && !objectDir.mkdirs()) {
 				throw BuildException.msg("unable to create object output directory: %s", objectDir.getAbsolutePath());
 			}
+
+			status("compiling > " + sourceFile.getPath());
 			
 			if (!super.run()) success = false;
 		}

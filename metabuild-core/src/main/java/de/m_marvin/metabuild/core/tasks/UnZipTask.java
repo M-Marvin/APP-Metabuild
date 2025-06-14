@@ -26,6 +26,7 @@ public class UnZipTask extends BuildTask {
 	public File output = new File("out");
 	public Predicate<File> extractPredicate = z -> true;
 	public boolean passtroughNonArchive = true;
+	public boolean passtroughFolders = false;
 	public boolean deleteUnexpectedFiles = true;
 	
 	protected List<File> toExtract = null;
@@ -46,9 +47,14 @@ public class UnZipTask extends BuildTask {
 			zip.close();
 			return files;
 		} catch (Exception e) {
-			File outputFile = new File(this.output, archiveFile.getName());
-			if (this.passtroughNonArchive && this.extractPredicate.test(outputFile))
-				return Collections.singleton(outputFile);
+			if (archiveFile.isDirectory() && this.passtroughFolders) {
+				return FileUtility.deepList(archiveFile).stream().map(f -> FileUtility.concat(this.output, FileUtility.relative(f, archiveFile))).toList();
+			} else if (archiveFile.isFile()) {
+				File outputFile = new File(this.output, archiveFile.getName());
+				if (this.passtroughNonArchive && this.extractPredicate.test(outputFile))
+					return FileUtility.deepList(outputFile);
+				return Collections.emptyList();
+			}
 			return Collections.emptyList();
 		}
 	}
@@ -66,9 +72,9 @@ public class UnZipTask extends BuildTask {
 		
 		for (File archiveFile : archiveFiles) {
 			
-			if (!archiveFile.isFile()) continue;
 			if (!FileUtility.isArchive(archiveFile) && !this.passtroughNonArchive) continue;
-			Optional<FileTime> timestamp = FileUtility.timestamp(archiveFile);
+			if (archiveFile.isDirectory() && !this.passtroughFolders) continue;
+			Optional<FileTime> timestamp = archiveFile.isFile() ? FileUtility.timestamp(archiveFile) : FileUtility.timestampDir(archiveFile);
 			
 			boolean missing = false;
 			FileTime outputTimetstamp = null;
@@ -83,13 +89,12 @@ public class UnZipTask extends BuildTask {
 				if (outputTimetstamp == null || outputTimetstamp.compareTo(outTime.get()) > 0)
 					outputTimetstamp = outTime.get();
 			}
-
-			boolean outdated = missing || timestamp.isEmpty() || (outputTimetstamp != null && outputTimetstamp.compareTo(timestamp.get()) < 0);
 			
+			boolean outdated = missing || timestamp.isEmpty() || (outputTimetstamp != null && outputTimetstamp.compareTo(timestamp.get()) < 0);
 			if (outdated) this.toExtract.add(archiveFile);
 			
 		}
-
+		
 		return this.toExtract.isEmpty() ? TaskState.UPTODATE : TaskState.OUTDATED;
 		
 	}
@@ -103,7 +108,7 @@ public class UnZipTask extends BuildTask {
 		
 		// Delete files which are not part of the files extracted from the archives
 		if (this.deleteUnexpectedFiles) {
-			for (File file : FileUtility.deepList(outputFolder, f -> this.filesExpected.contains(f))) {
+			for (File file : FileUtility.deepList(outputFolder, f -> f.isFile() && !this.filesExpected.contains(f))) {
 				logger().debugt(logTag(), "delete unexpected file from archive output: %s", file);
 				if (!FileUtility.delete(file)) {
 					logger().errort(logTag(), "unable to delete file!");
@@ -116,11 +121,27 @@ public class UnZipTask extends BuildTask {
 		for (File archiveFile : this.toExtract) {
 			
 			if (!FileUtility.isArchive(archiveFile)) {
-				
-				if (this.extractPredicate.test(new File(outputFolder, archiveFile.getName()))) {
 
-					logger().debugt(logTag(), "copy non archive file: %s -> %s", archiveFile, this.output);
-					return FileUtility.copy(archiveFile, outputFolder);
+				if (archiveFile.isDirectory() && this.passtroughFolders) {
+
+					logger().debugt(logTag(), "copy non archive files: %s -> %s", archiveFile, this.output);
+					
+					for (File file : FileUtility.deepList(archiveFile)) {
+						File f = FileUtility.concat(outputFolder, FileUtility.relative(file, archiveFile));
+						if (this.extractPredicate.test(f)) {
+							if (!f.getParentFile().isDirectory()) f.getParentFile().mkdirs();
+							if (!FileUtility.copy(file, f.getParentFile())) return false;
+						}
+					}
+					
+				} else if (archiveFile.isFile()) {
+
+					if (this.extractPredicate.test(new File(outputFolder, archiveFile.getName()))) {
+
+						logger().debugt(logTag(), "copy non archive file: %s -> %s", archiveFile, this.output);
+						if (!FileUtility.copy(archiveFile, outputFolder)) return false;
+						
+					}
 					
 				}
 				
@@ -147,7 +168,6 @@ public class UnZipTask extends BuildTask {
 						}
 					}
 					zstream.close();
-					return true;
 				} catch (IOException e) {
 					throw BuildException.msg(e, "unable to extract archive: %s", archiveFile);
 				}

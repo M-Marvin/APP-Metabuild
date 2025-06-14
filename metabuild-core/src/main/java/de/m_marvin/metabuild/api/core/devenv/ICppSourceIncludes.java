@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.api.core.devenv;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 public interface ICppSourceIncludes extends ISourceIncludes {
 
@@ -13,5 +14,6 @@ public interface ICppSourceIncludes extends ISourceIncludes {
 	}
 	
 	public List<File> getIncludeDirectories();
+	public Map<String, String> getSymbols();
 	
 }

@@ -41,6 +41,7 @@ public class CppCompileTask extends CommandLineTask {
 	public final List<File> includes = new ArrayList<File>();
 	public File stateCache = null; // if not set, will be set by prepare
 	public final List<String> options = new ArrayList<>();
+	public final Map<String, String> symbols = new HashMap<String, String>();
 	public String sourceStandard = null; // if not set, let the compiler decide
 	public String compiler = "g++";
 
@@ -183,8 +184,20 @@ public class CppCompileTask extends CommandLineTask {
 	public Collection<File> allIncludes() {
 		List<File> includes = new ArrayList<File>();
 		includes.addAll(systemIncludes());
-		includes.addAll(FileUtility.parseFilePaths(this.includes));
+		includes.addAll(FileUtility.parseFilePaths(this.includes).stream().filter(File::isDirectory).toList());
 		return includes;
+	}
+	
+	public void define(String definition) {
+		this.symbols.put(definition, null);
+	}
+
+	public void define(String definition, String value) {
+		this.symbols.put(definition, value);
+	}
+	
+	public Map<String, String> symbols() {
+		return this.symbols;
 	}
 	
 	@Override
@@ -208,9 +221,20 @@ public class CppCompileTask extends CommandLineTask {
 			this.arguments.add("-std=" + this.sourceStandard);
 		this.arguments.addAll(this.options);
 		
+		for (var e : this.symbols.entrySet()) {
+			this.arguments.add("-D");
+			if (e.getValue() != null) {
+				this.arguments.add(e.getKey());
+			} else {
+				this.arguments.add(e.getKey() + "=" + e.getValue());
+			}
+		}
+		
 		for (File include : FileUtility.parseFilePaths(this.includes)) {
+			if (!include.isDirectory()) continue;
 			File includeDir = FileUtility.absolute(include);
-			this.arguments.add("-I\"" + includeDir.getAbsolutePath() + "\"");
+			this.arguments.add("-I");
+			this.arguments.add("\"" + includeDir.getAbsolutePath() + "\"");
 		}
 		
 		return super.buildCommand();

@@ -48,6 +48,7 @@ public class JavaCompileTask extends BuildTask {
 
 	public File sourcesDir = new File("src/java");
 	public File classesDir = new File("classes/default");
+	public File headersDir = null;
 	public final List<String> options = new ArrayList<>();
 	public final List<File> classpath = new ArrayList<>();
 	public File stateCache = null; // if not set, will be set by prepare
@@ -347,6 +348,14 @@ public class JavaCompileTask extends BuildTask {
 		// Add output directory to compiler options
 		this.options.add("-d");
 		this.options.add(classPath.getAbsolutePath());
+		
+		// Add header directory to compiler options
+		if (this.headersDir != null) {
+			File headerFolder = FileUtility.absolute(this.headersDir);
+			headerFolder.mkdirs();
+			this.options.add("-h");
+			this.options.add(headerFolder.getAbsolutePath());
+		}
 		
 		// Add compatibility options
 		if (this.sourceCompatibility != null) {

@@ -5,10 +5,10 @@ import de.m_marvin.metabuild.maven.xml.POM;
 public enum Scope {
 	
 	COMPILE(POM.Dependency.Scope.COMPILE),
-	PROVIDED(POM.Dependency.Scope.COMPILE),
-	RUNTIME(POM.Dependency.Scope.COMPILE),
-	TEST(POM.Dependency.Scope.COMPILE),
-	SYSTEM(POM.Dependency.Scope.COMPILE);
+	PROVIDED(POM.Dependency.Scope.PROVIDED),
+	RUNTIME(POM.Dependency.Scope.RUNTIME),
+	TEST(POM.Dependency.Scope.TEST),
+	SYSTEM(POM.Dependency.Scope.SYSTEM);
 	
 	private final POM.Dependency.Scope mavenScope;
 	

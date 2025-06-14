@@ -40,6 +40,7 @@ public class JavaBuildScript extends BuildScript {
 		compileJava.group = "build";
 		compileJava.sourcesDir = new File("src/main/java");
 		compileJava.classesDir = new File("build/classes/main/java");
+		compileJava.headersDir = new File("build/headers/main/java");
 		compileJava.classpath.add(dependencies.fpCompiletime);
 		compileJava.dependsOn(dependencies);
 		

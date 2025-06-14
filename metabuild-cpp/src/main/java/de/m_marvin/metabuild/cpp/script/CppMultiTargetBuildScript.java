@@ -3,6 +3,7 @@ package de.m_marvin.metabuild.cpp.script;
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -13,6 +14,7 @@ import de.m_marvin.metabuild.core.tasks.UnZipTask;
 import de.m_marvin.metabuild.core.tasks.FileTask.Action;
 import de.m_marvin.metabuild.core.tasks.ZipTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
+import de.m_marvin.metabuild.cpp.CppSourceIncludes;
 import de.m_marvin.metabuild.cpp.tasks.CppCompileTask;
 import de.m_marvin.metabuild.cpp.tasks.CppLinkTask;
 import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
@@ -86,6 +88,22 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		
 	}
 	
+	@Override
+	public void finish() {
+		
+		List<File> includes = this.targets.values().stream()
+				.filter(target -> target.compileCpp.didRun())
+				.flatMap(target -> target.compileCpp.allIncludes().stream())
+				.distinct().toList();
+		Map<String, String> symbols = new HashMap<String, String>();
+		for (var target : this.targets.values()) {
+			if (!target.compileCpp.didRun()) continue;
+			symbols.putAll(target.compileCpp.symbols());
+		}
+		CppSourceIncludes.include(symbols, includes);
+		
+	}
+	
 	public Collection<File> dependencyHeaders() {
 		return null;
 	}
@@ -102,14 +120,14 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		String outputName = FileUtility.getNameNoExtension(new File(binName));
 		
 		target.dependencies = new MavenResolveTask("cppDependencies" + name);
-		target.dependencies.group = "platform";
+		target.dependencies.group = "platformDependencies";
 		target.dependencies.fpCompiletime = new File("build/" + name + "/compile.filepath");
 		target.dependencies.fpRunttime = new File("build/" + name + "/runtime.filepath");
 		target.dependencies.fpTestCompiletime = new File("build/" + name + "/testcompile.filepath");
 		target.dependencies.fpTestRuntime = new File("build/" + name + "/testruntime.filepath");
 		
 		repositories(target.dependencies, name);
-		dependenciesa(target.dependencies, name);
+		dependencies(target.dependencies, name);
 		
 		target.headersUnzip = new UnZipTask("headersUnzip" + name);
 		target.headersUnzip.group = "platform";
@@ -126,8 +144,10 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		target.binaryUnzip.dependsOn(target.dependencies);
 		
 		target.compileCpp = new CppCompileTask("compileCpp" + name);
-		target.compileCpp.group = "platform";
+		target.compileCpp.group = "platformCompile";
+		target.compileCpp.sourcePredicate = this.sourcePredicate;
 		target.compileCpp.includes.add(target.headersUnzip.output);
+		target.compileCpp.includes.add(target.dependencies.fpCompiletime);
 		target.compileCpp.includes.add(this.headers);
 		target.compileCpp.includes.add(this.publics);
 		target.compileCpp.sourcesDir = this.sources;
@@ -139,7 +159,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		target.linkCpp.group = "platform";
 		target.linkCpp.objectsDir = target.compileCpp.objectsDir;
 		target.linkCpp.libraryDirs.add(target.binaryUnzip.output);
-		target.linkCpp.outputFile = new File("build/" + name + "/bin/" + binName);
+		target.linkCpp.outputFile = new File("build/bin/" + binName);
 		target.linkCpp.dependsOn(target.compileCpp, target.binaryUnzip);
 		
 		linking(target.linkCpp, name);
@@ -193,7 +213,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		
 	}
 	
-	public void dependenciesa(MavenResolveTask dependencies, String config) {
+	public void dependencies(MavenResolveTask dependencies, String config) {
 		
 	}
 	

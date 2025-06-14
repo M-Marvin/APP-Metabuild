@@ -39,6 +39,7 @@ import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.metabuild.maven.xml.ArtifactMetadata;
 import de.m_marvin.metabuild.maven.xml.POM;
 import de.m_marvin.metabuild.maven.xml.VersionMetadata;
+import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class MavenPublisher {
@@ -148,6 +149,8 @@ public class MavenPublisher {
 					}
 				}
 				pom.dependencies.dependency.add(dependency);
+				
+				if (tg.scope == Scope.SYSTEM) continue;
 				
 				// Add repository
 				if (tg.graph == null || tg.graph.getResolutionRepository() == null)

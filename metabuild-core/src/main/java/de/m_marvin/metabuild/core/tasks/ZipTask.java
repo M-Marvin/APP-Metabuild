@@ -150,9 +150,6 @@ public class ZipTask extends BuildTask {
 	@Override
 	public TaskState prepare() {
 		
-		if (this.toArchive != null)
-			return this.toArchive.isEmpty() ? TaskState.UPTODATE : TaskState.OUTDATED;
-		
 		File archiveFile = FileUtility.absolute(this.archive);
 		Optional<FileTime> lasttime = FileUtility.timestamp(archiveFile);
 		Optional<FileTime> timestamp = Optional.empty();
@@ -164,8 +161,9 @@ public class ZipTask extends BuildTask {
 				throw BuildScriptException.msg("no null entries allowed in ZipTask: %s - %s", entry.getKey(), entry.getValue());
 			File eloc = new File(entry.getValue());
 			File oloc = FileUtility.absolute(entry.getKey());
+			
 			for (File file : FileUtility.deepList(oloc, f -> f.isFile() && this.entryPredicate.test(f))) {
-				
+
 				Optional<FileTime> filetime = FileUtility.timestamp(file);
 				if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
 					timestamp = filetime;
@@ -173,7 +171,9 @@ public class ZipTask extends BuildTask {
 				File floc = FileUtility.concat(eloc, FileUtility.relative(file, oloc));
 				String ename = floc.getPath().replace('\\', '/');
 				if (ename.startsWith("/")) ename = ename.substring(1);
+				
 				this.toArchive.put(file, ename);
+				
 			}
 		}
 		

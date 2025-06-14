@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.Artifact.DataLevel;
@@ -64,7 +65,7 @@ public class MavenResolver {
 	private TimeUnit metadataExpirationUnit = TimeUnit.SECONDS;
 	private long metadataExpiration = 60;
 	private ResolutionStrategy resolutionStrategy = ResolutionStrategy.REMOTE;
-	private boolean ignoreOptionalDependencies;
+	private boolean ignoreOptionalDependencies = true;
 	private Consumer<String> statusCallback = s -> {};
 	private ZonedDateTime snapshotTimestamp = null;
 	
@@ -189,8 +190,8 @@ public class MavenResolver {
 					if (transitiveGroup.scope == Scope.SYSTEM) {
 						
 						// system dependencies are expected to be available on the system
-						File systemFile = new File(transitive.systemPath);
-						if (!systemFile.isFile()) {
+						File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
+						if (!systemFile.exists()) {
 							logger().warn("failed to find system artifact: %s", systemFile);
 							return false;
 						}

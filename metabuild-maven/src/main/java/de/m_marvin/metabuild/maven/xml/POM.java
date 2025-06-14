@@ -302,13 +302,19 @@ public class POM {
 		return m.replaceAll(r -> {
 			String property = r.group(1);
 			if (property.startsWith("env.")) {
-				return System.getenv(property.substring(4));
+				return System.getenv(property.substring(4)).replace("\\", "\\\\").replace("$", "\\$");
 			} else if (System.getProperties().contains(property)) {
 				return System.getProperty(property);
 			} else {
 				return this.properties.property.getOrDefault(property, "NA");
 			}
 		});
+	}
+	
+	private final static POM DUMMY_POM = new POM();
+	
+	public static String fillPropertiesStatic(String str) {
+		return DUMMY_POM.fillPoperties(str);
 	}
 	
 	/* POM serialization and de-serialization */

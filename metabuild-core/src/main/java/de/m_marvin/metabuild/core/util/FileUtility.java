@@ -37,9 +37,17 @@ import de.m_marvin.metabuild.core.Metabuild;
 public class FileUtility {
 
 	private FileUtility() {}
+
+	public static List<File> deepList(Collection<File> dirs) {
+		return dirs.stream().flatMap(f -> deepList(f).stream()).toList();
+	}
 	
 	public static List<File> deepList(File dir) {
 		return deepList(dir, File::isFile);
+	}
+
+	public static List<File> deepList(Collection<File> dirs, Predicate<File> pred) {
+		return dirs.stream().flatMap(f -> deepList(f, pred).stream()).toList();
 	}
 	
 	public static List<File> deepList(File path, Predicate<File> pred) {
@@ -202,6 +210,7 @@ public class FileUtility {
 					Files.copy(from.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
 				else
 					Files.move(from.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				touch(t);
 				return true;
 			} catch (IOException e) {
 				return false;

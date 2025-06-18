@@ -10,6 +10,7 @@ import de.m_marvin.metabuild.java.JavaSourceIncludes;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
 import de.m_marvin.metabuild.java.tasks.JavaRunClasspathTask;
+import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
 import de.m_marvin.metabuild.maven.tasks.MavenResolveTask;
 
@@ -19,6 +20,7 @@ public class JavaBuildScript extends BuildScript {
 	
 	public MavenResolveTask dependencies;
 	public MavenPublishTask publishMaven;
+	public MavenPublishTask publishMavenLocal;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
 	public JarTask sourcesJar;
@@ -62,6 +64,10 @@ public class JavaBuildScript extends BuildScript {
 		publishMaven = new MavenPublishTask("publishMaven");
 		publishMaven.group = "publish";
 		publishMaven.dependsOn(jar);
+
+		publishMavenLocal = new MavenPublishTask("publishMavenLocal");
+		publishMavenLocal.group = "publish";
+		publishMavenLocal.dependsOn(jar);
 		
 		publishing();
 		
@@ -98,7 +104,8 @@ public class JavaBuildScript extends BuildScript {
 		compileTestJava.classesDir = new File("build/classes/test/java");
 		compileTestJava.headersDir = new File("build/headers/test/java");
 		compileTestJava.classpath.add(dependencies.fpTestCompiletime);
-		compileTestJava.dependsOn(dependencies);
+		compileTestJava.classpath.add(compileJava.classesDir);
+		compileTestJava.dependsOn(compileJava);
 
 		var runTestJava = new JavaRunClasspathTask("runTest");
 		runTestJava.group = "run";
@@ -146,6 +153,10 @@ public class JavaBuildScript extends BuildScript {
 		
 		publishMaven.dependencies(this.dependencies);
 		publishMaven.artifact("", jar.archive);
+
+		publishMavenLocal.dependencies(this.dependencies);
+		publishMavenLocal.artifact("", jar.archive);
+		publishMavenLocal.repository(Maven.mavenLocal());
 		
 	}
 	

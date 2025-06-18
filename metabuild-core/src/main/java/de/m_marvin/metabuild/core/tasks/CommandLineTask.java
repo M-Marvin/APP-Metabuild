@@ -58,7 +58,7 @@ public class CommandLineTask extends BuildTask {
 		try {
 			// Start process
 			logger().debugt(logTag(), "cmd: %s", Stream.of(command).reduce((a, b) -> String.format("%s %s", a, b)).get());
-			int exitCode = ProcessUtility.runProcess(logger(), processBuilder);
+			int exitCode = ProcessUtility.runProcess(logger(), processBuilder, this::shouldAbort);
 			
 			return this.exitCondition.test(exitCode);
 		} catch (MetaScriptException e) {

@@ -132,16 +132,72 @@ public class MavenResolver {
 	}
 	
 	/**
+	 * Attempts to resolve and download all the artifacts for the supplied list of dependency versions using the resolved graph.<br>
+	 * The file path to the downloaded artifacts is put into the supplied list.
+	 * @param graph The graph to resolve the list of dependency versions against
+	 * @param dependencyVersions The list of dependency versions to resolve and download
+	 * @param artifactOutput The list to fill with the artifact file paths
+	 * @param artifactScope The scope to limit the resolution to
+	 * @return true if all dependencies could be resolved and downloaded successfully, false is returned as soon as one resolution fails
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts
+	 */
+	public boolean downloadArtifacts(DependencyGraph graph, Collection<Artifact> dependencyVersions, List<File> artifactOutput, DependencyScope artifactScope) throws MavenException {
+		
+		for (TransitiveGroup transitiveGroup : graph.getTransitiveGroups()) {
+			
+			if (!artifactScope.includes(transitiveGroup.scope)) continue;
+			
+			if (!dependencyVersions.contains(transitiveGroup.group)) continue;
+			
+			for (TransitiveEntry transitive : transitiveGroup.artifacts) {
+				
+				this.statusCallback.accept("resolving > " + transitive.artifact);
+				
+				if (transitiveGroup.scope == Scope.SYSTEM) {
+					
+					// system dependencies are expected to be available on the system
+					File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
+					if (!systemFile.exists()) {
+						logger().warn("failed to find system artifact: %s", systemFile);
+						return false;
+					}
+					
+					artifactOutput.add(systemFile);
+					
+				} else {
+					
+					Repository repository = transitiveGroup.graph.getResolutionRepository();
+					File localArtifact = downloadArtifact(repository, transitive.artifact);
+					if (localArtifact == null) {
+						logger().warn("failed to download artifact: %s", transitive.artifact);
+						return false;
+					}
+					
+					artifactOutput.add(localArtifact);
+					
+				}
+				
+			}
+			
+			if (transitiveGroup.graph != null && !downloadArtifacts(transitiveGroup.graph, dependencyVersions, artifactOutput, artifactScope)) return false;
+			
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * Attempt to resolve all transitive dependencies to a full dependency graph.<br>
-	 * If an list for collecting the artifact paths is supplied, the artifacts are also attempted to download.
+	 * Fills the supplied map with all effectively imported transitive dependency versions and their hierarchical position in the graph three.
 	 * @param graph The top level graph containing the first dependencies to resolve
 	 * @param exclusion An exclusion predicate for direct transitive artifacts to ignore
-	 * @param artifactOutput The list to collect the resolved local cache artifacts, may be null
+	 * @param dependencyVersions The map to fill with the effectively imported transitive dependency versions
+	 * @param priority The priority value which represents the supplied graph in the dependency map, increased by one for each step deeper into the sub-graph tree
 	 * @param artifactScope The scope for which to collect the local artifacts, may be null
 	 * @return true if all dependencies where successfully resolved, false otherwise
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public boolean resolveGraph(DependencyGraph graph, Predicate<Artifact> exclusion, List<File> artifactOutput, DependencyScope artifactScope) throws MavenException {
+	public boolean resolveGraph(DependencyGraph graph, Predicate<Artifact> exclusion, Map<Artifact, Integer> dependencyVersions, int priority, DependencyScope artifactScope) throws MavenException {
 		
 		// attempt to resolve all transitive dependency groups of this graph
 		for (TransitiveGroup transitiveGroup : graph.getTransitiveGroups()) {
@@ -171,48 +227,41 @@ public class MavenResolver {
 				Predicate<Artifact> transitiveExclusion = transitiveGroup.excludes != null ? transitiveGroup.excludes::contains : g -> false;
 				
 				// attempt to resolve child graph of transitive dependency
-				if (!resolveGraph(transitiveGroup.graph, transitiveExclusion, artifactOutput, artifactScope)) {
+				if (!resolveGraph(transitiveGroup.graph, transitiveExclusion, dependencyVersions, priority + 1, artifactScope)) {
 					logger().warn("unable to resolve transitive graphs for artifact group: %s (scope %s)", transitiveGroup.group, transitiveGroup.scope);
 					return false;
 				}
 				
 			}
-
-			// if artifact output configured, download artifacts and add local cache paths
-			if (artifactOutput != null && artifactScope != null) {
-
-				for (TransitiveEntry transitive : transitiveGroup.artifacts) {
-					
-					if (!artifactScope.includes(transitiveGroup.scope)) continue;
-
-					this.statusCallback.accept("resolving > " + transitive.artifact);
-					
-					if (transitiveGroup.scope == Scope.SYSTEM) {
-						
-						// system dependencies are expected to be available on the system
-						File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
-						if (!systemFile.exists()) {
-							logger().warn("failed to find system artifact: %s", systemFile);
-							return false;
-						}
-						
-						artifactOutput.add(systemFile);
-						
-					} else {
-						
-						Repository repository = transitiveGroup.graph.getResolutionRepository();
-						File localArtifact = downloadArtifact(repository, transitive.artifact);
-						if (localArtifact == null) {
-							logger().warn("failed to download artifact: %s", transitive.artifact);
-							return false;
-						}
-						
-						artifactOutput.add(localArtifact);
-						
-					}
-					
+			
+			if (!artifactScope.includes(transitiveGroup.scope)) continue;
+			
+			// check the hierarchical position of this transitive import and add it to the map if required
+			Artifact replacedVersion = null;
+			for (Artifact definedGroup : dependencyVersions.keySet()) {
+				if (	definedGroup.groupId.equals(transitiveGroup.group.groupId) &&
+						definedGroup.artifactId.equals(transitiveGroup.group.artifactId)) {
+					if (	!definedGroup.baseVersion.equals(transitiveGroup.group.baseVersion) &&
+							dependencyVersions.get(definedGroup) > priority)
+						replacedVersion = definedGroup;
+					break;
 				}
-				
+			}
+			if (replacedVersion != null) {
+				dependencyVersions.remove(replacedVersion);
+			}
+			Artifact replacingVersion = null;
+			for (Artifact definedGroup : dependencyVersions.keySet()) {
+				if (	definedGroup.groupId.equals(transitiveGroup.group.groupId) &&
+						definedGroup.artifactId.equals(transitiveGroup.group.artifactId)) {
+					if (	!definedGroup.baseVersion.equals(transitiveGroup.group.baseVersion) &&
+							dependencyVersions.get(definedGroup) <= priority)
+						replacingVersion = definedGroup;
+					break;
+				}
+			}
+			if (replacingVersion == null) {
+				dependencyVersions.put(transitiveGroup.group, priority);
 			}
 			
 		}

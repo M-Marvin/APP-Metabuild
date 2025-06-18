@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -58,6 +59,7 @@ public class MetaProjectNature implements IProjectNature {
 	 * - Run-Configurations for Java projects
 	 * - Run-Configurations for C projects
 	 * - Creation Wizards (Meta C and Meta Java projects)
+	 * - Multi-Project source cross-linking
 	 */
 	
 	public static final String NATURE_ID = "de.m_marvin.eclipsemeta.metaNature";
@@ -318,7 +320,17 @@ public class MetaProjectNature implements IProjectNature {
 						return;
 					}
 					
-					task.accept(SubMonitor.convert(monitor));
+					var taskFuture = CompletableFuture.runAsync(() -> {
+						task.accept(SubMonitor.convert(monitor));
+					});
+					
+					while (!taskFuture.isDone()) {
+						try { Thread.sleep(500); } catch (InterruptedException e) {}
+						if (monitor.isCanceled()) {
+							this.meta.abortTasks();
+							taskFuture.join();
+						}
+					}
 					
 				}
 				

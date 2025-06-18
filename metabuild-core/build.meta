@@ -132,8 +132,8 @@ public class Buildfile extends JavaBuildScript {
 		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
 		
 		// SimpleLogging
-		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3");
-		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3");
+		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3.2");
+		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3.2");
 		
 		// JavaRun
 		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");

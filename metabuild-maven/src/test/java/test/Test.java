@@ -6,7 +6,9 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
@@ -14,6 +16,7 @@ import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
 import de.m_marvin.metabuild.maven.types.Repository;
+import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.Log;
 
@@ -31,8 +34,38 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:sources:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("javax.xml.bind:jaxb-api:javadoc:2.2.4"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.reposerver:reposervertest:0.1.0"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.metabuild:metabuild-core:0.1-SNAPSHOT"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.metabuild:metabuild-core:0.1-SNAPSHOT"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:sources:2.3"), null, null, false);
+
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.commandlineparser:commandlineutility:2.0"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:2.3.1"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.javarun:javarun:1.2"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.basicxml:basicxml:1.1"), null, null, false);
+		
+		graph.addRepository(new Repository(
+				"GHP SimpleLogging",
+				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
+				new Credentials(
+						() -> System.getenv("GITHUB_ACTOR"), 
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
+		
+//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
+//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
+//		
+//		// SimpleLogging
+//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3.1");
+//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3.1");
+//		
+//		// JavaRun
+//		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
+//		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
+//		
+//		// BasicXML
+//		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1");
+//		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.1");
+		
 		
 //		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
 //		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
@@ -60,9 +93,13 @@ public class Test {
 		graph.addRepository(new Repository("Maven Local", new URL("file:///C:/Users/marvi/.m2/repository")));
 		
 		List<File> artifacts = new ArrayList<File>();
+		Map<Artifact, Integer> effective = new HashMap<>();
 		MavenResolver resolver = new MavenResolver(Log.defaultLogger(), local);
 //		resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
-		boolean success = resolver.resolveGraph(graph, r -> false, artifacts, DependencyScope.TEST_COMPILETIME);
+		boolean success = false;
+		if (resolver.resolveGraph(graph, r -> false, effective, 0, DependencyScope.TEST_COMPILETIME)) {
+			success = resolver.downloadArtifacts(graph, effective.keySet(), artifacts, DependencyScope.TEST_COMPILETIME);
+		}
 
 		System.out.println("=> " + success);
 		for (File f : artifacts) {

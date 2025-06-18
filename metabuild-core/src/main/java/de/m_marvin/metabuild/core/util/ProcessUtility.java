@@ -1,9 +1,10 @@
 package de.m_marvin.metabuild.core.util;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
@@ -13,36 +14,35 @@ public class ProcessUtility {
 
 	private ProcessUtility() {}
 	
-	public static int runProcess(Logger logger,  ProcessBuilder processBuilder) throws BuildException {
+	public static int runProcess(Logger logger, ProcessBuilder processBuilder) throws BuildException {
+		return runProcess(logger, processBuilder, () -> false);
+	}
+	
+	public static int runProcess(Logger logger, ProcessBuilder processBuilder, Supplier<Boolean> abortSwitch) throws BuildException {
 		
 		try {
+			
 			// Start process
 			Process process = processBuilder.start();
 			
 			// Pipe output to logger
 			Thread stoutPipe = new Thread(() -> {
-				BufferedReader source = new BufferedReader(new InputStreamReader(process.getInputStream()));
+				InputStreamReader source = new InputStreamReader(process.getInputStream());
 				PrintWriter target = logger.infoPrinterRaw();
-				String line;
 				try {
-					while ((line = source.readLine()) != null) {
-						target.println(line);
-					}
-					source.close();
-					target.close();
-				} catch (IOException e) {}
+					source.transferTo(target);
+				} catch (IOException e) {} finally {
+					target.flush();
+				}
 			}, "PipeStdOut");
 			Thread sterrPipe = new Thread(() -> {
-				BufferedReader source = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+				InputStreamReader source = new InputStreamReader(process.getErrorStream());
 				PrintWriter target = logger.errorPrinterRaw();
-				String line;
 				try {
-					while ((line = source.readLine()) != null) {
-						target.println(line);
-					}
-					source.close();
-					target.close();
-				} catch (IOException e) {}
+					source.transferTo(target);
+				} catch (IOException e) {} finally {
+					target.flush();
+				}
 			}, "PipeStdErr");
 			
 			// Pipe input to process
@@ -55,7 +55,16 @@ public class ProcessUtility {
 			sterrPipe.start();
 			
 			// Wait for process to finish
-			int exitCode = process.waitFor();
+			boolean aborted = false;
+			while (process.isAlive()) {
+				process.waitFor(1, TimeUnit.SECONDS);
+				if (abortSwitch.get()) {
+					process.destroy();
+					aborted = true;
+				}
+			}
+			
+			int exitCode = aborted ? Integer.MIN_VALUE : process.exitValue();
 			
 			// Close pipes
 			Metabuild.get().setConsoleInputTarget(null);

@@ -17,6 +17,7 @@ public class JavaRunClasspathTask extends BuildTask {
 
 	public final List<File> classpath = new ArrayList<>(); 
 	public final List<File> classesDir = new ArrayList<File>();
+	public String javaExecutable = "java";
 	public String mainClass = null;
 	public final List<String> arguments = new ArrayList<>();
 	
@@ -46,14 +47,14 @@ public class JavaRunClasspathTask extends BuildTask {
 		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
 		classpathBuf.append(classpathStr);
 		
-		Optional<String> javaExecutable = ProcessHandle.current().info().command();
+		Optional<File> javaExecutable = FileUtility.locateOnPath(this.javaExecutable);
 		if (javaExecutable.isEmpty()) {
-			logger().errort(logTag(), "failed to get JVM executable!");
+			logger().errort(logTag(), "failed to locate JVM executable: %s", this.javaExecutable);
 			return false;
 		}
 		
 		List<String> commandLine = new ArrayList<>();
-		commandLine.add(javaExecutable.get());
+		commandLine.add(javaExecutable.get().getAbsolutePath());
 		commandLine.add("-classpath");
 		commandLine.add(classpathBuf.toString());
 		commandLine.add(this.mainClass);
@@ -64,8 +65,8 @@ public class JavaRunClasspathTask extends BuildTask {
 		try {
 			// Start process
 			logger().warnt(logTag(), "starting process: %s", this.mainClass);
-			int exitCode = ProcessUtility.runProcess(logger(), processBuilder);
-			
+			logger().debugt(logTag(), "java cmd: %s", commandLine.stream().reduce((a, b) -> a + " " + b).get());
+			int exitCode = ProcessUtility.runProcess(logger(), processBuilder, this::shouldAbort);
 			logger().warnt(logTag(), "process terminated, exit code: %d", exitCode);
 			return true;
 		} catch (MetaScriptException e) {

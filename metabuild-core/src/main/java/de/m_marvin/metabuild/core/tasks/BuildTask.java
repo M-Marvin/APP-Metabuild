@@ -21,6 +21,7 @@ public class BuildTask {
 	public String group;
 
 	protected TaskState state;
+	protected boolean abortRequest;
 	private BuildScript buildscript;
 	private Consumer<String> statusCallback;
 	
@@ -90,6 +91,7 @@ public class BuildTask {
 	
 	public void reset() {
 		this.state = null;
+		this.abortRequest = false;
 	}
 	
 	public boolean didRun() {
@@ -167,8 +169,24 @@ public class BuildTask {
 		try {
 			cleanup();
 		} catch (Exception e) {
-			logger().errort(logTag() + "/cleanup", "task cleanup did throw an exception, this should not happen!");
+			logger().errort(logTag() + "/cleanup", "task cleanup did throw an exception, this should not happen!", e);
 		}
+	}
+
+	/** 
+	 * Called to request the task to abort its current process.
+	 * This will be called from an sepprate thread and should only set some flags to tell the main task to terminate as soon as possible.
+	 * This method should not do any time consuming work or wait for other threads to join.
+	 */
+	protected void abort() {}
+	
+	public void abortTask() {
+		this.abortRequest = true;
+		abort();
+	}
+	
+	protected boolean shouldAbort() {
+		return this.abortRequest;
 	}
 	
 	/**

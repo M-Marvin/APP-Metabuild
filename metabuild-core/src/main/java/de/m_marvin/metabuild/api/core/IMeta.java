@@ -67,6 +67,8 @@ public interface IMeta {
 	public static final String META_PROJECT_PLUGIN_LOCATION = "meta/plugins";
 	public static final String META_SYSTEM_PLUGIN_LOCATION = "plugins";
 	
+	public static final int ABORT_TIMEOUT_SECONDS = 10;
+	
 	/**
 	 * Get a new instance of the metabuild main class.<br>
 	 * Only one instance can exist within a JVM at a time.
@@ -233,5 +235,10 @@ public interface IMeta {
 	 * @return true if and only if all tasks where prepared and executed successfully
 	 */
 	public boolean runTasks(List<String> tasks);
+	
+	/**
+	 * Attempts to abort all currently running tasks, the build system can still start over again.
+	 */
+	public void abortTasks();
 	
 }

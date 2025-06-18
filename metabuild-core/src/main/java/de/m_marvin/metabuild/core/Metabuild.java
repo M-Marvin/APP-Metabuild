@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -24,6 +26,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
@@ -103,6 +106,8 @@ public final class Metabuild implements IMeta {
 	private BlockingQueue<Runnable> taskQueue;
 	/* Executor for build tasks */
 	private ThreadPoolExecutor taskExecutor;
+	/* Set if an external abort request was issued and reset if abort succedded */
+	private boolean doAbort = false;
 	/* Compiler for loading and instantiating build script */
 	private final ScriptCompiler buildCompiler;
 	/* Map of registered tasks of the current build script */
@@ -805,6 +810,14 @@ public final class Metabuild implements IMeta {
 		}
 	}
 	
+	@Override
+	public void abortTasks() {
+		this.doAbort = true;
+		synchronized (this.taskExecutor) {
+			this.taskExecutor.notifyAll();
+		}
+	}
+	
 	/**
 	 * Executes the prepared task tree, from the specified node upwards.
 	 * @param node The node in the task tree to run
@@ -820,12 +833,14 @@ public final class Metabuild implements IMeta {
 				return future;
 			}).toArray(CompletableFuture[]::new)
 		).thenRunAsync(() -> {
+			if (this.doAbort) return; // do not start any more tasks, we are aborting the build
 			if (node.task().isEmpty()) return;
 			asyncEnterBuild(node.task().get().buildscript().buildName);
 			try {
 				if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskStarted(node.task().get().fullName()));
 				boolean result = node.task().get().runTask(
 						status -> statusCallback.forEach(s -> s.taskStatus(node.task().get().fullName(), status)));
+				if (this.doAbort) return; // do not further check results, the task was aborted
 				if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCompleted(node.task().get().fullName()));
 				if (!result) {
 					throw BuildException.msg("task '%s' failed!", node.task().get().fullName());
@@ -864,6 +879,13 @@ public final class Metabuild implements IMeta {
 	@Override
 	public boolean runTasks(List<String> tasks) {
 		
+		this.doAbort = false;
+		
+		/* Prepare tasks for execution, check which ones have to run and build the task tree to execut
+		 * The actual code that runs in the prepare phase usualy does not take very long to cmoplete
+		 * but it still might take a bit to complete.
+		 */
+		
 		stateTransition(MetaState.PREPARE, MetaState.READY);
 		if (!buildTaskTree(tasks)) {
 			logger().errort(LOG_TAG, "could not build task tree, abort build!");
@@ -874,7 +896,22 @@ public final class Metabuild implements IMeta {
 			return false;
 		}
 		
+		if (this.doAbort) {
+			logger().errort(LOG_TAG, "build was aborted");
+			stateTransition(MetaState.READY, MetaState.PREPARE);
+			return false;
+		}
+		
 		if (this.statusCallback != null) this.statusCallback.forEach(s -> s.taskCount(this.task2node.size()));
+		
+		/* Actually run the tasks (uncles this phase is requested to be skipped)
+		 * This might take some very long time depending on the amount of work to complete.
+		 * An abort call while still in this phase causes an abort request to be send to each running task.
+		 * Tasks should terminate as soon as possible when receiving this request, even if this means leaving their work incomplete. 
+		 * 
+		 * If one or more tasks do not respond within the timeout, the build system is forcefully terminated, leaving it in an state
+		 * in which it can potentially not continue to process further requests, an complete reset is required.
+		 */
 		
 		boolean success = false;
 		if (!this.skipTaskRun) {
@@ -889,8 +926,53 @@ public final class Metabuild implements IMeta {
 			
 			try {
 				stateTransition(MetaState.RUN, MetaState.PREPARE);
-				runTaskTree(this.taskTree, new HashMap<Metabuild.TaskNode, CompletableFuture<Void>>()).join();
-				success = true;
+				CompletableFuture<Void> buildTask = runTaskTree(this.taskTree, new HashMap<Metabuild.TaskNode, CompletableFuture<Void>>());
+				
+				// wait for completition
+				while (!buildTask.isDone()) {
+					
+					try {
+						synchronized (this.taskExecutor) {
+							this.taskExecutor.wait(1000);
+						}
+					} catch (InterruptedException e1) {
+						stateTransition(MetaState.ERROR);
+						return false;
+					}
+					
+					if (this.doAbort) {
+						logger().warnt(LOG_TAG, "ABORT OF ALL TASKS REQUESTED");
+						// notify all running tasks to terminate as soon as possible
+						Queue<TaskNode> toNotify = new ArrayDeque<Metabuild.TaskNode>();
+						toNotify.add(this.taskTree);
+						while (toNotify.size() > 0) {
+							TaskNode task = toNotify.poll();
+							toNotify.addAll(task.dep());
+							if (task.task().isPresent())
+								task.task().get().abortTask();
+						}
+						// await task termination
+						try {
+							buildTask.orTimeout(ABORT_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
+						} catch (CompletionException e) {
+							if (e.getCause() instanceof TimeoutException) {
+								// timeout, tasks stuck in running state and not responding
+								logger().errort(LOG_TAG, "tasks did not react to abort request, force terminating ...");
+
+								// abort execution of any more tasks, the task tree will not be able to finish normally any more
+								this.taskExecutor.shutdownNow();
+								// enter error state, further executions are not possible, system has to be terminated
+								stateTransition(MetaState.ERROR);
+								return false;
+							}
+							throw e;
+						}
+					}
+					
+				}
+				buildTask.join();
+				
+				success = !this.doAbort;
 			} catch (CompletionException e)  {
 				if (e.getCause() instanceof MetaScriptException me) {
 					logger().errort(LOG_TAG, "build task error:");
@@ -908,6 +990,10 @@ public final class Metabuild implements IMeta {
 		}
 
 		stateTransition(MetaState.FINISH, MetaState.PREPARE, MetaState.RUN);
+		
+		/**
+		 * Execute post-task-work, like suppling information about the build to external processes.
+		 */
 		
 		if (success) {
 			try {
@@ -928,7 +1014,17 @@ public final class Metabuild implements IMeta {
 			}
 		}
 
+		if (this.doAbort) {
+			logger().errort(LOG_TAG, "build was aborted");
+			stateTransition(MetaState.READY, MetaState.FINISH);
+			return false;
+		}
+		
 		stateTransition(MetaState.SHUTDOWN, MetaState.FINISH);
+		
+		/**
+		 * Call cleanup on all tasks and unload all resources.
+		 */
 		
 		this.registeredTasks.values().forEach(BuildTask::cleanupTask);
 	 
@@ -955,6 +1051,7 @@ public final class Metabuild implements IMeta {
 		this.refreshDependencies = false;
 		this.forceRunTasks = false;
 		this.skipTaskRun = false;
+		this.doAbort = false;
 		
 		return success;
 		

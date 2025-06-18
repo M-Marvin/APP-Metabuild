@@ -17,6 +17,7 @@ import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.cpp.CppSourceIncludes;
 import de.m_marvin.metabuild.cpp.tasks.CppCompileTask;
 import de.m_marvin.metabuild.cpp.tasks.CppLinkTask;
+import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.tasks.MavenPublishTask;
 import de.m_marvin.metabuild.maven.tasks.MavenResolveTask;
 
@@ -33,11 +34,17 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		public ZipTask sourcesZip;
 		public BuildTask build;
 		public MavenPublishTask publishMaven;
+		public MavenPublishTask publishMavenLocal;
 	}
 	
 	public final Map<String, TargetConfig> targets = new HashMap<>();
 	
 	public String projectName = "Project";
+	
+	BuildTask dependencies;
+	BuildTask build;
+	BuildTask publishMaven;
+	BuildTask publishMavenLocal;
 	
 	public File sources = new File("src/cpp/source");
 	public File headers = new File("src/cpp/header");
@@ -69,17 +76,21 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		
 		super.init();
 
-		BuildTask dependencies = new BuildTask("dependencies");
+		dependencies = new BuildTask("dependencies");
 		dependencies.group = "dependencies";
 		dependencies.dependsOn(this.targets.values().stream().map(t -> t.dependencies).toArray(BuildTask[]::new));
 		
-		BuildTask build = new BuildTask("build");
+		build = new BuildTask("build");
 		build.group = "build";
 		build.dependsOn(this.targets.values().stream().map(t -> t.build).toArray(BuildTask[]::new));
 
-		BuildTask publishMaven = new BuildTask("publishMaven");
+		publishMaven = new BuildTask("publishMaven");
 		publishMaven.group = "publish";
 		publishMaven.dependsOn(this.targets.values().stream().map(t -> t.publishMaven).toArray(BuildTask[]::new));
+
+		publishMavenLocal = new BuildTask("publishMavenLocal");
+		publishMavenLocal.group = "publish";
+		publishMavenLocal.dependsOn(this.targets.values().stream().map(t -> t.publishMavenLocal).toArray(BuildTask[]::new));
 		
 		new FileTask("clean", Action.DELETE, new File("build"));
 		
@@ -199,8 +210,20 @@ public class CppMultiTargetBuildScript extends BuildScript {
 			target.publishMaven.artifact("sources", target.sourcesZip.archive);
 		target.publishMaven.artifact("headers", target.headersZip.archive);
 		target.publishMaven.dependsOn(target.build);
+
+		target.publishMavenLocal = new MavenPublishTask("publishMavenLocal" + name);
+		target.publishMavenLocal.group = "platform";
+		target.publishMavenLocal.dependencies(target.dependencies);
+		target.publishMavenLocal.artifact("", target.binaryZip.archive);
+		if (this.withSources)
+			target.publishMavenLocal.artifact("sources", target.sourcesZip.archive);
+		target.publishMavenLocal.artifact("headers", target.headersZip.archive);
+		target.publishMavenLocal.dependsOn(target.build);
 		
 		publishing(target.publishMaven, name);
+		publishing(target.publishMavenLocal, name);
+		
+		target.publishMavenLocal.repository(Maven.mavenLocal());
 		
 		return target;
 		

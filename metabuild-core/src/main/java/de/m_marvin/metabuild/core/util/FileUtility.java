@@ -259,7 +259,7 @@ public class FileUtility {
 		return relocate(from, to, rename, true);
 	}
 	
-	public static Optional<File> locateOnPath(String nameOrPath) {
+	public static Optional<File> locateOnPath(String nameOrPath, Predicate<File> predicate) {
 		Objects.requireNonNull(nameOrPath, "nameOrPath can not be null");
 		
 		File f = new File(nameOrPath);
@@ -273,10 +273,23 @@ public class FileUtility {
 			File pathDirectory = new File(pathDir);
 			if (!pathDirectory.exists()) continue;
 			for (File file : pathDirectory.listFiles()) {
-				if (file.getName().equals(nameOrPath) || getNameNoExtension(file).equals(nameOrPath)) return Optional.of(file);
+				if (file.getName().equals(nameOrPath) || getNameNoExtension(file).equals(nameOrPath) && predicate.test(file))
+					return Optional.of(file);
 			}
 		}
 		return Optional.empty();
+	}
+	
+	public static Optional<File> locateOnPath(String nameOrPath) {
+		// ignores shared libraries on linux and windows to only list (potentially) executables
+		return locateOnPath(nameOrPath, file -> {
+			String extension = getExtension(file);
+			if (extension.equalsIgnoreCase("dll")) return false;
+			if (extension.equalsIgnoreCase("sys")) return false;
+			if (extension.equalsIgnoreCase("so")) return false;
+			if (extension.equalsIgnoreCase("lib")) return false;
+			return true;
+		});
 	}
 	
 	public static boolean isArchive(File file) {

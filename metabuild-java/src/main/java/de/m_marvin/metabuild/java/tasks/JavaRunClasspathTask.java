@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.java.tasks;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,8 +16,7 @@ import de.m_marvin.metabuild.core.util.ProcessUtility;
 public class JavaRunClasspathTask extends BuildTask {
 
 	public final List<File> classpath = new ArrayList<>(); 
-	public File classesDir = new File("classes/default");
-	public File workingDir = null;
+	public final List<File> classesDir = new ArrayList<File>();
 	public String mainClass = null;
 	public final List<String> arguments = new ArrayList<>();
 	
@@ -33,26 +33,15 @@ public class JavaRunClasspathTask extends BuildTask {
 	@Override
 	protected boolean run() {
 		
-		File classesDir = FileUtility.absolute(this.classesDir);
-		File workingDir = this.workingDir != null ? FileUtility.absolute(this.workingDir) : classesDir;
+		Collection<File> classesDir = FileUtility.parseFilePaths(this.classesDir);
 		
 		if (this.mainClass == null) {
 			logger().errort(logTag(), "main class not set!");
 			return false;
 		}
 		
-		if (!classesDir.isDirectory()) {
-			logger().errort(logTag(), "classes direcoty not found: %s", this.classesDir);
-			return false;
-		}
-		
-		if (!workingDir.isDirectory() && !workingDir.mkdirs()) {
-			logger().errort(logTag(), "failed to create run workink dir: %s", this.workingDir != null ? this.workingDir : this.classesDir);
-			return false;
-		}
-		
 		StringBuffer classpathBuf = new StringBuffer();
-		classpathBuf.append(classesDir).append(";");
+		classesDir.forEach(f -> classpathBuf.append(f).append(";"));
 		
 		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
 		classpathBuf.append(classpathStr);

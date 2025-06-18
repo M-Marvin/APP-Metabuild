@@ -90,14 +90,37 @@ public class JavaBuildScript extends BuildScript {
 		
 	}
 	
+	public void withTests(String testMainClass) {
+
+		var compileTestJava = new JavaCompileTask("compileTestJava");
+		compileTestJava.group = "build";
+		compileTestJava.sourcesDir = new File("src/test/java");
+		compileTestJava.classesDir = new File("build/classes/test/java");
+		compileTestJava.headersDir = new File("build/headers/test/java");
+		compileTestJava.classpath.add(dependencies.fpTestCompiletime);
+		compileTestJava.dependsOn(dependencies);
+
+		var runTestJava = new JavaRunClasspathTask("runTest");
+		runTestJava.group = "run";
+		runTestJava.classpath.add(dependencies.fpTestRuntime);
+		runTestJava.classesDir.add(compileJava.classesDir);
+		runTestJava.classesDir.add(compileTestJava.classesDir);
+		runTestJava.classesDir.add(new File("src/main/resources"));
+		runTestJava.mainClass = testMainClass;
+		runTestJava.dependsOn(compileTestJava);
+		runTestJava.dependsOn(dependencies);
+		
+	}
+	
 	public void makeRunnable() {
 
 		var runJava = new JavaRunClasspathTask("run");
 		runJava.group = "run";
 		runJava.classpath.add(dependencies.fpRunttime);
-		runJava.classesDir = compileJava.classesDir;
+		runJava.classesDir.add(compileJava.classesDir);
+		runJava.classesDir.add(new File("src/main/resources"));
 		runJava.mainClass = jar.metainfo.get("Main-Class");
-		runJava.dependsOn(jar);
+		runJava.dependsOn(compileJava);
 		runJava.dependsOn(dependencies);
 		
 	}

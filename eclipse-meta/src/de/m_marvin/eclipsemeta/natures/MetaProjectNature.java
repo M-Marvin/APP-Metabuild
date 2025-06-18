@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -226,6 +227,7 @@ public class MetaProjectNature implements IProjectNature {
 	
 	public void setActiveConfiguration(TaskConfiguration activeConfiguration) {
 		this.activeConfiguration = activeConfiguration;
+		refreshProject(RefreshType.RELOAD);
 	}
 	
 	protected boolean claimMeta() {
@@ -430,12 +432,18 @@ public class MetaProjectNature implements IProjectNature {
 			List<ICppSourceIncludes> cppIncludes = new ArrayList<>();
 			this.meta.getSourceIncludes(cppIncludes, ICppSourceIncludes.CPP_LANGUAGE_ID);
 			
-			IPathEntry[] includeEntries = cppIncludes.stream().flatMap(incl -> incl.getIncludeDirectories().stream().map(
-					entry -> CoreModel.newIncludeEntry(null, null, IPath.fromFile(entry))
-			)).toArray(IPathEntry[]::new);
+			IPathEntry[] pathEntries = Stream.concat(
+					cppIncludes.stream().flatMap(incl -> incl.getIncludeDirectories().stream().map(
+							entry -> CoreModel.newIncludeEntry(null, null, IPath.fromFile(entry))
+					)),
+					cppIncludes.stream()
+						.map(incl -> incl.getSymbols())
+						.map(Map::entrySet).flatMap(Set::stream)
+						.map(e -> CoreModel.newMacroEntry(null, e.getKey(), e.getValue()))
+			).toArray(IPathEntry[]::new);
 			
 			try {
-				cp.setRawPathEntries(includeEntries, null);
+				cp.setRawPathEntries(pathEntries, null);
 			} catch (CoreException e) {}
 			
 		}

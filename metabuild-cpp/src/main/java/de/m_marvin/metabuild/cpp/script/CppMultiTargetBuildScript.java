@@ -58,9 +58,6 @@ public class CppMultiTargetBuildScript extends BuildScript {
 	};
 	
 	public boolean withSources = false;
-//	public final List<File> includes = new ArrayList<File>();
-//	public final List<File> libraryDirs = new ArrayList<>();
-//	public final List<String> libraries = new ArrayList<String>();
 	public String sourceStandard = null;
 	
 	public TargetConfig target(String name) {

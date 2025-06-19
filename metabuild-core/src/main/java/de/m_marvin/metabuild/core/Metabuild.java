@@ -383,6 +383,20 @@ public final class Metabuild implements IMeta {
 	}
 	
 	/**
+	 * Attempts to find the build script imported with the given name.
+	 * @param importName The name under which the build file was imported
+	 * @return The build script instance created from the imported build file
+	 */
+	public BuildScript buildNamed(String importName) {
+		if (this.importAlias.containsKey(importName))
+			importName = this.importAlias.get(importName);
+		if (!this.imports.containsKey(importName)) {
+			throw BuildScriptException.msg("no build file named '%s' is registered!", importName);
+		}
+		return this.imports.get(importName);
+	}
+	
+	/**
 	 * Attempts to find and return the task with the requested name.
 	 * @param name The name of the task
 	 * @return The task with the name or null if none was found

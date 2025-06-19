@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "0.4-alpha-SNAPSHOT";
+	public String version = "0.5-beta-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");

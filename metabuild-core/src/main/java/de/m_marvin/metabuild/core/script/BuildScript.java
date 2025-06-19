@@ -1,8 +1,10 @@
 package de.m_marvin.metabuild.core.script;
 
 import java.io.File;
+import java.lang.reflect.Field;
 
 import de.m_marvin.metabuild.core.Metabuild;
+import de.m_marvin.metabuild.core.exception.BuildScriptException;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.InitTask;
 import de.m_marvin.metabuild.core.util.FileUtility;
@@ -34,6 +36,20 @@ public class BuildScript {
 	
 	protected void importBuild(String importName, File location, File buildfile) {
 		Metabuild.get().importBuild(importName, location, buildfile);
+	}
+
+	protected BuildScript buildNamed(String importName) {
+		return Metabuild.get().buildNamed(importName);
+	}
+	
+	protected Object field(String fieldName) {
+		try {
+			Field f = this.getClass().getDeclaredField(fieldName);
+			f.setAccessible(true);
+			return f.get(this);
+		} catch (Exception e) {
+			throw BuildScriptException.msg("field '%s' is not availble in build '%s'", fieldName, this.buildName);
+		}
 	}
 	
 	/**

@@ -161,7 +161,7 @@ public class CppCompileTask extends CommandLineTask {
 		if (this.executable == null) return Collections.emptyList();
 		
 		try {
-			ProcessBuilder pbuilder = new ProcessBuilder(this.executable.getAbsolutePath(), "-v", "-xc++", "null");
+			ProcessBuilder pbuilder = new ProcessBuilder(this.executable.getAbsolutePath(), "-v", "-xc++", FileUtility.emptyFile().getAbsolutePath());
 			pbuilder.redirectErrorStream(true);
 			Process process = pbuilder.start();
 			ByteArrayOutputStream stdbuf = new ByteArrayOutputStream();

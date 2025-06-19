@@ -35,9 +35,19 @@ import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.metabuild.core.Metabuild;
 
 public class FileUtility {
-
+	
 	private FileUtility() {}
 
+	public static File emptyFile() {
+		File file = new File(Metabuild.get().metaHome(), "empty");
+		try {
+			if (!file.isFile()) file.createNewFile();
+			return file;
+		} catch (IOException e) {
+			throw new RuntimeException("failed to create empty file: %s" + file);
+		}
+	}
+	
 	public static List<File> deepList(Collection<File> dirs) {
 		return dirs.stream().flatMap(f -> deepList(f).stream()).toList();
 	}

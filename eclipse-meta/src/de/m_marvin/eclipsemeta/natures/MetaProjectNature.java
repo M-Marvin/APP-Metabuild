@@ -57,9 +57,10 @@ public class MetaProjectNature implements IProjectNature {
 	/**
 	 * TODO EclipseMeta Features
 	 * - Run-Configurations for Java projects
-	 * - Run-Configurations for C projects
+	 * - Run-Configurations for C projects (maybe not required)
 	 * - Creation Wizards (Meta C and Meta Java projects)
 	 * - Multi-Project source cross-linking
+	 * - Automatic PopUp of Meta Console when running build
 	 */
 	
 	public static final String NATURE_ID = "de.m_marvin.eclipsemeta.metaNature";

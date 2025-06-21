@@ -78,7 +78,7 @@ public final class Metabuild implements IMeta {
 	/* OutputStream to the log file */
 	private OutputStream logStream;
 	/* Handling of console input */
-	private OutputStream consoleStreamTarget = null;
+	private PrintWriter consoleStreamTarget = null;
 	private InputStream consoleStream = System.in;
 	private boolean consolePipeClosed = true;
 	/* Root logger, all loggers end up here */
@@ -287,17 +287,16 @@ public final class Metabuild implements IMeta {
 	}
 	
 	public void setConsoleInputTarget(OutputStream targetStream) {
-		this.consoleStreamTarget = targetStream;
+		this.consoleStreamTarget = targetStream == null ? null : new PrintWriter(targetStream);
 		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
 			ForkJoinPool.commonPool().execute(() -> {
 				try {
 					this.consolePipeClosed = false;
 					BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
-					PrintWriter target = new PrintWriter(this.consoleStreamTarget);
 					String line;
 					while ((line = source.readLine()) != null) {
-						target.println(line);
-						target.flush();
+						this.consoleStreamTarget.println(line);
+						this.consoleStreamTarget.flush();
 					}
 					this.consoleStreamTarget.close();
 				} catch (Throwable e) {}

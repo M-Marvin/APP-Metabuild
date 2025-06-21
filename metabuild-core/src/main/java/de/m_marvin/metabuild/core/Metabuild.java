@@ -122,6 +122,7 @@ public final class Metabuild implements IMeta {
 	/* List of includes for the developement environment */
 	private List<ISourceIncludes> sourceIncludes = new ArrayList<>();
 	/* An handler for printing the command line inteface, can be null if not configured */
+	@SuppressWarnings("unused")
 	private OutputHandler outputHandler = null;
 	/* ClassLoader able to load all plugins found in any project which has been loaded in this session */
 	private DynamicFileListClassLoader pluginLoader = new DynamicFileListClassLoader(Thread.currentThread().getContextClassLoader());
@@ -282,26 +283,38 @@ public final class Metabuild implements IMeta {
 	public void setTerminalOutput(PrintStream print, boolean printUI) {
 		if (getState() != MetaState.PREINIT)
 			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
-		if (this.outputHandler != null) return; // Can only be called once, the removal of the handler is not implemented
 		this.outputHandler = new OutputHandler(this, print, printUI);
 	}
 	
 	public void setConsoleInputTarget(OutputStream targetStream) {
-		this.consoleStreamTarget = targetStream == null ? null : new PrintWriter(targetStream);
-		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
-			ForkJoinPool.commonPool().execute(() -> {
-				try {
-					this.consolePipeClosed = false;
-					BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
-					String line;
-					while ((line = source.readLine()) != null) {
-						this.consoleStreamTarget.println(line);
-						this.consoleStreamTarget.flush();
-					}
-					this.consoleStreamTarget.close();
-				} catch (Throwable e) {}
-				this.consolePipeClosed = true;
-			});
+		try {
+			// read all garbage that might be stuck in the input buffer
+			this.consoleStream.readNBytes(this.consoleStream.available());
+			
+			// set new writer which prints to the target stream (or remove old one if null)
+			this.consoleStreamTarget = targetStream == null ? null : new PrintWriter(targetStream);
+			
+			// if new target set and currently now pipe worker running, start new worker
+			if (this.consoleStreamTarget != null && this.consolePipeClosed) {
+				ForkJoinPool.commonPool().execute(() -> {
+					try {
+						// update pipe flag to indicate worker running
+						this.consolePipeClosed = false;
+						// pipe console input from input stream to output writer
+						BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
+						String line;
+						while ((line = source.readLine()) != null) {
+							this.consoleStreamTarget.println(line);
+							this.consoleStreamTarget.flush();
+						}
+						this.consoleStreamTarget.close();
+					} catch (Throwable e) {}
+					// update pipe flag to indicate worker terminated
+					this.consolePipeClosed = true;
+				});
+			}
+		} catch (IOException e) {
+			logger().errort(LOG_TAG, "unable to create console input target redirect", e);
 		}
 	}
 
@@ -833,6 +846,7 @@ public final class Metabuild implements IMeta {
 	@Override
 	public void abortTasks() {
 		this.doAbort = true;
+		if (this.taskExecutor == null) return;
 		synchronized (this.taskExecutor) {
 			this.taskExecutor.notifyAll();
 		}

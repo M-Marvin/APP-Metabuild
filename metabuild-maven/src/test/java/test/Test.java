@@ -1,14 +1,17 @@
 package test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.net.MalformedURLException;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
@@ -23,7 +26,69 @@ import de.m_marvin.simplelogging.Log;
 public class Test {
 	
 	@SuppressWarnings("deprecation")
-	public static void main(String... args) throws MavenException, FileNotFoundException, MalformedURLException, URISyntaxException {
+	public static void main(String... args) throws MavenException, URISyntaxException, IOException {
+		
+		URL url = URI.create("https://maven.pkg.github.com/m-marvin/library-serialportaccess/de/m_marvin/serialportaccess/jserialportaccess/maven-matedata.xml").toURL();
+		
+		HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+		if (connection instanceof HttpURLConnection httpConnection)
+			httpConnection.setRequestMethod("GET");
+		
+		connection.setRequestProperty("Connection", "Keep-Alive");
+		
+		Credentials credentials = new Credentials(
+				() -> System.getenv("GITHUB_ACTOR"), 
+				() -> System.getenv("GITHUB_TOKEN")
+		);
+		
+		// apply credentials if available
+		if (credentials != null) {
+			if (credentials.token() != null)
+				connection.setRequestProperty("Authorization", "Bearer " + credentials.bearer());
+			if (connection instanceof HttpsURLConnection httpsConnection && credentials.username() != null && credentials.password() != null)
+				httpsConnection.setAuthenticator(credentials.authenticator());
+		}
+		
+		System.out.println("STATUS CODE: " + connection.getResponseCode());
+		
+		String t = new String(connection.getInputStream().readAllBytes());
+		System.out.println(t);
+		
+		connection.getInputStream().close();
+//		connection.disconnect();
+		
+//		connection.con
+		
+//		HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+//		if (connection instanceof HttpURLConnection httpConnection) {
+//			httpConnection.setRequestMethod("PUT");
+//			httpConnection.setRequestProperty("User-Agent", "Gradle/8.9 (Windows 11;10.0;amd64) (Microsoft;21.0.3;21.0.3+9-LTS)");
+//		}
+//		
+//		Credentials credentials = new Credentials(
+//				() -> System.getenv("GITHUB_ACTOR"), 
+//				() -> System.getenv("GITHUB_TOKEN")
+//		);
+		
+//		// apply credentials if available
+//		if (credentials != null) {
+//			if (credentials.token() != null)
+//				connection.setRequestProperty("Authorization", "Bearer " + credentials.bearer());
+//			if (connection instanceof HttpsURLConnection httpsConnection && credentials.username() != null && credentials.password() != null)
+//				httpsConnection.setAuthenticator(credentials.authenticator());
+//		}
+		connection.setRequestMethod("PUT");
+		connection.setDoOutput(true);
+		
+		connection.getOutputStream().write("<metadata><groupId>de.m_marvin.serialportaccess</groupId><artifactId>serialportaccess-linarm32</artifactId><versioning><latest>1.0</latest><release>1.0</release><versions><version>1.0</version></versions><lastUpdated>20250614-205700</lastUpdated></versioning></metadata>".getBytes());
+		
+		connection.getOutputStream().close();
+		
+		System.out.println("STATUS CODE: " + connection.getResponseCode());
+		
+		connection.disconnect();
+			
+		System.exit(-1);
 		
 		File local = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getFile(), "../../temp");
 		

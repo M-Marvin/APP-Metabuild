@@ -75,7 +75,6 @@ public class MavenPublisher {
 	/**
 	 * Attempts to upload the supplied publish configuration to all configured repositories.
 	 * @param config The publish configuration, containing all relevant publish informations
-	 * @param timeOfCreation The time to use for all timestamp's on the remote server
 	 * @return true if the artifacts could be uploaded to ALL remote repositories, false even if only one of them failed
 	 * @throws MavenException if an unexpected error occurred preventing from some of the uploads to even begin
 	 */
@@ -506,7 +505,7 @@ public class MavenPublisher {
 				int rcode = httpConnection.getResponseCode();
 				
 				if (rcode != 200) {
-					logger().debug("not found: %d %s", rcode, httpConnection.getResponseMessage());
+					logger().debug("upload failed: %d %s", rcode, httpConnection.getResponseMessage());
 					return false;
 				}
 				httpConnection.disconnect();

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
@@ -20,6 +21,7 @@ public class JavaRunClasspathTask extends BuildTask {
 	public String javaExecutable = "java";
 	public String mainClass = null;
 	public final List<String> arguments = new ArrayList<>();
+	public Predicate<Integer> exitCondition = i -> i == 0;
 	
 	public JavaRunClasspathTask(String name) {
 		super(name);
@@ -68,7 +70,7 @@ public class JavaRunClasspathTask extends BuildTask {
 			logger().debugt(logTag(), "java cmd: %s", commandLine.stream().reduce((a, b) -> a + " " + b).get());
 			int exitCode = ProcessUtility.runProcess(logger(), processBuilder, this::shouldAbort);
 			logger().warnt(logTag(), "process terminated, exit code: %d", exitCode);
-			return true;
+			return this.exitCondition.test(exitCode);
 		} catch (MetaScriptException e) {
 			throw BuildException.msg(e, "failed to run java process: %s", javaExecutable.get());
 		}

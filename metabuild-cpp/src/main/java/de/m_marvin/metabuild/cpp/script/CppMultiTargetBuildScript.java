@@ -220,8 +220,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		target.publishMavenLocal.artifact("headers", target.headersZip.archive);
 		target.publishMavenLocal.dependsOn(target.build);
 		
-		publishing(target.publishMaven, name);
-		publishing(target.publishMavenLocal, name);
+		publishing(target.publishMaven, target.publishMavenLocal, name);
 		
 		target.publishMavenLocal.repository(Maven.mavenLocal());
 		
@@ -245,7 +244,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		
 	}
 	
-	public void publishing(MavenPublishTask publish, String config) {
+	public void publishing(MavenPublishTask publish, MavenPublishTask publishLocal, String config) {
 			
 	}
 	

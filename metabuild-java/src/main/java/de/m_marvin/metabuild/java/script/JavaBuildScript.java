@@ -142,6 +142,9 @@ public class JavaBuildScript extends BuildScript {
 		
 		publishMaven.artifacts.put("sources", sourcesJar.archive);
 		publishMaven.dependsOn(sourcesJar);
+
+		publishMavenLocal.artifacts.put("sources", sourcesJar.archive);
+		publishMavenLocal.dependsOn(sourcesJar);
 		
 	}
 	

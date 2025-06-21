@@ -248,9 +248,9 @@ public class MetaProjectNature implements IProjectNature {
 	}
 	
 	protected boolean setupBuildsystem() {
-		meta.setTerminalOutput(new PrintStream(MetaUI.newConsoleStream()), false);
+		meta.setTerminalOutput(new PrintStream(MetaUI.newConsoleOutputStream()), false);
 		meta.setWorkingDirectory(this.project.getLocation().toFile());
-		meta.setConsoleStreamInput(MetaUI.getConsoleInputStream());
+		meta.setConsoleStreamInput(MetaUI.newConsoleInputStream());
 		return meta.initBuild();
 	}
 

@@ -4,8 +4,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ForkJoinPool;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
@@ -21,6 +24,9 @@ public class MetaUI {
 	
 	public static String META_CONSOLE_NAME = "Meta";
 	
+	private static PipedOutputStream consolePipeIn;
+	private static PipedInputStream consolePipeOut;
+	
 	public static IOConsole getConsole() {
 		IConsoleManager conMan = ConsolePlugin.getDefault().getConsoleManager();
 		for (var console : conMan.getConsoles()) {
@@ -31,7 +37,7 @@ public class MetaUI {
 		return console;
 	}
 	
-	public static OutputStream newConsoleStream() {
+	public static OutputStream newConsoleOutputStream() {
 		IOConsole console = getConsole();
 		IOConsoleOutputStream out = console.newOutputStream();
 		try {
@@ -40,9 +46,31 @@ public class MetaUI {
 		return out;
 	}
 	
-	public static InputStream getConsoleInputStream() {
-		IOConsole console = getConsole();
-		return console.getInputStream();
+	public static InputStream newConsoleInputStream() {
+		try {
+			PipedInputStream oldOut = consolePipeOut;
+			PipedOutputStream oldIn = consolePipeIn;
+			consolePipeIn = new PipedOutputStream();
+			consolePipeOut = new PipedInputStream(consolePipeIn);
+			if (oldOut == null) {
+				ForkJoinPool.commonPool().execute(() -> {
+					try {
+						InputStream console = getConsole().getInputStream();
+						int i;
+						while ((i = console.read()) != -1)
+							consolePipeIn.write(i);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				});
+			} else {
+				oldOut.close();
+				oldIn.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		};
+		return consolePipeOut;
 	}
 	
 	public static void openError(String name, String message, Object... parameters) {

@@ -105,7 +105,7 @@ public class JavaBuildScript extends BuildScript {
 		compileTestJava.headersDir = new File("build/headers/test/java");
 		compileTestJava.classpath.add(dependencies.fpTestCompiletime);
 		compileTestJava.classpath.add(compileJava.classesDir);
-		compileTestJava.dependsOn(compileJava);
+		compileTestJava.dependsOn(build);
 
 		var runTestJava = new JavaRunClasspathTask("runTest");
 		runTestJava.group = "run";

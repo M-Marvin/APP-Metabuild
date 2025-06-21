@@ -1,12 +1,15 @@
 package de.m_marvin.metabuild.core;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -283,16 +286,20 @@ public final class Metabuild implements IMeta {
 		this.outputHandler = new OutputHandler(this, print, printUI);
 	}
 	
-	public void setConsoleInputTarget(OutputStream target) {
-		this.consoleStreamTarget = target;
+	public void setConsoleInputTarget(OutputStream targetStream) {
+		this.consoleStreamTarget = targetStream;
 		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
 			ForkJoinPool.commonPool().execute(() -> {
 				try {
 					this.consolePipeClosed = false;
-					while (this.consoleStreamTarget != null) {
-						this.consoleStreamTarget.write(this.consoleStream.read());
-						this.consoleStreamTarget.flush();
+					BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
+					PrintWriter target = new PrintWriter(this.consoleStreamTarget);
+					String line;
+					while ((line = source.readLine()) != null) {
+						target.println(line);
+						target.flush();
 					}
+					this.consoleStreamTarget.close();
 				} catch (Throwable e) {}
 				this.consolePipeClosed = true;
 			});

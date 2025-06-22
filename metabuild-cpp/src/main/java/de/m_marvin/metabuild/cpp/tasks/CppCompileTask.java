@@ -141,10 +141,11 @@ public class CppCompileTask extends CommandLineTask {
 		// Try to locate compiler executable
 		Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
 		if (compilerPath.isEmpty()) {
-			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
+			logger().warnt(logTag(), "unable to locate cpp compiler, compillation will fail: %s", this.compile);
+		} else {
+			this.executable = compilerPath.get();
+			logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
 		}
-		this.executable = compilerPath.get();
-		logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
 		
 		return this.compile.size() > 0 ? TaskState.OUTDATED : TaskState.UPTODATE;
 		
@@ -153,12 +154,14 @@ public class CppCompileTask extends CommandLineTask {
 	protected static final Pattern PREPROCESS_PATH_PATTERN = Pattern.compile("#include <\\.\\.\\.> search starts here:([\\S\\s]*)End of search list\\.");
 	
 	public Collection<File> systemIncludes() {
-		
+
+		// Try to locate compiler executable
 		if (this.executable == null) {
 			Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
 			this.executable = compilerPath.orElse(null);
 		}
-		if (this.executable == null) return Collections.emptyList();
+		if (this.executable == null)
+			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
 		
 		try {
 			ProcessBuilder pbuilder = new ProcessBuilder(this.executable.getAbsolutePath(), "-v", "-xc++", FileUtility.emptyFile().getAbsolutePath());

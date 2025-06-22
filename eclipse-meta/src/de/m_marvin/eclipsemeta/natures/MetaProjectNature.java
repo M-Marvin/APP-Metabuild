@@ -382,7 +382,7 @@ public class MetaProjectNature implements IProjectNature {
 			this.meta.setSkipTaskRun(mode == RefreshType.RELOAD);
 			this.meta.setRefreshDependencies(mode == RefreshType.REFRESH_DEPENDENCIES);
 			if (!this.meta.runTasks(refreshTasks)) {
-				MetaUI.openError("Update Meta Dependencies", "Failed to run dependency tasks!");
+				MetaUI.openError("Update Meta Dependencies", "Failed to run Tasks for Configuration: " + this.activeConfiguration);
 				MetaProjectNature.this.changeState(MetaState.ERROR);
 				return;
 			}

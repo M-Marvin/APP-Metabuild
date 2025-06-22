@@ -84,6 +84,15 @@ public class CppLinkTask extends CommandLineTask {
 		libraryDirectories.forEach(d -> this.arguments.add("-L\"" + d.getAbsolutePath() + "\""));
 		librariesFromPaths.forEach(l -> this.arguments.add("-l" + l));
 		this.libraries.forEach(l -> this.arguments.add("-l" + l));
+
+		// Try to locate compiler executable
+		Optional<File> linkerPath = FileUtility.locateOnPath(this.linker);
+		if (linkerPath.isEmpty()) {
+			logger().warnt(logTag(), "unable to locate cpp linker, linking will fail: %s", this.linker);
+		} else {
+			this.executable = linkerPath.get();
+			logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());
+		}
 		
 		return super.buildCommand();
 	}
@@ -92,12 +101,12 @@ public class CppLinkTask extends CommandLineTask {
 	public boolean run() {
 
 		// Try to locate linker executable
-		Optional<File> linkerPath = FileUtility.locateOnPath(this.linker);
-		if (linkerPath.isEmpty()) {
-			throw BuildException.msg("failed to locate linker: %s", this.linker);
+		if (this.executable == null) {
+			Optional<File> linkerPath = FileUtility.locateOnPath(this.linker);
+			this.executable = linkerPath.orElse(null);
 		}
-		this.executable = linkerPath.get();
-		logger().infot(logTag(), "located linker: %s", this.executable.getAbsolutePath());
+		if (this.executable == null)
+			throw BuildException.msg("failed to locate cpp linker: %s", this.linker);
 		
 		logger().infot(logTag(), "linking objects in: %s", this.objectsDir.getAbsolutePath());
 		

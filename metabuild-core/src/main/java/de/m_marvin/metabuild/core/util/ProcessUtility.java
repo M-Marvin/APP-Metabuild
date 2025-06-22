@@ -68,6 +68,8 @@ public class ProcessUtility {
 			
 			// Close pipes
 			Metabuild.get().setConsoleInputTarget(null);
+			process.getInputStream().close();
+			process.getErrorStream().close();
 			stoutPipe.join();
 			sterrPipe.join();
 			

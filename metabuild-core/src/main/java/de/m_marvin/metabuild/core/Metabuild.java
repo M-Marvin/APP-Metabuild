@@ -287,34 +287,30 @@ public final class Metabuild implements IMeta {
 	}
 	
 	public void setConsoleInputTarget(OutputStream targetStream) {
-		try {
-			// read all garbage that might be stuck in the input buffer
-			this.consoleStream.readNBytes(this.consoleStream.available());
-			
-			// set new writer which prints to the target stream (or remove old one if null)
-			this.consoleStreamTarget = targetStream == null ? null : new PrintWriter(targetStream);
-			
-			// if new target set and currently now pipe worker running, start new worker
-			if (this.consoleStreamTarget != null && this.consolePipeClosed) {
-				ForkJoinPool.commonPool().execute(() -> {
-					try {
-						// update pipe flag to indicate worker running
-						this.consolePipeClosed = false;
-						// pipe console input from input stream to output writer
-						BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
-						String line;
-						while ((line = source.readLine()) != null) {
-							this.consoleStreamTarget.println(line);
-							this.consoleStreamTarget.flush();
-						}
-						this.consoleStreamTarget.close();
-					} catch (Throwable e) {}
-					// update pipe flag to indicate worker terminated
-					this.consolePipeClosed = true;
-				});
-			}
-		} catch (IOException e) {
-			logger().errort(LOG_TAG, "unable to create console input target redirect", e);
+		// set new writer which prints to the target stream (or remove old one if null)
+		this.consoleStreamTarget = targetStream == null ? null : new PrintWriter(targetStream);
+
+		// if new target set and currently now pipe worker running, start new worker
+		if (this.consoleStreamTarget != null && this.consolePipeClosed) {
+			ForkJoinPool.commonPool().execute(() -> {
+				try {
+					// read all garbage that might be stuck in the input buffer
+					this.consoleStream.readNBytes(this.consoleStream.available());
+					
+					// update pipe flag to indicate worker running
+					this.consolePipeClosed = false;
+					// pipe console input from input stream to output writer
+					BufferedReader source = new BufferedReader(new InputStreamReader(this.consoleStream));
+					String line;
+					while ((line = source.readLine()) != null) {
+						this.consoleStreamTarget.println(line);
+						this.consoleStreamTarget.flush();
+					}
+					this.consoleStreamTarget.close();
+				} catch (Throwable e) {}
+				// update pipe flag to indicate worker terminated
+				this.consolePipeClosed = true;
+			});
 		}
 	}
 

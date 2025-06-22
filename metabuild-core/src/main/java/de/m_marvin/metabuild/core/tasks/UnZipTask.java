@@ -62,8 +62,6 @@ public class UnZipTask extends BuildTask {
 	@Override
 	protected TaskState prepare() {
 		
-		if (this.toExtract != null)
-			return this.toExtract.isEmpty() ? TaskState.UPTODATE : TaskState.OUTDATED;
 		this.toExtract = new ArrayList<File>();
 		this.filesExpected = new ArrayList<File>();
 		

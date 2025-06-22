@@ -226,7 +226,7 @@ public class CppCompileTask extends CommandLineTask {
 		
 		for (var e : this.symbols.entrySet()) {
 			this.arguments.add("-D");
-			if (e.getValue() != null) {
+			if (e.getValue() == null) {
 				this.arguments.add(e.getKey());
 			} else {
 				this.arguments.add(e.getKey() + "=" + e.getValue());

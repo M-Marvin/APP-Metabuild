@@ -326,8 +326,12 @@ public class MavenPublisher {
 		ArtifactMetadata.toXML(metadata, bufOut);
 		ByteArrayInputStream bufIn = new ByteArrayInputStream(bufOut.toByteArray());
 		
-		uploadArtifact(repository, artifact, DataLevel.META_ARTIFACT, bufIn);
-		
+		try {
+			uploadArtifact(repository, artifact, DataLevel.META_ARTIFACT, bufIn);
+		} catch (MavenException e) {
+			logger().warn("warning, could not upload maven-metadata.xml to remote repository, ignore: %s", e.getMessage());
+		}
+	
 	}
 
 	/**
@@ -343,7 +347,11 @@ public class MavenPublisher {
 		VersionMetadata.toXML(metadata, bufOut);
 		ByteArrayInputStream bufIn = new ByteArrayInputStream(bufOut.toByteArray());
 		
-		uploadArtifact(repository, artifact, DataLevel.META_VERSION, bufIn);
+		try {
+			uploadArtifact(repository, artifact, DataLevel.META_VERSION, bufIn);
+		} catch (MavenException e) {
+			logger().warn("warning, could not upload maven-metadata.xml to remote repository, ignore: %s", e.getMessage());
+		}
 		
 	}
 

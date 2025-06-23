@@ -123,19 +123,16 @@ public class CppCompileTask extends CommandLineTask {
 				for (File objectFile : objectDir.listFiles()) {
 					if (FileUtility.getNameNoExtension(objectFile).equals(unitName)) {
 						Optional<FileTime> objectTime = FileUtility.timestamp(objectFile);
-						if (objectTime.isEmpty()) {
+						if (objectTime.isEmpty())
 							this.compile.add(sourceFile);
-							break;
-						}
-						if (objectTime.get().compareTo(sourceTime.get()) < 0) {
+						if (objectTime.get().compareTo(sourceTime.get()) < 0)
 							this.compile.add(sourceFile);
-							break;
-						}
-						continue srcloop;
+						break;
 					}
 				}
+			} else {
+				this.compile.add(sourceFile);
 			}
-			this.compile.add(sourceFile);
 		}
 
 		// Try to locate compiler executable

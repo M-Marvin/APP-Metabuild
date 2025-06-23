@@ -172,8 +172,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.publishing();
 		
-		publishMaven.repository(Maven.mavenLocal());
-		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
+		publishMavenLocal.coordinates("de.m_marvin.metabuild:metabuild-core:" + version);
 		
 	}
 

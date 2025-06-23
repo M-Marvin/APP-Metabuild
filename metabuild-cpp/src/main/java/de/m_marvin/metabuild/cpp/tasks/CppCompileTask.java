@@ -1,14 +1,11 @@
 package de.m_marvin.metabuild.cpp.tasks;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayDeque;
@@ -24,6 +21,10 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import de.m_marvin.basicxml.XMLInputStream;
+import de.m_marvin.basicxml.XMLOutputStream;
+import de.m_marvin.basicxml.XMLStream.DescType;
+import de.m_marvin.basicxml.XMLStream.ElementDescriptor;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.script.TaskType;
 import de.m_marvin.metabuild.core.tasks.CommandLineTask;
@@ -59,34 +60,93 @@ public class CppCompileTask extends CommandLineTask {
 	}
 	
 	// TODO XML format for object metadata
+//	protected void loadMetadata() {
+//		this.sourceMetadata = new HashMap<>();
+//		try {
+//			File metaFile = getMetaFile();
+//			if (!metaFile.isFile()) return;
+//			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(metaFile)));
+//			String line;
+//			while ((line = reader.readLine()) != null) {
+//				File sourceFile = new File(line);
+//				File objectFile = new File(reader.readLine());
+//				this.sourceMetadata.put(sourceFile, objectFile);
+//			}
+//			reader.close();
+//		} catch (IOException e) {
+//			throw BuildException.msg(e, "failed to load object meta data: %s", this.stateCache);
+//		}
+//	}
+//	
+//	protected void saveMetadata() {
+//		try {
+//			Writer writer = new OutputStreamWriter(new FileOutputStream(getMetaFile()));
+//			for (var entry : this.sourceMetadata.entrySet()) {
+//				writer.write(entry.getKey().getPath() + "\n");
+//				writer.write(entry.getValue().getPath() + "\n");
+//			}
+//			writer.close();
+//		} catch (IOException e) {
+//			throw BuildException.msg(e, "failed to save object meta data: %s", this.stateCache);
+//		}
+//	}
+
+	public static final URI METABUILD_CPP_OBJECTMETA_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild/cpp/objectmeta");
+	
 	protected void loadMetadata() {
 		this.sourceMetadata = new HashMap<>();
 		try {
 			File metaFile = getMetaFile();
 			if (!metaFile.isFile()) return;
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(metaFile)));
-			String line;
-			while ((line = reader.readLine()) != null) {
-				File sourceFile = new File(line);
-				File objectFile = new File(reader.readLine());
-				this.sourceMetadata.put(sourceFile, objectFile);
+			
+			XMLInputStream xml = new XMLInputStream(new FileInputStream(metaFile));
+			ElementDescriptor classmetaTag = xml.readNext();
+			if (classmetaTag != null && classmetaTag.name().equals("objectmeta") && classmetaTag.type() == DescType.OPEN) {
+				ElementDescriptor classfileTag;
+				while ((classfileTag = xml.readNext()) != null) {
+					if (classfileTag != null && classfileTag.name().equals("objectfile") && classfileTag.type() == DescType.SELF_CLOSING) {
+						
+						if (!classfileTag.attributes().containsKey("source") || !classfileTag.attributes().containsKey("object")) {
+							this.sourceMetadata.clear();
+							xml.close();
+							return;
+						}
+						
+						try {
+							File objectFile = new File(classfileTag.attributes().get("object"));
+							File sourceFile = new File(classfileTag.attributes().get("source"));
+							this.sourceMetadata.put(sourceFile, objectFile);
+						} catch (Exception e) {
+							this.sourceMetadata.clear();
+							xml.close();
+							return;
+						}
+						
+					} else if (classfileTag != null && classfileTag.name().equals("classmeta") && classfileTag.type() == DescType.CLOSE) {
+						break;
+					}
+				}
 			}
-			reader.close();
-		} catch (IOException e) {
+			xml.close();
+		} catch (Exception e) {
 			throw BuildException.msg(e, "failed to load object meta data: %s", this.stateCache);
 		}
 	}
 	
 	protected void saveMetadata() {
 		try {
-			Writer writer = new OutputStreamWriter(new FileOutputStream(getMetaFile()));
+			XMLOutputStream xml = new XMLOutputStream(new FileOutputStream(getMetaFile()));
+			xml.writeNext(new ElementDescriptor(DescType.OPEN, METABUILD_CPP_OBJECTMETA_NAMESPACE, "objectmeta", null));
 			for (var entry : this.sourceMetadata.entrySet()) {
-				writer.write(entry.getKey().getPath() + "\n");
-				writer.write(entry.getValue().getPath() + "\n");
+				var tag = new ElementDescriptor(DescType.SELF_CLOSING, METABUILD_CPP_OBJECTMETA_NAMESPACE, "objectfile", new HashMap<String, String>());
+				tag.attributes().put("object", entry.getValue().getPath());
+				tag.attributes().put("source", entry.getKey().getPath());
+				xml.writeNext(tag);
 			}
-			writer.close();
-		} catch (IOException e) {
-			throw BuildException.msg(e, "failed to save object meta data: %s", this.stateCache);
+			xml.writeNext(new ElementDescriptor(DescType.CLOSE, METABUILD_CPP_OBJECTMETA_NAMESPACE, "objectmeta", null));
+			xml.close();
+		} catch (Exception e) {
+			throw BuildException.msg(e, "failed to save class meta data: %s", this.stateCache);
 		}
 	}
 	
@@ -127,18 +187,17 @@ public class CppCompileTask extends CommandLineTask {
 							this.compile.add(sourceFile);
 						if (objectTime.get().compareTo(sourceTime.get()) < 0)
 							this.compile.add(sourceFile);
-						break;
+						continue srcloop;
 					}
 				}
-			} else {
-				this.compile.add(sourceFile);
 			}
+			this.compile.add(sourceFile);
 		}
 
 		// Try to locate compiler executable
 		Optional<File> compilerPath = FileUtility.locateOnPath(this.compiler);
 		if (compilerPath.isEmpty()) {
-			logger().warnt(logTag(), "unable to locate cpp compiler, compillation will fail: %s", this.compile);
+			logger().warnt(logTag(), "unable to locate cpp compiler, compillation will fail: %s", this.compiler);
 		} else {
 			this.executable = compilerPath.get();
 			logger().infot(logTag(), "located cpp compiler: %s", this.executable.getAbsolutePath());

@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.cpp.tasks;
 
 import java.io.File;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -23,7 +24,7 @@ public class CppLinkTask extends CommandLineTask {
 		String extension = FileUtility.getExtension(file);
 		return extension.equalsIgnoreCase("o");
 	};
-	public final Set<String> options = new HashSet<>();
+	public final List<String> options = new ArrayList<>();
 	public String linker = "g++";
 
 	protected List<File> link;

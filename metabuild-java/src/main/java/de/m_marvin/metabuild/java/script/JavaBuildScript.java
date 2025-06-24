@@ -6,6 +6,7 @@ import de.m_marvin.metabuild.core.script.BuildScript;
 import de.m_marvin.metabuild.core.tasks.BuildTask;
 import de.m_marvin.metabuild.core.tasks.FileTask;
 import de.m_marvin.metabuild.core.tasks.FileTask.Action;
+import de.m_marvin.metabuild.core.util.FileUtility;
 import de.m_marvin.metabuild.java.JavaSourceIncludes;
 import de.m_marvin.metabuild.java.tasks.JarTask;
 import de.m_marvin.metabuild.java.tasks.JavaCompileTask;
@@ -93,6 +94,9 @@ public class JavaBuildScript extends BuildScript {
 	public void packageExecutable() {
 		
 		jar.includes.add(dependencies.fpRunttime);
+		jar.includePredicate = f -> 
+			!FileUtility.getNameNoExtension(f).endsWith("-sources") && 
+			!FileUtility.getNameNoExtension(f).endsWith("-javadoc");
 		
 	}
 	

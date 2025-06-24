@@ -61,7 +61,7 @@ public interface IMeta {
 	public static final int DEFAULT_TASK_THREADS = 8;
 	
 	public static final String BUILD_SCRIPT_CLASS_NAME = "Buildfile";
-	public static final Pattern TASK_NAME_FILTER = Pattern.compile("((?<buildname>[\\d\\w]*):|)(?<taskname>[\\d\\w]+)");
+	public static final Pattern TASK_NAME_FILTER = Pattern.compile("((?<buildname>[\\d\\w]*):|)(?<taskname>[\\d\\w][\\d\\w\\-_]+)");
 
 	public static final String DEPENDENCY_TASK_GROUP = "depend";
 	public static final String META_PROJECT_PLUGIN_LOCATION = "meta/plugins";

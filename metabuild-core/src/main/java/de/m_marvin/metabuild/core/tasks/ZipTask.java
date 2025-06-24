@@ -182,7 +182,8 @@ public class ZipTask extends BuildTask {
 		if (this.includes.contains(null))
 			throw BuildScriptException.msg("no null entries allowed in ZipTask includes");
 		for (File file : FileUtility.parseFilePaths(this.includes)) {
-			for (File file1 : FileUtility.deepList(file, f -> f.isFile() && this.includePredicate.test(f))) {
+			if (!this.includePredicate.test(file)) continue;
+			for (File file1 : FileUtility.deepList(file, f -> f.isFile())) {
 				Optional<FileTime> filetime = FileUtility.timestamp(file1);
 				if (timestamp.isEmpty() || filetime.isEmpty() || timestamp.get().compareTo(filetime.get()) < 0)
 					timestamp = filetime;

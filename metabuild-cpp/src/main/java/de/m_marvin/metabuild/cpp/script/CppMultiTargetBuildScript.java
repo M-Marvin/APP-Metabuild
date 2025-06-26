@@ -99,13 +99,14 @@ public class CppMultiTargetBuildScript extends BuildScript {
 	@Override
 	public void finish() {
 		
+		
 		List<File> includes = this.targets.values().stream()
-				.filter(target -> target.compileCpp.didRun())
+				.filter(target -> target.dependencies.didRun())
 				.flatMap(target -> target.compileCpp.allIncludes().stream())
 				.distinct().toList();
 		Map<String, String> symbols = new HashMap<String, String>();
 		for (var target : this.targets.values()) {
-			if (!target.compileCpp.didRun()) continue;
+			if (!target.dependencies.didRun()) continue;
 			symbols.putAll(target.compileCpp.symbols());
 		}
 		CppSourceIncludes.include(symbols, includes);
@@ -138,14 +139,14 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		dependencies(target.dependencies, name);
 		
 		target.headersUnzip = new UnZipTask("headersUnzip" + name);
-		target.headersUnzip.group = "platform";
+		target.headersUnzip.group = "platformPackaging";
 		target.headersUnzip.archives.add(target.dependencies.fpCompiletime);
 		target.headersUnzip.extractPredicate = headerPredicate;
 		target.headersUnzip.output = new File("build/" + name + "/includeHeaders");
 		target.headersUnzip.dependsOn(target.dependencies);
 
 		target.binaryUnzip = new UnZipTask("binaryUnzip" + name);
-		target.binaryUnzip.group = "platform";
+		target.binaryUnzip.group = "platformPackaging";
 		target.binaryUnzip.archives.add(target.dependencies.fpCompiletime);
 		target.binaryUnzip.extractPredicate = binaryPredicate;
 		target.binaryUnzip.output = new File("build/" + name + "/includeLibraries");
@@ -164,7 +165,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		target.compileCpp.dependsOn(target.dependencies, target.headersUnzip);
 		
 		target.linkCpp = new CppLinkTask("linkCpp" + name);
-		target.linkCpp.group = "platform";
+		target.linkCpp.group = "platformLink";
 		target.linkCpp.objectsDir = target.compileCpp.objectsDir;
 		target.linkCpp.libraryDirs.add(target.binaryUnzip.output);
 		target.linkCpp.outputFile = new File("build/bin/" + binName);
@@ -173,7 +174,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		linking(target.linkCpp, name);
 		
 		target.binaryZip = new ZipTask("binaryZip" + name);
-		target.binaryZip.group = "platform";
+		target.binaryZip.group = "platformPackaging";
 		target.binaryZip.entries.put(target.linkCpp.outputFile, binName);
 		target.binaryZip.archive = new File("build/" + name + "/bin/" + outputName + ".zip");
 		target.binaryZip.dependsOn(target.linkCpp);
@@ -181,7 +182,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		if (this.withSources) {
 
 			target.sourcesZip = new ZipTask("sourcesZip" + name);
-			target.sourcesZip.group = "platform";
+			target.sourcesZip.group = "platformPackaging";
 			target.sourcesZip.entries.put(this.sources, "");
 			target.sourcesZip.entries.put(this.headers, "");
 			target.sourcesZip.entries.put(this.publics, "");
@@ -190,20 +191,20 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		}
 		
 		target.headersZip = new ZipTask("headersZip" + name);
-		target.headersZip.group = "platform";
+		target.headersZip.group = "platformPackaging";
 		target.headersZip.entries.put(this.publics, "");
 		target.headersZip.archive = new File("build/" + name + "/bin/" + outputName + "-headers.zip");
 		
 		publicHeaders(target.headersZip, name);
 
 		target.build = new BuildTask("build" + name);
-		target.build.group = "platform";
+		target.build.group = "build";
 		target.build.dependsOn(target.binaryZip, target.headersZip);
 		if (this.withSources)
 			target.build.dependsOn(target.sourcesZip);
 		
 		target.publishMaven = new MavenPublishTask("publishMaven" + name);
-		target.publishMaven.group = "platform";
+		target.publishMaven.group = "publish";
 		target.publishMaven.dependencies(target.dependencies);
 		target.publishMaven.artifact("", target.binaryZip.archive);
 		if (this.withSources)
@@ -212,7 +213,7 @@ public class CppMultiTargetBuildScript extends BuildScript {
 		target.publishMaven.dependsOn(target.build);
 
 		target.publishMavenLocal = new MavenPublishTask("publishMavenLocal" + name);
-		target.publishMavenLocal.group = "platform";
+		target.publishMavenLocal.group = "publish";
 		target.publishMavenLocal.dependencies(target.dependencies);
 		target.publishMavenLocal.artifact("", target.binaryZip.archive);
 		if (this.withSources)

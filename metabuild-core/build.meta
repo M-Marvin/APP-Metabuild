@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "0.5-beta-SNAPSHOT";
+	public String version = "1.0-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -34,8 +34,6 @@ public class Buildfile extends JavaBuildScript {
 		projectName = "metabuild-core";
 		
 		super.init();
-
-		withSourcesJar();
 		
 		// make metabuild API jar
 		apiJar = new JarTask("apiJar");
@@ -48,13 +46,15 @@ public class Buildfile extends JavaBuildScript {
 		apiJar.dependencyOf(publishMaven);
 		publishMaven.artifact("api", apiJar.archive);
 		manifestApi(apiJar);
+
+		withSourcesJar();
 		
 		// publish metabuild API jar only
 		publishMavenApi = new MavenPublishTask("publishMavenApi");
 		publishMavenApi.group = "publish";
 		publishMavenApi.dependsOn(apiJar, sourcesJar);
 		publishingApi();
-		
+
 		// add wrapper jar into core jar
 		importBuild("wrapper", new File("../metabuild-wrapper"));
 		jar.entries.put(FileUtility.concat(new File("../metabuild-wrapper"), ((JarTask) taskNamed("wrapper:jar")).archive), wrapperIncludeDir);
@@ -70,7 +70,7 @@ public class Buildfile extends JavaBuildScript {
 		var install = new BuildTask("install");
 		install.group = "install";
 		install.dependsOn(copyAdditional, copyBinary);
-		
+
 		// install system plugins
 		importBuild("java", new File("../metabuild-java"));
 		importBuild("maven", new File("../metabuild-maven"));
@@ -81,7 +81,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		var cleanAll = new BuildTask("cleanAll");
 		cleanAll.dependsOn(":clean", "java:clean", "maven:clean", "wrapper:clean", "cpp:clean");
-		
+
 	}
 	
 	@Override

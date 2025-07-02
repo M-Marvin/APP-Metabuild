@@ -18,7 +18,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
 	public String wrapperVersion = "0.1-alpha";
-	public String version = "0.5-beta-SNAPSHOT";
+	public String version = "1.0-SNAPSHOT";
 	
 	@Override
 	public void init() {
@@ -81,8 +81,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.publishing();
 		
-		publishMaven.repository(Maven.mavenLocal());
-		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-wrapper:" + wrapperVersion);
+		publishMavenLocal.coordinates("de.m_marvin.metabuild:metabuild-wrapper:" + wrapperVersion);
 		
 	}
 	

@@ -16,7 +16,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
-	public String version = "0.5-beta-SNAPSHOT";
+	public String version = "1.0-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -32,12 +32,12 @@ public class Buildfile extends JavaBuildScript {
 		var copyBinary = new FileTask("copyBinary", FileTask.Action.COPY, jar.archive, installDir);
 		copyBinary.group = "install";
 		copyBinary.dependsOn(jar);
-		
+
 		withSourcesJar();
 		
 		importBuild("core", new File("../metabuild-core"));
-		dependencies.dependsOn(taskNamed("core:publishMaven"));
-		
+		dependencies.dependsOn(taskNamed("core:publishMavenLocal"));
+
 	}
 	
 	@Override
@@ -80,8 +80,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.publishing();
 		
-		publishMaven.repository(Maven.mavenLocal());
-		publishMaven.coordinates("de.m_marvin.metabuild:metabuild-maven:" + version);
+		publishMavenLocal.coordinates("de.m_marvin.metabuild:metabuild-maven:" + version);
 		
 	}
 	

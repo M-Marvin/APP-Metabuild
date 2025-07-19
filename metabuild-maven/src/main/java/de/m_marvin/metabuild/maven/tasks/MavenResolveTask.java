@@ -33,6 +33,7 @@ public class MavenResolveTask extends BuildTask {
 	public File fpRunttime = new File("runtime.filepath");
 	public File fpTestCompiletime = new File("testcompile.filepath");
 	public File fpTestRuntime = new File("testruntime.filepath");
+	public boolean autoAddSources = false;
 	public final DependencyGraph graph;
 	protected final MavenResolver resolver;
 	
@@ -62,6 +63,13 @@ public class MavenResolveTask extends BuildTask {
 		Objects.requireNonNull(artifact);
 		Objects.requireNonNull(scope);
 		this.graph.addTransitive(scope.mavenScope(), artifact, null, systemPath, optional);
+
+		if (this.autoAddSources && (artifact.extension.equals("jar") || artifact.extension.equals("")) && !artifact.classifier.equals("sources")) {
+			try {
+				Artifact sources = artifact.withClassifier("sources", artifact.extension);
+				graph.addTransitive(scope.mavenScope(), sources, null, systemPath, optional);
+			} catch (MavenException e) {}
+		}
 	}
 	
 	protected void dependency(Scope scope, String artifact, String systemPath, boolean optional) {
@@ -160,6 +168,7 @@ public class MavenResolveTask extends BuildTask {
 		
 		// Test if dependencies are missing in cache
 		try {
+			this.resolver.setAutoIncludeSources(this.autoAddSources);
 			this.resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
 			List<File> filepath;
 			
@@ -228,6 +237,7 @@ public class MavenResolveTask extends BuildTask {
 	protected boolean run() {
 		
 		try {
+			this.resolver.setAutoIncludeSources(this.autoAddSources);
 			this.resolver.setResolutionStrategy(Metabuild.get().isRefreshDependencies() ? ResolutionStrategy.FORCE_REMOTE : ResolutionStrategy.REMOTE);
 			List<File> filepath;
 			

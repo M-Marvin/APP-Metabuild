@@ -289,7 +289,7 @@ public class POM {
 	/* key value pairs to replace in all other property strings in this POM */
 	
 	@XMLType
-	public class Properties { @XMLField(value = FieldType.REMAINING_ELEMENT_MAP, namespace = NS, type = String.class) Map<String, String> property = new HashMap<String, String>(); }
+	public class Properties { @XMLField(value = FieldType.REMAINING_ELEMENT_MAP, namespace = NS, type = String.class) public Map<String, String> property = new HashMap<String, String>(); }
 	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public Properties properties;
 	

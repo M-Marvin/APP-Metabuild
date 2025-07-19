@@ -2,8 +2,6 @@ package test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -11,10 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
-
+import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
+import de.m_marvin.metabuild.maven.handler.MavenResolver.ResolutionStrategy;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
@@ -28,33 +26,33 @@ public class Test {
 	@SuppressWarnings("deprecation")
 	public static void main(String... args) throws MavenException, URISyntaxException, IOException {
 		
-		URL url = URI.create("https://maven.pkg.github.com/m-marvin/library-serialportaccess/de/m_marvin/serialportaccess/jserialportaccess/maven-matedata.xml").toURL();
-		
-		HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-		if (connection instanceof HttpURLConnection httpConnection)
-			httpConnection.setRequestMethod("GET");
-		
-		connection.setRequestProperty("Connection", "Keep-Alive");
-		
-		Credentials credentials = new Credentials(
-				() -> System.getenv("GITHUB_ACTOR"), 
-				() -> System.getenv("GITHUB_TOKEN")
-		);
-		
-		// apply credentials if available
-		if (credentials != null) {
-			if (credentials.token() != null)
-				connection.setRequestProperty("Authorization", "Bearer " + credentials.bearer());
-			if (connection instanceof HttpsURLConnection httpsConnection && credentials.username() != null && credentials.password() != null)
-				httpsConnection.setAuthenticator(credentials.authenticator());
-		}
-		
-		System.out.println("STATUS CODE: " + connection.getResponseCode());
-		
-		String t = new String(connection.getInputStream().readAllBytes());
-		System.out.println(t);
-		
-		connection.getInputStream().close();
+//		URL url = URI.create("https://maven.pkg.github.com/m-marvin/library-serialportaccess/de/m_marvin/serialportaccess/jserialportaccess/maven-matedata.xml").toURL();
+//		
+//		HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+//		if (connection instanceof HttpURLConnection httpConnection)
+//			httpConnection.setRequestMethod("GET");
+//		
+//		connection.setRequestProperty("Connection", "Keep-Alive");
+//		
+//		Credentials credentials = new Credentials(
+//				() -> System.getenv("GITHUB_ACTOR"), 
+//				() -> System.getenv("GITHUB_TOKEN")
+//		);
+//		
+//		// apply credentials if available
+//		if (credentials != null) {
+//			if (credentials.token() != null)
+//				connection.setRequestProperty("Authorization", "Bearer " + credentials.bearer());
+//			if (connection instanceof HttpsURLConnection httpsConnection && credentials.username() != null && credentials.password() != null)
+//				httpsConnection.setAuthenticator(credentials.authenticator());
+//		}
+//		
+//		System.out.println("STATUS CODE: " + connection.getResponseCode());
+//		
+//		String t = new String(connection.getInputStream().readAllBytes());
+//		System.out.println(t);
+//		
+//		connection.getInputStream().close();
 //		connection.disconnect();
 		
 //		connection.con
@@ -77,18 +75,18 @@ public class Test {
 //			if (connection instanceof HttpsURLConnection httpsConnection && credentials.username() != null && credentials.password() != null)
 //				httpsConnection.setAuthenticator(credentials.authenticator());
 //		}
-		connection.setRequestMethod("PUT");
-		connection.setDoOutput(true);
-		
-		connection.getOutputStream().write("<metadata><groupId>de.m_marvin.serialportaccess</groupId><artifactId>serialportaccess-linarm32</artifactId><versioning><latest>1.0</latest><release>1.0</release><versions><version>1.0</version></versions><lastUpdated>20250614-205700</lastUpdated></versioning></metadata>".getBytes());
-		
-		connection.getOutputStream().close();
-		
-		System.out.println("STATUS CODE: " + connection.getResponseCode());
-		
-		connection.disconnect();
-			
-		System.exit(-1);
+//		connection.setRequestMethod("PUT");
+//		connection.setDoOutput(true);
+//		
+//		connection.getOutputStream().write("<metadata><groupId>de.m_marvin.serialportaccess</groupId><artifactId>serialportaccess-linarm32</artifactId><versioning><latest>1.0</latest><release>1.0</release><versions><version>1.0</version></versions><lastUpdated>20250614-205700</lastUpdated></versioning></metadata>".getBytes());
+//		
+//		connection.getOutputStream().close();
+//		
+//		System.out.println("STATUS CODE: " + connection.getResponseCode());
+//		
+//		connection.disconnect();
+//			
+//		System.exit(-1);
 		
 		File local = new File(Test.class.getProtectionDomain().getCodeSource().getLocation().toURI().toURL().getFile(), "../../temp");
 		
@@ -102,11 +100,13 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.metabuild:metabuild-core:0.1-SNAPSHOT"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:sources:2.3"), null, null, false);
 
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.commandlineparser:commandlineutility:2.0"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:2.3.1"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.javarun:javarun:1.2"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.basicxml:basicxml:1.1"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.commandlineparser:commandlineutility:2.0"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:2.3.1"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.javarun:javarun:1.2"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.basicxml:basicxml:1.1"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.openui:openui:1.3.2.1-alpha"), null, null, false);
 		
+		graph.addRepository(Maven.mavenCentral());
 		graph.addRepository(new Repository(
 				"GHP SimpleLogging",
 				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
@@ -162,6 +162,8 @@ public class Test {
 		MavenResolver resolver = new MavenResolver(Log.defaultLogger(), local);
 //		resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
 		boolean success = false;
+		resolver.setAutoIncludeSources(true);
+		resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
 		if (resolver.resolveGraph(graph, r -> false, effective, 0, DependencyScope.TEST_COMPILETIME)) {
 			success = resolver.downloadArtifacts(graph, effective.keySet(), artifacts, DependencyScope.TEST_COMPILETIME);
 		}

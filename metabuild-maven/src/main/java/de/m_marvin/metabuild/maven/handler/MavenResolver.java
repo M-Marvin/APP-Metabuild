@@ -68,6 +68,7 @@ public class MavenResolver {
 	private boolean ignoreOptionalDependencies = true;
 	private Consumer<String> statusCallback = s -> {};
 	private ZonedDateTime snapshotTimestamp = null;
+	private boolean autoIncludeSources = false;
 	
 	public static enum ResolutionStrategy {
 		OFFLINE,REMOTE,FORCE_REMOTE;
@@ -80,6 +81,13 @@ public class MavenResolver {
 	
 	public void setStatusCallback(Consumer<String> statusCallback) {
 		this.statusCallback = statusCallback;
+	}
+	
+	/**
+	 * If true, automatically adds the source classifier transitive for all jar dependencies
+	 */
+	public void setAutoIncludeSources(boolean autoIncludeSources) {
+		this.autoIncludeSources = autoIncludeSources;
 	}
 	
 	/**
@@ -366,6 +374,13 @@ public class MavenResolver {
 				}
 				
 				graph.addTransitive(effectiveScope, artifact, excludes, systemPath, d.optional);
+				
+				if (this.autoIncludeSources && (artifact.extension.equals("jar") || artifact.extension.equals("")) && !artifact.classifier.equals("sources")) {
+					try {
+						Artifact sources = artifact.withClassifier("sources", artifact.extension);
+						graph.addTransitive(effectiveScope, sources, excludes, systemPath, d.optional);
+					} catch (MavenException e) {}
+				}
 				
 			}
 		}

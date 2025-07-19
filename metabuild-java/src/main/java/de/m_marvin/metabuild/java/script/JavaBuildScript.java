@@ -38,6 +38,7 @@ public class JavaBuildScript extends BuildScript {
 		dependencies.fpRunttime = new File("build/runtime.classpath");
 		dependencies.fpTestCompiletime = new File("build/testcompile.classpath");
 		dependencies.fpTestRuntime = new File("build/testruntime.classpath");
+		dependencies.autoAddSources = true;
 		
 		compileJava = new JavaCompileTask("compileJava");
 		compileJava.group = "build";

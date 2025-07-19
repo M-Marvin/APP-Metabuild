@@ -81,12 +81,12 @@ public class Artifact {
 		StringBuffer buff = new StringBuffer();
 		buff.append(this.groupId).append(':').append(this.artifactId);
 		if (this.baseVersion != null) {
-			if (this.extension != null || this.classifier != null) {
+			buff.append(':').append(this.baseVersion);
+			if (this.classifier != null) {
 				buff.append(':').append(this.classifier);
 				if (this.extension != null) 
 					buff.append(':').append(this.extension);
 			}
-			buff.append(':').append(this.baseVersion);
 		}
 		if (isSnapshot() && this.version != null) {
 			buff.append(" (").append(this.version).append(')');
@@ -143,7 +143,7 @@ public class Artifact {
 		}
 	}
 	
-	private static final Pattern GAVCE_PATTERN = Pattern.compile("(?<group>[^: ]+):(?<artifact>[^: ]+)(:(?<classifier>[^: ]*)(:(?<extension>[^: ]*))?)?:(?<version>[^: ]+)");
+	private static final Pattern GAVCE_PATTERN = Pattern.compile("(?<group>[^: ]+):(?<artifact>[^: ]+)(:(?<version>[^: ]*))?(:(?<classifier>[^: ]*))?(:(?<extension>[^: ]+))?");
 	
 	public static Artifact of(String gavce) throws MavenException {
 		Matcher m = GAVCE_PATTERN.matcher(gavce);

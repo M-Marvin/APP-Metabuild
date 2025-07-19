@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "1.0-SNAPSHOT";
+	public String version = "1.1-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -129,19 +129,15 @@ public class Buildfile extends JavaBuildScript {
 		
 		// CommandLineParser
 		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
-		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
 		
 		// SimpleLogging
 		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3.2");
-		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3.2");
 		
 		// JavaRun
 		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
-		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
 		
 		// BasicXML
-		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1");
-		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.1");
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1.2");
 		
 		// Include dependencies into final binary jar
 		packageExecutable();
@@ -180,7 +176,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.publishing();
 		
-		publishMavenApi.artifact("api", apiJar.archive);
+		publishMavenApi.artifact("", apiJar.archive);
 		publishMavenApi.artifact("sources", sourcesJar.archive);
 		publishMavenApi.repository(Maven.mavenLocal());
 		publishMavenApi.coordinates("de.m_marvin.metabuild:metabuild-core-api:" + version);

@@ -16,7 +16,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
-	public String version = "1.0-SNAPSHOT";
+	public String version = "1.1-SNAPSHOT";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -62,7 +62,6 @@ public class Buildfile extends JavaBuildScript {
 		super.dependencies();
 		
 		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:" + version);
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:sources:" + version);
 		
 	}
 	

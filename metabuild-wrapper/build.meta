@@ -17,8 +17,8 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
-	public String wrapperVersion = "0.1-alpha";
-	public String version = "1.0-SNAPSHOT";
+	public String wrapperVersion = "1.0";
+	public String version = "1.1-SNAPSHOT";
 	
 	@Override
 	public void init() {
@@ -58,8 +58,7 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.dependencies();
 		
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core-api:api:" + version);
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core-api:sources:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core-api:" + version);
 		
 		// package only metabuild-core-X-api.jar
 		packageExecutable();

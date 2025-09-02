@@ -28,7 +28,8 @@ public class Buildfile extends JavaBuildScript {
 		super.init();
 		
 		withSourcesJar();
-
+		packageExecutable();
+		
 		importBuild("core", new File("../metabuild-core"));
 		dependencies.dependsOn(taskNamed("core:publishMavenApi"));
 		

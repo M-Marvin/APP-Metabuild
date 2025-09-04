@@ -186,9 +186,14 @@ public class MetaWrapper {
 			}
 			
 			ZipEntry entry;
+			String installDirPath = installDir.getCanonicalPath();
 			while ((entry = input.getNextEntry()) != null) {
 				File destination = new File(installDir, entry.getName());
+				if (!destination.getCanonicalPath().startsWith(installDirPath))
+					throw new IOException("ZipSlip in installing meta.zip detected: " + entry.getName());
 				try {
+					if (!destination.getParentFile().isDirectory() && !destination.getParentFile().mkdirs())
+						new IOException("Unable to create destination folder for file: " + entry.getName());
 					OutputStream output = new FileOutputStream(destination);
 					input.transferTo(output);
 					output.close();

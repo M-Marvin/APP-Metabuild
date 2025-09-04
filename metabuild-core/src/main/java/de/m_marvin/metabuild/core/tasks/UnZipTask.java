@@ -150,11 +150,16 @@ public class UnZipTask extends BuildTask {
 				try {
 					ZipInputStream zstream = new ZipInputStream(new FileInputStream(archiveFile));
 					ZipEntry entry;
+					String outputFolderPath = outputFolder.getCanonicalPath();
 					while ((entry = zstream.getNextEntry()) != null) {
 						try {
 							File outputFile = new File(outputFolder, entry.getName());
 							if (this.extractPredicate.test(outputFile)) {
 								logger().debugt(logTag(), "extracting entry: %s", entry.getName());
+								if (!outputFile.getCanonicalPath().startsWith(outputFolderPath))
+									throw BuildException.msg("ZipSlip in archive entry detected: " + entry.getName());
+								if (!outputFile.getParentFile().isDirectory() && !outputFile.getParentFile().mkdirs())
+									throw BuildException.msg("Unable to create folders for output file: " + entry.getName());
 								OutputStream fstream = new FileOutputStream(outputFile);
 								zstream.transferTo(fstream);
 								fstream.close();

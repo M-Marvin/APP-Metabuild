@@ -148,6 +148,7 @@ public class MavenResolveTask extends BuildTask {
 		return dependencyPath.stream()
 				.map(File::getParentFile)
 				.distinct()
+				.filter(File::isDirectory)
 				.map(f -> Stream.of(f.listFiles()).filter(dependencyPath::contains).toArray(File[]::new))
 				.toList();
 	}

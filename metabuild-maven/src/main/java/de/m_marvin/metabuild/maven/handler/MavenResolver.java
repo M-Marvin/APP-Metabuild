@@ -146,11 +146,15 @@ public class MavenResolver {
 	 * @param graph The graph to resolve the list of dependency versions against
 	 * @param dependencyVersions The list of dependency versions to resolve and download
 	 * @param artifactOutput The list to fill with the artifact file paths
+	 * @param completitionList An list which is filled with all Artifacts which have been resolved successfully, can be null, items on this list will not be resolved again
 	 * @param artifactScope The scope to limit the resolution to
 	 * @return true if all dependencies could be resolved and downloaded successfully, false is returned as soon as one resolution fails
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts
 	 */
-	public boolean downloadArtifacts(DependencyGraph graph, Collection<Artifact> dependencyVersions, List<File> artifactOutput, DependencyScope artifactScope) throws MavenException {
+	public boolean downloadArtifacts(DependencyGraph graph, Collection<Artifact> dependencyVersions, List<File> artifactOutput, List<Artifact> completitionList, DependencyScope artifactScope) throws MavenException {
+		
+		if (completitionList == null)
+			completitionList = new ArrayList<Artifact>();
 		
 		for (TransitiveGroup transitiveGroup : graph.getTransitiveGroups()) {
 			
@@ -171,24 +175,34 @@ public class MavenResolver {
 						return false;
 					}
 					
-					artifactOutput.add(systemFile);
+					if (!artifactOutput.contains(systemFile))
+						artifactOutput.add(systemFile);
 					
 				} else {
 					
 					Repository repository = transitiveGroup.graph.getResolutionRepository();
-					File localArtifact = downloadArtifact(repository, transitive.artifact);
+					
+					ResolutionStrategy strategy = this.resolutionStrategy;
+					
+					// avoid downloading the same artifact multiple times
+					if (completitionList.contains(transitive.artifact)) strategy = strategy == ResolutionStrategy.FORCE_REMOTE ? ResolutionStrategy.REMOTE : ResolutionStrategy.OFFLINE;
+					
+					File localArtifact = downloadArtifact(repository, transitive.artifact, strategy);
 					if (localArtifact == null) {
 						logger().warn("failed to download artifact: %s", transitive.artifact);
 						return false;
 					}
 					
-					artifactOutput.add(localArtifact);
+					if (!artifactOutput.contains(localArtifact))
+						artifactOutput.add(localArtifact);
 					
 				}
+
+				completitionList.add(transitive.artifact);
 				
 			}
 			
-			if (transitiveGroup.graph != null && !downloadArtifacts(transitiveGroup.graph, dependencyVersions, artifactOutput, artifactScope)) return false;
+			if (transitiveGroup.graph != null && !downloadArtifacts(transitiveGroup.graph, dependencyVersions, artifactOutput, completitionList, artifactScope)) return false;
 			
 		}
 		
@@ -496,7 +510,7 @@ public class MavenResolver {
 	 */
 	public POM downloadArtifactPOM(Repository repository, Artifact artifact) throws MavenException {
 		
-		File localArtifact = downloadArtifact(repository, artifact.getPOMId());
+		File localArtifact = downloadArtifact(repository, artifact.getPOMId(), this.resolutionStrategy);
 		if (localArtifact == null) return null;
 		
 		try {
@@ -514,16 +528,17 @@ public class MavenResolver {
 	 * Snapshot version resolution is handled automatically.
 	 * @param repository The remote repository from which to download the file if required
 	 * @param artifact The artifact to acquire
+	 * @param strategy The resolution strategy to apply
 	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public File downloadArtifact(Repository repository, Artifact artifact) throws MavenException {
+	public File downloadArtifact(Repository repository, Artifact artifact, ResolutionStrategy strategy) throws MavenException {
 		
 		// if snapshot artifact, metadata resolution required first
 		if (artifact.isSnapshot() && !artifact.isSnapshotDefined()) {
 			
 			// download snapshot metadata or pull from cache if not yet expired
-			File snapshotMetadataFile = downloadArtifact(repository, artifact, DataLevel.META_VERSION);
+			File snapshotMetadataFile = downloadArtifact(repository, artifact, DataLevel.META_VERSION, strategy);
 			if (snapshotMetadataFile == null) return null;
 			
 			try {
@@ -550,8 +565,6 @@ public class MavenResolver {
 							0, 
 							ZoneOffset.UTC);
 				}
-
-				
 				
 			} catch (IOException | MavenException e) {
 				throw new MavenException(e, "problem when parsing maven-metadata: %s", artifact);
@@ -559,7 +572,7 @@ public class MavenResolver {
 			
 		}
 		
-		return downloadArtifact(repository, artifact, DataLevel.ARTIFACT);
+		return downloadArtifact(repository, artifact, DataLevel.ARTIFACT, strategy);
 		
 	}
 	
@@ -569,16 +582,17 @@ public class MavenResolver {
 	 * @param repository The remote repository from which to download the file if required
 	 * @param artifact The artifact to acquire
 	 * @param dataLevel The data level, this indicates if the actual artifact or one of the three metadata levels should be acquired
+	 * @param strategy The resolution strategy to apply
 	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
+	public File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel, ResolutionStrategy strategy) throws MavenException {
 		
 		// assemble remote URL and local path
 		File localArtifact = new File(this.localCache, repository.getCacheFolder() +"/" + artifact.getLocalPath(dataLevel));
 		
 		// check if file already exists in local cache
-		if (this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) {
+		if (strategy != ResolutionStrategy.FORCE_REMOTE) {
 			if (localArtifact.isFile()) {
 				if (!dataLevel.isMetadata()) return localArtifact;
 				

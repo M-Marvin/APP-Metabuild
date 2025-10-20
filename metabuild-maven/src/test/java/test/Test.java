@@ -165,7 +165,7 @@ public class Test {
 		resolver.setAutoIncludeSources(true);
 		resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
 		if (resolver.resolveGraph(graph, r -> false, effective, 0, DependencyScope.TEST_COMPILETIME)) {
-			success = resolver.downloadArtifacts(graph, effective.keySet(), artifacts, DependencyScope.TEST_COMPILETIME);
+			success = resolver.downloadArtifacts(graph, effective.keySet(), artifacts, null, DependencyScope.TEST_COMPILETIME);
 		}
 
 		System.out.println("=> " + success);

@@ -26,6 +26,9 @@ public class JavaBuildScript extends BuildScript {
 	public JarTask jar;
 	public JarTask sourcesJar;
 	public BuildTask build;
+	public JavaCompileTask compileTestJava;
+	public JavaRunClasspathTask runTestJava;
+	public JavaRunClasspathTask runJava;
 	
 	@Override
 	public void init() {
@@ -103,7 +106,7 @@ public class JavaBuildScript extends BuildScript {
 	
 	public void withTests(String testMainClass) {
 
-		var compileTestJava = new JavaCompileTask("compileTestJava");
+		compileTestJava = new JavaCompileTask("compileTestJava");
 		compileTestJava.group = "build";
 		compileTestJava.sourcesDir = new File("src/test/java");
 		compileTestJava.classesDir = new File("build/classes/test/java");
@@ -112,7 +115,7 @@ public class JavaBuildScript extends BuildScript {
 		compileTestJava.classpath.add(compileJava.classesDir);
 		compileTestJava.dependsOn(build);
 
-		var runTestJava = new JavaRunClasspathTask("runTest");
+		runTestJava = new JavaRunClasspathTask("runTest");
 		runTestJava.group = "run";
 		runTestJava.classpath.add(dependencies.fpTestRuntime);
 		runTestJava.classesDir.add(compileJava.classesDir);
@@ -126,7 +129,7 @@ public class JavaBuildScript extends BuildScript {
 	
 	public void makeRunnable() {
 
-		var runJava = new JavaRunClasspathTask("run");
+		runJava = new JavaRunClasspathTask("run");
 		runJava.group = "run";
 		runJava.classpath.add(dependencies.fpRunttime);
 		runJava.classesDir.add(compileJava.classesDir);

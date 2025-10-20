@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -225,6 +226,19 @@ public class MavenResolver {
 					if (transitiveGroup.graph == null) {
 						
 						logger().warn("unable to resolve artifact graph for group: %s (scope %s)", transitiveGroup.group, transitiveGroup.scope);
+						
+						// check if an another version of transitiveGroup.group is already present in dependencyVersions with an higher or equal priority
+						// this prevents the build from failing because of an missing outdated version even if it is replaced in with an newer one higher up in the dependency tree
+						
+						for (Entry<Artifact, Integer> definedGroup : dependencyVersions.entrySet()) {
+							if (definedGroup.getValue() > priority) continue;
+							if (	definedGroup.getKey().groupId.equals(transitiveGroup.group.groupId) &&
+									definedGroup.getKey().artifactId.equals(transitiveGroup.group.artifactId)) {
+								logger().warn("missing resolution ignored, higher priority defined in dependency tree: %s", definedGroup.getKey());
+								return true;
+							}
+						}
+						
 						return false;
 						
 					}

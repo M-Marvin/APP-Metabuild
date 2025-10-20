@@ -3,8 +3,8 @@ package de.m_marvin.metabuild.maven.types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,7 +53,7 @@ public class DependencyGraph {
 	public DependencyGraph(List<Repository> repositories, List<TransitiveGroup> transitives) {
 		this.repositories = new ArrayList<Repository>();
 		this.repositories.addAll(repositories);
-		this.transitives = new HashMap<Artifact, Map<Scope, TransitiveGroup>>();
+		this.transitives = new LinkedHashMap<Artifact, Map<Scope,TransitiveGroup>>();
 		for (var g : transitives) {
 			for (var a : g.artifacts) {
 				addTransitive(g.scope, a.artifact, g.excludes, a.systemPath, a.optional);
@@ -103,7 +103,7 @@ public class DependencyGraph {
 		Artifact group = artifact.getGAV();
 		Map<Scope, TransitiveGroup> scopes = this.transitives.get(group);
 		if (scopes == null) {
-			scopes = new HashMap<Scope, TransitiveGroup>();
+			scopes = new LinkedHashMap<Scope, TransitiveGroup>();
 			this.transitives.put(group, scopes);
 		}
 		TransitiveGroup scopegroup = scopes.get(scope);

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import de.m_marvin.metabuild.core.Metabuild;
 import de.m_marvin.metabuild.core.exception.BuildException;
 import de.m_marvin.metabuild.core.exception.MetaScriptException;
 import de.m_marvin.metabuild.core.script.TaskType;
@@ -63,6 +64,7 @@ public class JavaRunClasspathTask extends BuildTask {
 		commandLine.addAll(this.arguments.stream().filter(a -> a != null).toList());
 		
 		ProcessBuilder processBuilder = new ProcessBuilder(commandLine);
+		processBuilder.directory(Metabuild.get().buildWorkingDir());
 		
 		try {
 			// Start process

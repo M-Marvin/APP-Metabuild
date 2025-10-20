@@ -18,7 +18,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of t metabuild runtime
 	public String wrapperVersion = "1.1";
-	public String version = "1.2.1";
+	public String version = "1.2.2";
 	
 	@Override
 	public void init() {

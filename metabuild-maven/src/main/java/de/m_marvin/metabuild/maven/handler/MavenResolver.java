@@ -66,7 +66,7 @@ public class MavenResolver {
 	private TimeUnit metadataExpirationUnit = TimeUnit.SECONDS;
 	private long metadataExpiration = 60;
 	private ResolutionStrategy resolutionStrategy = ResolutionStrategy.REMOTE;
-	private boolean ignoreOptionalDependencies = true;
+	private boolean ignoreOptionalDependencies = false;
 	private Consumer<String> statusCallback = s -> {};
 	private ZonedDateTime snapshotTimestamp = null;
 	private boolean autoIncludeSources = false;
@@ -172,10 +172,15 @@ public class MavenResolver {
 					File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
 					if (!systemFile.exists()) {
 						logger().warn("failed to find system artifact: %s", systemFile);
-						return false;
+						
+						// ignore optional dependencies if failed to resolve, just warn about it
+						if (!transitive.optional)
+							return false;
+						else
+							logger().warn("artifact marked as optional, ignore");
 					}
 					
-					if (!artifactOutput.contains(systemFile))
+					if (systemFile.exists() && !artifactOutput.contains(systemFile))
 						artifactOutput.add(systemFile);
 					
 				} else {
@@ -186,14 +191,22 @@ public class MavenResolver {
 					
 					// avoid downloading the same artifact multiple times
 					if (completitionList.contains(transitive.artifact)) strategy = strategy == ResolutionStrategy.FORCE_REMOTE ? ResolutionStrategy.REMOTE : ResolutionStrategy.OFFLINE;
+
+					// ignore optional dependencies if asked to
+					if (transitive.optional && this.ignoreOptionalDependencies) continue;
 					
 					File localArtifact = downloadArtifact(repository, transitive.artifact, strategy);
 					if (localArtifact == null) {
 						logger().warn("failed to download artifact: %s", transitive.artifact);
-						return false;
+						
+						// ignore optional dependencies if failed to resolve, just warn about it
+						if (!transitive.optional)
+							return false;
+						else
+							logger().warn("artifact marked as optional, ignore");
 					}
 					
-					if (!artifactOutput.contains(localArtifact))
+					if (localArtifact != null && !artifactOutput.contains(localArtifact))
 						artifactOutput.add(localArtifact);
 					
 				}
@@ -364,7 +377,7 @@ public class MavenResolver {
 		Set<Artifact> nddepend = new HashSet<Artifact>();
 		if (pom.dependencies != null) {
 			for (var d : pom.dependencies.dependency) {
-
+				
 				// get the scope the imported transitive will have in this graph
 				Scope effectiveScope = scope.effective(d.scope);
 				
@@ -406,7 +419,7 @@ public class MavenResolver {
 				if (this.autoIncludeSources && (artifact.extension.equals("jar") || artifact.extension.equals("")) && !artifact.classifier.equals("sources")) {
 					try {
 						Artifact sources = artifact.withClassifier("sources", artifact.extension);
-						graph.addTransitive(effectiveScope, sources, excludes, systemPath, d.optional);
+						graph.addTransitive(effectiveScope, sources, excludes, systemPath, true);
 					} catch (MavenException e) {}
 				}
 				
@@ -464,10 +477,17 @@ public class MavenResolver {
 					try {
 						POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
 						if (importPOM == null)
-							throw new MavenException("POM resolution inconsistencies, import not found on repositories: %s", importArtifactPOM);
-						pom.importPOM(importPOM, false);
+							if (dependency.optional)
+								logger().warn("unable to resolve optional dependency POM: %s", importArtifactPOM);
+							else
+								throw new MavenException("POM resolution inconsistencies, import not found on repositories: %s", importArtifactPOM);
+						else
+							pom.importPOM(importPOM, false);
 					} catch (MavenException e) {
-						throw new MavenException(e, "POM resolution inconsistencies, failed to resolve import POM: %s", importArtifactPOM);
+						if (dependency.optional)
+							logger().warn("unable to fully resolve optional dependency POM: %s", importArtifactPOM);
+						else
+							throw new MavenException(e, "POM resolution inconsistencies, failed to resolve import POM: %s", importArtifactPOM);
 					}
 					
 				}
@@ -492,6 +512,7 @@ public class MavenResolver {
 			pomRepository.accept(repository);
 			
 			logger().info("-> fully resolved POM: %s", artifact);
+			
 			return pom;
 			
 		}
@@ -574,6 +595,19 @@ public class MavenResolver {
 		
 		return downloadArtifact(repository, artifact, DataLevel.ARTIFACT, strategy);
 		
+	}
+
+	/**
+	 * Attempts to download the artifact or metadata from the remote repository to the cache if required, and returns the local cache file<br>
+	 * If the artifact coordinates are snapshot coordinates, the concrete timestamped version has to be resolved for this to work.
+	 * @param repository The remote repository from which to download the file if required
+	 * @param artifact The artifact to acquire
+	 * @param dataLevel The data level, this indicates if the actual artifact or one of the three metadata levels should be acquired
+	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
+	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
+	 */
+	public File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
+		return downloadArtifact(repository, artifact, this.resolutionStrategy);
 	}
 	
 	/**

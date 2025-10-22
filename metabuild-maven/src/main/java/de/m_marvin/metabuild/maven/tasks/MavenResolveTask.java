@@ -67,7 +67,7 @@ public class MavenResolveTask extends BuildTask {
 		if (this.autoAddSources && (artifact.extension.equals("jar") || artifact.extension.equals("")) && !artifact.classifier.equals("sources")) {
 			try {
 				Artifact sources = artifact.withClassifier("sources", artifact.extension);
-				graph.addTransitive(scope.mavenScope(), sources, null, systemPath, optional);
+				graph.addTransitive(scope.mavenScope(), sources, null, systemPath, true);
 			} catch (MavenException e) {}
 		}
 	}

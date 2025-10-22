@@ -397,7 +397,7 @@ public class JavaCompileTask extends BuildTask {
 			}
 			
 			// Update metadata and remove possible outdated class files
-			SourceMetaData newMeta = new SourceMetaData(classFiles.get().toArray(File[]::new), FileUtility.timestamp(classFiles.get().get(0)).get());
+			SourceMetaData newMeta = new SourceMetaData(classFiles.get().toArray(File[]::new), classFiles.get().stream().map(FileUtility::timestamp).filter(Optional::isPresent).map(Optional::get).findAny().orElse(FileTime.fromMillis(System.currentTimeMillis())));
 			SourceMetaData oldMeta = this.sourceMetadata.put(sourceFile, newMeta);
 			if (oldMeta != null) {
 				List<File> outdatedFiles = Stream.of(oldMeta.classFiles()).filter(f -> !Arrays.asList(newMeta.classFiles()).contains(f)).toList();

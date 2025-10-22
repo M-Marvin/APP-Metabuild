@@ -607,7 +607,7 @@ public class MavenResolver {
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
 	public File downloadArtifact(Repository repository, Artifact artifact, DataLevel dataLevel) throws MavenException {
-		return downloadArtifact(repository, artifact, this.resolutionStrategy);
+		return downloadArtifact(repository, artifact, dataLevel, this.resolutionStrategy);
 	}
 	
 	/**

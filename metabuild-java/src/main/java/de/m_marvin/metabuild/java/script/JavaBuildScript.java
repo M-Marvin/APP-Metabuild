@@ -24,6 +24,7 @@ public class JavaBuildScript extends BuildScript {
 	public MavenPublishTask publishMavenLocal;
 	public JavaCompileTask compileJava;
 	public JarTask jar;
+	public JarTask jarAll;
 	public JarTask sourcesJar;
 	public BuildTask build;
 	public JavaCompileTask compileTestJava;
@@ -97,10 +98,23 @@ public class JavaBuildScript extends BuildScript {
 	
 	public void packageExecutable() {
 		
-		jar.includes.add(dependencies.fpRunttime);
-		jar.includePredicate = f -> 
+		jarAll = new JarTask("jarAll");
+		jarAll.group = "build";
+		jarAll.archive = new File(String.format("build/libs/%s-all.jar", projectName));
+		jarAll.dependencyOf(build);
+		jarAll.dependsOn(jar);
+		
+		jarAll.includes.add(jar.archive);
+		jarAll.includes.add(dependencies.fpRunttime);
+		jarAll.includePredicate = f -> 
 			!FileUtility.getNameNoExtension(f).endsWith("-sources") && 
 			!FileUtility.getNameNoExtension(f).endsWith("-javadoc");
+			
+		publishMaven.artifacts.put("all", jarAll.archive);
+		publishMaven.dependsOn(jarAll);
+
+		publishMavenLocal.artifacts.put("all", jarAll.archive);
+		publishMavenLocal.dependsOn(jarAll);
 		
 	}
 	
@@ -146,7 +160,7 @@ public class JavaBuildScript extends BuildScript {
 		sourcesJar.group = "build";
 		sourcesJar.entries.put(new File("src/main/java"), "");
 		sourcesJar.archive = new File(String.format("build/libs/%s-sources.jar", projectName));
-		sourcesJar.dependencyOf("build");
+		sourcesJar.dependencyOf(build);
 		
 		publishMaven.artifacts.put("sources", sourcesJar.archive);
 		publishMaven.dependsOn(sourcesJar);

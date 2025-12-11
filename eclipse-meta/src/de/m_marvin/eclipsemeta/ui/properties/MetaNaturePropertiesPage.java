@@ -15,6 +15,7 @@ import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -140,7 +141,7 @@ public class MetaNaturePropertiesPage extends PropertyPage implements IWorkbench
 		info.setLayout(layout);
 		
 		Label infoIcon = new Label(info, SWT.NULL);
-		infoIcon.setImage(Icons.INFO_ICON.createImage());
+		infoIcon.setImage(Icons.INFO_ICON_IMAGE);
 
 		Label infoText = new Label(info, SWT.NULL);
 		infoText.setText("The configured tasks will be run in \"prepare phase only\", when loading/reloading the project, to get information such as dependencies to include.\nThe tasks will be actualy executed when the meta project is refreshed.\nThe tasks are executed with the refresh dependencies flag, when calling refresh dependencies on the project.\nAll three only apply when the configuration is active while loading/refreshing the project.");

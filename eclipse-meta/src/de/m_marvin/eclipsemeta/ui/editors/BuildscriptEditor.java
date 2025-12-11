@@ -26,7 +26,7 @@ public class BuildscriptEditor extends CompilationUnitEditor {
 	@Override
 	protected void doSetInput(IEditorInput input) throws CoreException {
 		super.doSetInput(input);
-		setTitleImage(Icons.META_FILE_ICON.createImage());
+		setTitleImage(Icons.META_FILE_ICON_IMAGE);
 	}
 	
 	public Collection<IClasspathEntry> getClasspath() {

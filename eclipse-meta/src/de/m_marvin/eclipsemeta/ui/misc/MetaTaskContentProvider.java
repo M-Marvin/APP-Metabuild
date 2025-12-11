@@ -26,24 +26,24 @@ public class MetaTaskContentProvider implements ITreePathContentProvider {
 					cell.setText(project.getProject().getName() + " (no active configuration)");
 				}
 				switch (project.getState()) {
-				case UNLOADED: cell.setImage(Icons.META_PROJECT_CLOSED_ICON.createImage()); break;
-				case ERROR: cell.setImage(Icons.META_PROJECT_ERROR_ICON.createImage()); break;
+				case UNLOADED: cell.setImage(Icons.META_PROJECT_CLOSED_ICON_IMAGE); break;
+				case ERROR: cell.setImage(Icons.META_PROJECT_ERROR_ICON_IMAGE); break;
 				case OK: {
 					if (project.isJava()) {
-						cell.setImage(Icons.META_JAVA_PROJECT_LOADED_ICON.createImage());
+						cell.setImage(Icons.META_JAVA_PROJECT_LOADED_ICON_IMAGE);
 					} else if (project.isCpp()) {
-						cell.setImage(Icons.META_CPP_PROJECT_LOADED_ICON.createImage());
+						cell.setImage(Icons.META_CPP_PROJECT_LOADED_ICON_IMAGE);
 					} else {
-						cell.setImage(Icons.META_PROJECT_LOADED_ICON.createImage());
+						cell.setImage(Icons.META_PROJECT_LOADED_ICON_IMAGE);
 					}
 				}
 				}
 			} else if (cell.getElement() instanceof MetaGroup group) {
 				cell.setText(group.group());
-				cell.setImage(Icons.TASK_GROUP_ICON.createImage());
+				cell.setImage(Icons.TASK_GROUP_ICON_IMAGE);
 			} else if (cell.getElement() instanceof MetaTask task) {
 				cell.setText(task.name());
-				cell.setImage(Icons.TASK_ICON.createImage());
+				cell.setImage(Icons.TASK_ICON_IMAGE);
 			} else {
 				cell.setText(cell.getElement().toString());
 			}

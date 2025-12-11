@@ -163,7 +163,8 @@ public class MetaProjectNature implements IProjectNature {
 		for (var config : this.configurations) {
 			configSettings.put(config.getName(), config.getTasks().stream().map(MetaTask::name).reduce((a, b) -> a + ";" + b).orElse(""));
 		}
-		this.settings.put("activeConfig", this.activeConfiguration.getName());
+		if (this.activeConfiguration != null)
+			this.settings.put("activeConfig", this.activeConfiguration.getName());
 		this.settings.flush();
 		
 	}

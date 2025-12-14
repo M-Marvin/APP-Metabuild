@@ -90,7 +90,9 @@ public class Repository {
 			return new Authenticator() {
 				@Override
 				protected PasswordAuthentication getPasswordAuthentication() {
-					return new PasswordAuthentication(Credentials.this.username.get(), Credentials.this.password.get().toCharArray());
+					String username = Credentials.this.username.get();
+					String password = Credentials.this.password.get();
+					return new PasswordAuthentication(username == null ? "" : username, (password == null ? "" : password).toCharArray());
 				}
 			};
 		}

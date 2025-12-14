@@ -101,6 +101,7 @@ public class JavaBuildScript extends BuildScript {
 		jarAll = new JarTask("jarAll");
 		jarAll.group = "build";
 		jarAll.archive = new File(String.format("build/libs/%s-all.jar", projectName));
+		jarAll.metainfo.putAll(jar.metainfo);
 		jarAll.dependencyOf(build);
 		jarAll.dependsOn(jar);
 		

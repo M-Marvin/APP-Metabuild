@@ -82,7 +82,7 @@ public class CppLinkTask extends CommandLineTask {
 			}
 			libraryDirectories.add(libPath);
 		}
-		libraryDirectories.forEach(d -> this.arguments.add("-L\"" + d.getAbsolutePath() + "\""));
+		libraryDirectories.forEach(d -> this.arguments.add("-L" + d.getAbsolutePath()));
 		librariesFromPaths.forEach(l -> this.arguments.add("-l" + l));
 		this.libraries.forEach(l -> this.arguments.add("-l" + l));
 

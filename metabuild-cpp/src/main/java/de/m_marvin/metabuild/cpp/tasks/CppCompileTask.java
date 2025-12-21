@@ -293,7 +293,7 @@ public class CppCompileTask extends CommandLineTask {
 			if (!include.isDirectory()) continue;
 			File includeDir = FileUtility.absolute(include);
 			this.arguments.add("-I");
-			this.arguments.add("\"" + includeDir.getAbsolutePath() + "\"");
+			this.arguments.add(includeDir.getAbsolutePath());
 		}
 		
 		return super.buildCommand();

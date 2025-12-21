@@ -302,6 +302,9 @@ public class CppCompileTask extends CommandLineTask {
 	@Override
 	public boolean run() {
 		
+		if (this.executable == null)
+			throw BuildException.msg("failed to locate cpp compiler: %s", this.compiler);
+		
 		for (File removedObj : this.removed) {
 			this.sourceMetadata.remove(removedObj).delete();
 		}

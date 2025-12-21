@@ -74,7 +74,9 @@ public class MetaLaunch {
 		
 		mb.setWorkingDirectory(workingDir);
 		
-		if (args.get("log") != null)
+		if (taskList.isEmpty())
+			mb.setLogFile(null);
+		else if (args.get("log") != null)
 			mb.setLogFile(args.get("log"));
 		if (args.get("cache-dir") != null)
 			mb.setCacheDirectory(args.get("cache-dir"));

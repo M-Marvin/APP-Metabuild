@@ -100,7 +100,7 @@ public class CppLinkTask extends CommandLineTask {
 	
 	@Override
 	public boolean run() {
-
+		
 		// Try to locate linker executable
 		if (this.executable == null) {
 			Optional<File> linkerPath = FileUtility.locateOnPath(this.linker);

@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "1.2.6";
+	public String version = "1.3.0";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -134,7 +134,7 @@ public class Buildfile extends JavaBuildScript {
 		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3.2");
 		
 		// JavaRun
-		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
+		dependencies.implementation("de.m_marvin.javarun:javarun:1.2.1");
 		
 		// BasicXML
 		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1.2");

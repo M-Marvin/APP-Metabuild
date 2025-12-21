@@ -19,9 +19,11 @@ public class InitTask extends BuildTask {
 
 	private static final File WRAPPER_LOCATION = new File("meta/metabuild-wrapper.jar");
 	private static final File METAW_LOCATION_WIN = new File("metaw.cmd");
+	private static final File METAW_LOCATION_LIN = new File("metaw");
 
 	private static final String WRAPPER_INCLUDE_LOC = "wrapper/wrapper.zip";
 	private static final String METAW_INCLUDE_LOC_WIN = "wrapper/metaw.cmd";
+	private static final String METAW_INCLUDE_LOC_LIN = "wrapper/metaw";
 	
 	public InitTask(String name) {
 		super(name);
@@ -44,10 +46,12 @@ public class InitTask extends BuildTask {
 		
 		File wrapperJar = FileUtility.absolute(WRAPPER_LOCATION);
 		File metawWin = FileUtility.absolute(METAW_LOCATION_WIN);
+		File metawLin = FileUtility.absolute(METAW_LOCATION_LIN);
 		
 		try {
 			writeWrapper(wrapperJar);
 			writeFile(metawWin, METAW_INCLUDE_LOC_WIN);
+			writeFile(metawLin, METAW_INCLUDE_LOC_LIN);
 			return true;
 		} catch (IOException e) {
 			throw BuildException.msg(e, "unable to rewrite write wrapper jar, NOTE: do not rewrite wrapper using 'metaw init -force', use 'meta init -force' instead!");

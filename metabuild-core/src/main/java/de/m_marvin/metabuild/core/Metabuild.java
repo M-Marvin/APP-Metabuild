@@ -139,6 +139,7 @@ public final class Metabuild implements IMeta {
 		if (instance != null) throw MetaInitError.msg("can't instantiate multiple metabuild instances in same VM!");
 		instance = this;
 		
+		setLogFile(DEFAULT_BUILD_LOG_NAME);
 		setTaskThreads(DEFAULT_TASK_THREADS);
 		
 		this.buildCompiler = new ScriptCompiler(this);
@@ -234,7 +235,7 @@ public final class Metabuild implements IMeta {
 	public void setLogFile(File logFile) {
 		if (getState() != MetaState.PREINIT)
 			throw new IllegalStateException("configurations can only be changed in PREINIT phase!");
-		this.logFile = FileUtility.absolute(logFile, workingDir());
+		this.logFile = logFile;
 	}
 	
 	public File getLogFile() {
@@ -477,15 +478,17 @@ public final class Metabuild implements IMeta {
 		}
 	}
 	
-	private boolean checkPlugin(File pluginFile) {
+	private Optional<String> checkPlugin(File pluginFile) {
 		try {
 			JarFile jar = new JarFile(pluginFile);
 			Attributes attributes = jar.getManifest().getMainAttributes();
 			String pluginName = attributes.getValue("Metabuild-Plugin-Name");
+			String versionName = attributes.getValue("Implementation-Version");
 			jar.close();
-			return pluginName != null;
+			return pluginName != null ? Optional.of(String.format("(%s) %s", pluginName, versionName)) : Optional.empty();
+			
 		} catch (IOException e) {
-			return false;
+			return Optional.empty();
 		}
 	}
 	
@@ -503,7 +506,6 @@ public final class Metabuild implements IMeta {
 		
 		if (this.workingDirectory == null) setWorkingDirectory(DEFAULT_CACHE_DIRECTORY);
 		if (this.cacheDirectory == null) setCacheDirectory(DEFAULT_CACHE_DIRECTORY);
-		if (this.logFile == null) setLogFile(DEFAULT_BUILD_LOG_NAME);
 		
 		if (!this.cacheDirectory.isDirectory() && !this.cacheDirectory.mkdir()) {
 			logger().errort(LOG_TAG, "could not create cache directory: %s", this.cacheDirectory.getPath());
@@ -511,9 +513,13 @@ public final class Metabuild implements IMeta {
 		}
 		if (this.logger == null) {
 			try {
-				if (!this.logFile.getParentFile().isDirectory() && !this.logFile.getParentFile().mkdirs()) {
-					logger().warnt(LOG_TAG, "failed to create log file directory!");
-					if (this.terminalLogger != null) this.logger = new StacktraceLogger(this.terminalLogger);
+				if (this.logFile != null)
+					this.logFile = FileUtility.absolute(logFile, workingDir());
+				if (this.logFile == null || (!this.logFile.getParentFile().isDirectory() && !this.logFile.getParentFile().mkdirs())) {
+					if (this.logFile != null)
+						logger().warnt(LOG_TAG, "failed to create log file directory!");
+					if (this.terminalLogger != null)
+						this.logger = new StacktraceLogger(this.terminalLogger);
 				} else {
 					this.logStream = new FileOutputStream(this.logFile);
 					if (this.terminalLogger != null) {
@@ -543,9 +549,10 @@ public final class Metabuild implements IMeta {
 			logger().infot(LOG_TAG, "search system plugins: %s", this.metaHome);
 			for (File pluginFile : pluginFiles) {
 				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
-				if (!checkPlugin(pluginFile)) continue;
+				Optional<String> pluginInfo = checkPlugin(pluginFile);
+				if (pluginInfo.isEmpty()) continue;
 				this.pluginLoader.addFile(pluginFile);
-				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
+				logger().infot(LOG_TAG, "- %s %s", pluginFile.getName(), pluginInfo.get());
 			}
 		}
 		stateTransition(MetaState.IDLE, MetaState.PREINIT);
@@ -726,9 +733,10 @@ public final class Metabuild implements IMeta {
 			for (File pluginFile : pluginFiles) {
 				if (!FileUtility.getExtension(pluginFile).equalsIgnoreCase("jar")) continue;
 				if (this.pluginLoader.getFiles().contains(buildFile)) continue;
-				if (!checkPlugin(pluginFile)) continue;
+				Optional<String> pluginInfo = checkPlugin(pluginFile);
+				if (pluginInfo.isEmpty()) continue;
 				this.pluginLoader.addFile(pluginFile);
-				logger().infot(LOG_TAG, "- %s", pluginFile.getName());
+				logger().infot(LOG_TAG, "- %s %s", pluginFile.getName(), pluginInfo.get());
 			}
 		}
 		

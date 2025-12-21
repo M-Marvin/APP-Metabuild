@@ -16,10 +16,12 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of the metabuild runtime
-	public String version = "1.2.6";
+	public String coreVersion = "1.3.0";
+	public String mavenVersion = "1.3.0";
+	public String version = "1.3.0";
 	
 	// local system directory to install metabuild to
-	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
+	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + coreVersion + "/");
 	
 	@Override
 	public void init() {
@@ -54,9 +56,9 @@ public class Buildfile extends JavaBuildScript {
 		
 		super.dependencies();
 		
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-core:" + coreVersion);
 
-		dependencies.implementation("de.m_marvin.metabuild:metabuild-maven:" + version);
+		dependencies.implementation("de.m_marvin.metabuild:metabuild-maven:" + mavenVersion);
 		
 	}
 	

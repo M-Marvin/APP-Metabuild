@@ -608,9 +608,10 @@ public final class Metabuild implements IMeta {
 		
 		stateTransition(MetaState.INIT, MetaState.IDLE, MetaState.READY);
 		this.registeredTasks.clear();
-
-		buildFile = FileUtility.absolute(buildFile, workingDir());
-		if (!buildFile.isFile()) {
+		
+		if (buildFile != null)
+			buildFile = FileUtility.absolute(buildFile, workingDir());
+		if (buildFile == null || !buildFile.isFile()) {
 
 			// Initialize dummy build script to allow call to built in tasks
 			this.imports.put("", new BuildScript());

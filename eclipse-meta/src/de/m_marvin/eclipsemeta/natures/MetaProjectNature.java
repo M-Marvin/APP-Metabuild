@@ -138,7 +138,7 @@ public class MetaProjectNature implements IProjectNature {
 		for (String configName : configSettings.keys()) {
 			TaskConfiguration config = new TaskConfiguration(configName);
 			config.getTasks().addAll(
-					Stream.of(configSettings.get(configName, "").split(";"))
+					Stream.of(configSettings.get(configName, "").split(File.pathSeparator))
 					.map(n -> new MetaTask<MetaProjectNature>(this, Optional.empty(), n)) // We don't need to know the group of the task for this
 					.toList());
 			this.configurations.add(config);

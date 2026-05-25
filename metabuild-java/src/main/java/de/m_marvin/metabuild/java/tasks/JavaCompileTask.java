@@ -370,9 +370,9 @@ public class JavaCompileTask extends BuildTask {
 		// Add classpath options
 		StringBuffer classpathBuf = new StringBuffer();
 		
-		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
+		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + File.pathSeparator + b).orElse("");
 		classpathBuf.append(classpathStr);
-		classpathBuf.append(";" + FileUtility.absolute(this.sourcesDir));
+		classpathBuf.append(File.pathSeparator + FileUtility.absolute(this.sourcesDir));
 		this.options.add("-classpath");
 		this.options.add(classpathBuf.toString());
 		

@@ -34,6 +34,7 @@ public class MetaLaunch {
 		parser.addOption("refresh-dependencies", false, "if set, re-download all dependencies and replace current cache");
 		parser.addOption("info", false, "print additional log information to the terminal during build process");
 		parser.addOption("force", false, "if set, all tasks are run even if they are up to date");
+		parser.addOption("no-build", false, "skips loading the projects build file, can be used to update metabuild while ignoring a broken buildfile");
 		parser.addOption("prepare", false, "skip actual run phase and only run prepare phase");
 		
 		try {
@@ -97,10 +98,14 @@ public class MetaLaunch {
 		mb.setConsoleStreamInput(System.in);
 		
 		// Load build file
-		File buildFile = Metabuild.DEFAULT_BUILD_FILE_NAME;
-		if (args.get("build-file") != null)
-			buildFile = args.get("build-file");
-		if (!mb.initBuild(buildFile)) return -1;
+		if (args.flag("no-build")) {
+			if (!mb.initBuild(null)) return -1;
+		} else {
+			File buildFile = Metabuild.DEFAULT_BUILD_FILE_NAME;
+			if (args.get("build-file") != null)
+				buildFile = args.get("build-file");
+			if (!mb.initBuild(buildFile)) return -1;
+		}
 		
 		// Run tasks
 		boolean buildState = mb.runTasks(taskList);

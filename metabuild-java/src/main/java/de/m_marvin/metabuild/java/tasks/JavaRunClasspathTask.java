@@ -45,9 +45,9 @@ public class JavaRunClasspathTask extends BuildTask {
 		}
 		
 		StringBuffer classpathBuf = new StringBuffer();
-		classesDir.forEach(f -> classpathBuf.append(f).append(";"));
+		classesDir.forEach(f -> classpathBuf.append(f).append(File.pathSeparator));
 		
-		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + ";" + b).orElse("");
+		String classpathStr = FileUtility.parseFilePaths(this.classpath).stream().map(File::getAbsolutePath).reduce((a, b) -> a + File.pathSeparator + b).orElse("");
 		classpathBuf.append(classpathStr);
 		
 		Optional<File> javaExecutable = FileUtility.locateOnPath(this.javaExecutable);

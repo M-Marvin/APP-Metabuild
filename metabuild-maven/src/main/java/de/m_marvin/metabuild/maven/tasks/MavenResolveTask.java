@@ -2,6 +2,7 @@ package de.m_marvin.metabuild.maven.tasks;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,10 +60,10 @@ public class MavenResolveTask extends BuildTask {
 		return this.graph.getRepositories();
 	}
 	
-	protected void dependency(Scope scope, Artifact artifact, String systemPath, boolean optional) {
+	protected void dependency(Scope scope, Artifact artifact, String systemPath, boolean optional, Artifact... excludes) {
 		Objects.requireNonNull(artifact);
 		Objects.requireNonNull(scope);
-		this.graph.addTransitive(scope.mavenScope(), artifact, null, systemPath, optional);
+		this.graph.addTransitive(scope.mavenScope(), artifact, Arrays.asList(excludes), systemPath, optional);
 
 		if (this.autoAddSources && (artifact.extension.equals("jar") || artifact.extension.equals("")) && !artifact.classifier.equals("sources")) {
 			try {
@@ -72,50 +73,53 @@ public class MavenResolveTask extends BuildTask {
 		}
 	}
 	
-	protected void dependency(Scope scope, String artifact, String systemPath, boolean optional) {
+	protected void dependency(Scope scope, String artifact, String systemPath, boolean optional, String... excludes) {
 		Objects.requireNonNull(scope);
 		Objects.requireNonNull(artifact);
 		try {
-			dependency(scope, Artifact.of(artifact), systemPath, optional);
+			Artifact[] excludeArtifacts = new Artifact[excludes.length];
+			for (int i = 0; i < excludes.length; i++)
+				excludeArtifacts[i] = Artifact.of(excludes[i]);
+			dependency(scope, Artifact.of(artifact), systemPath, optional, excludeArtifacts);
 		} catch (MavenException e) {
 			throw BuildScriptException.msg(e, "malformed maven coordinates: %s", artifact);
 		}
 	}
 	
-	public void implementation(String dependency) {
-		dependency(Scope.COMPILE, dependency, null, false);
+	public void implementation(String dependency, String... excludes) {
+		dependency(Scope.COMPILE, dependency, null, false, excludes);
 	}
 	
-	public void runtime(String dependency) {
-		dependency(Scope.RUNTIME, dependency, null, false);
+	public void runtime(String dependency, String... excludes) {
+		dependency(Scope.RUNTIME, dependency, null, false, excludes);
 	}
 	
-	public void test(String dependency) {
-		dependency(Scope.TEST, dependency, null, false);
+	public void test(String dependency, String... excludes) {
+		dependency(Scope.TEST, dependency, null, false, excludes);
 	}
 	
-	public void provided(String dependency) {
-		dependency(Scope.PROVIDED, dependency, null, false);
+	public void provided(String dependency, String... excludes) {
+		dependency(Scope.PROVIDED, dependency, null, false, excludes);
 	}
 	
 	public void system(String dependency, String systemPath) {
 		dependency(Scope.SYSTEM, dependency, systemPath, false);
 	}
 	
-	public void implementationOpt(String dependency) {
-		dependency(Scope.COMPILE, dependency, null, true);
+	public void implementationOpt(String dependency, String... excludes) {
+		dependency(Scope.COMPILE, dependency, null, true, excludes);
 	}
 	
-	public void runtimeOpt(String dependency) {
-		dependency(Scope.RUNTIME, dependency, null, true);
+	public void runtimeOpt(String dependency, String... excludes) {
+		dependency(Scope.RUNTIME, dependency, null, true, excludes);
 	}
 	
-	public void testOpt(String dependency) {
-		dependency(Scope.TEST, dependency, null, true);
+	public void testOpt(String dependency, String... excludes) {
+		dependency(Scope.TEST, dependency, null, true, excludes);
 	}
 	
-	public void providedOpt(String dependency) {
-		dependency(Scope.PROVIDED, dependency, null, true);
+	public void providedOpt(String dependency, String... excludes) {
+		dependency(Scope.PROVIDED, dependency, null, true, excludes);
 	}
 	
 	public void systemOpt(String dependency, String systemPath) {

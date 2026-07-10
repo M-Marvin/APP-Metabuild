@@ -38,8 +38,8 @@ import de.m_marvin.metabuild.maven.types.Repository.ArtifactFile;
 import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.metabuild.maven.xml.ArtifactMetadata;
 import de.m_marvin.metabuild.maven.xml.POM;
-import de.m_marvin.metabuild.maven.xml.VersionMetadata;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
+import de.m_marvin.metabuild.maven.xml.VersionMetadata;
 import de.m_marvin.simplelogging.api.Logger;
 
 public class MavenPublisher {
@@ -125,7 +125,7 @@ public class MavenPublisher {
 		POM pom = new POM();
 		
 		// Set POM coordinates
-		pom.gavce(coordinates);
+		pom.gav(coordinates);
 		
 		// Set dependencies and repositories
 		pom.dependencies = pom.new Dependencies();
@@ -184,7 +184,7 @@ public class MavenPublisher {
 	 */
 	public boolean uploadArtifacts(Repository repository, Map<String, File> artifacts, POM pom, ZonedDateTime timeOfCreation) throws MavenException {
 		
-		Artifact pomArtifact = pom.gavce().getPOMId();
+		Artifact pomArtifact = pom.gav().getPOMId();
 
 		logger().info("attempt upload '%s' to repository: [%s] %s", pomArtifact, repository.name, repository.baseURL);
 

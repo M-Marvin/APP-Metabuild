@@ -3,7 +3,6 @@ package test;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,12 +11,9 @@ import java.util.Map;
 import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
-import de.m_marvin.metabuild.maven.handler.MavenResolver.ResolutionStrategy;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
-import de.m_marvin.metabuild.maven.types.Repository;
-import de.m_marvin.metabuild.maven.types.Repository.Credentials;
 import de.m_marvin.metabuild.maven.xml.POM.Dependency.Scope;
 import de.m_marvin.simplelogging.Log;
 
@@ -55,7 +51,8 @@ public class Test {
 //		connection.getInputStream().close();
 //		connection.disconnect();
 		
-//		connection.con
+		
+		
 		
 //		HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
 //		if (connection instanceof HttpURLConnection httpConnection) {
@@ -67,7 +64,7 @@ public class Test {
 //				() -> System.getenv("GITHUB_ACTOR"), 
 //				() -> System.getenv("GITHUB_TOKEN")
 //		);
-		
+//		
 //		// apply credentials if available
 //		if (credentials != null) {
 //			if (credentials.token() != null)
@@ -104,47 +101,20 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.simplelogging:simplelogging:2.3.1"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.javarun:javarun:1.2"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.basicxml:basicxml:1.1"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.openui:openui:1.3.2.1-alpha"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.openui:openui:1.3.2.1-alpha"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("com.googlecode.matrix-toolkits-java:mtj:1.0.4"), null, null, false);
+		
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("com.googlecode.netlib-java:netlib-java:1.1"), null, null, false);
 		
 		graph.addRepository(Maven.mavenCentral());
-		graph.addRepository(new Repository(
-				"GHP SimpleLogging",
-				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
-				new Credentials(
-						() -> System.getenv("GITHUB_ACTOR"), 
-						() -> System.getenv("GITHUB_TOKEN")
-				)
-		));
-		
-//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
-//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
-//		
-//		// SimpleLogging
-//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3.1");
-//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3.1");
-//		
-//		// JavaRun
-//		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
-//		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
-//		
-//		// BasicXML
-//		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.1");
-//		dependencies.implementation("de.m_marvin.basicxml:basicxml:sources:1.1");
-		
-		
-//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");
-//		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:sources:2.0");
-//		
-//		// SimpleLogging
-//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:2.3");
-//		dependencies.implementation("de.m_marvin.simplelogging:simplelogging:sources:2.3");
-//		
-//		// JavaRun
-//		dependencies.implementation("de.m_marvin.javarun:javarun:1.2");
-//		dependencies.implementation("de.m_marvin.javarun:javarun:sources:1.2");
-//		
-//		// BasicXML
-//		dependencies.implementation("de.m_marvin.metabuild:basicxml:0.1_build1");
+//		graph.addRepository(new Repository(
+//				"GHP SimpleLogging",
+//				"https://maven.pkg.github.com/m-marvin/library-simplelogging",
+//				new Credentials(
+//						() -> System.getenv("GITHUB_ACTOR"), 
+//						() -> System.getenv("GITHUB_TOKEN")
+//				)
+//		));
 		
 		
 //		graph.addTransitive(Scope.SYSTEM, Artifact.of("local:systemfile:1.0"), null, "C:/test.txt");
@@ -155,7 +125,9 @@ public class Test {
 //						() -> System.getenv("GITHUB_ACTOR"),
 //						() -> System.getenv("GITHUB_TOKEN")
 //				)));
-		graph.addRepository(new Repository("Maven Local", new URL("file:///C:/Users/marvi/.m2/repository")));
+		
+		
+//		graph.addRepository(new Repository("Maven Local", new URL("file:///C:/Users/marvi/.m2/repository")));
 		
 		List<File> artifacts = new ArrayList<File>();
 		Map<Artifact, Integer> effective = new HashMap<>();
@@ -163,8 +135,9 @@ public class Test {
 //		resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
 		boolean success = false;
 		resolver.setAutoIncludeSources(true);
-		resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
-		if (resolver.resolveGraph(graph, r -> false, effective, 0, DependencyScope.TEST_COMPILETIME)) {
+//		resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
+		if (resolver.resolveGraph(graph, r -> false, effective, 0, DependencyScope.COMPILETIME)) {
+			System.out.println("DOWNLOAD");
 			success = resolver.downloadArtifacts(graph, effective.keySet(), artifacts, null, DependencyScope.TEST_COMPILETIME);
 		}
 
@@ -185,38 +158,6 @@ public class Test {
 //		boolean success2 = publisher.publishConfiguration(publish);
 //		
 //		System.out.println("=> " + success2);
-		
-		
-		
-		
-//		DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-//
-//		RepositorySystemSupplier supplier = new RepositorySystemSupplier();
-//		
-//		RepositorySystem repoSystem =  supplier.get();//locator.getService(RepositorySystem.class);
-//		
-//		File rf = new File("/temp");
-//		System.out.println(rf.getAbsolutePath());
-//		LocalRepository localRepo = new LocalRepository(rf);
-//		session.setLocalRepositoryManager(repoSystem.newLocalRepositoryManager(session, localRepo));
-//		
-//		Artifact artifact = new DefaultArtifact("com.sun.xml.bind:jaxb-impl:3.0.0");
-//		List<RemoteRepository> repos = new ArrayList<RemoteRepository>();
-//		repos.add(new RemoteRepository.Builder( "central", "default", "https://repo.maven.apache.org/maven2" ).build());
-//
-//		ArtifactDescriptorRequest descriptorRequest = new ArtifactDescriptorRequest(artifact, repos, null);
-//		
-//		try {
-//			ArtifactDescriptorResult result = repoSystem.readArtifactDescriptor(session, descriptorRequest);
-//			
-//			System.out.println(result.getDependencies());
-//			
-////			DependencyRequest dependencyRequest = new Depende
-////			repoSystem.resolveDependencies(session, null)
-//			
-//		} catch (ArtifactDescriptorException e) {
-//			e.printStackTrace();
-//		}
 		
 	}
 	

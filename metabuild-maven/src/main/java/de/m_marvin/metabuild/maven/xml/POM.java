@@ -42,11 +42,11 @@ public class POM {
 	@XMLField(value = FieldType.ELEMENT, namespace = NS)
 	public String version; // required
 	
-	public Artifact gavce() throws MavenException {
+	public Artifact gav() throws MavenException {
 		return new Artifact(fillPoperties(this.groupId), fillPoperties(this.artifactId), fillPoperties(this.version));
 	}
 	
-	public void gavce(Artifact coordinates) {
+	public void gav(Artifact coordinates) {
 		this.groupId = coordinates.groupId;
 		this.artifactId = coordinates.artifactId;
 		this.version = coordinates.baseVersion;
@@ -94,7 +94,7 @@ public class POM {
 		public String type = "jar";
 
 		public Artifact gavce() throws MavenException {
-			return new Artifact(this.groupId, this.artifactId, this.version, this.classifier, this.type);
+			return new Artifact(fillPoperties(this.groupId), fillPoperties(this.artifactId), fillPoperties(this.version), fillPoperties(this.classifier), fillPoperties(this.type));
 		}
 		
 		public void gavce(Artifact coordinates) {
@@ -301,13 +301,16 @@ public class POM {
 		Matcher m = PROP_PATTERN.matcher(str);
 		return m.replaceAll(r -> {
 			String property = r.group(1);
+			String s = null;
 			if (property.startsWith("env.")) {
-				return System.getenv(property.substring(4)).replace("\\", "\\\\").replace("$", "\\$");
+				s = System.getenv(property.substring(4)).replace("\\", "\\\\").replace("$", "\\$");
 			} else if (System.getProperties().contains(property)) {
-				return System.getProperty(property);
+				s =  System.getProperty(property);
 			} else {
-				return this.properties.property.getOrDefault(property, "NA");
+				s =  this.properties.property.getOrDefault(property, "UNDEFINED");
 			}
+			
+			return s;
 		});
 	}
 	
@@ -344,6 +347,13 @@ public class POM {
 			if (this.dependencyManagement == null) this.dependencyManagement = new Dependencies();
 			this.dependencyManagement.dependency.importList(other.dependencyManagement.dependency);
 		}
+		
+		// update parent variables
+		if (this.properties == null)
+			this.properties = new Properties();
+		this.properties.property.put("project.parent.groupId", other.groupId);
+		this.properties.property.put("project.parent.artifactId", other.artifactId);
+		this.properties.property.put("project.parent.version", other.version);
 		
 	}
 	

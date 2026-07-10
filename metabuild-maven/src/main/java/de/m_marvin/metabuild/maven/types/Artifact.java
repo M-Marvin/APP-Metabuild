@@ -1,6 +1,7 @@
 package de.m_marvin.metabuild.maven.types;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -218,6 +219,12 @@ public class Artifact {
 		if (isGAWildcard()) throw new MavenException("can not get specific configuration from wildcard: %s", this.toString());
 		if (!hasGAV()) throw new MavenException("can not get specific configuration from non GAV coordinates: %s", this.toString());
 		return new Artifact(this.groupId, this.artifactId, this.baseVersion, this.version, classifier, extension, false);
+	}
+
+	public static boolean excluded(Set<Artifact> excludes, Artifact g) {
+		for (Artifact exclude : excludes)
+			if (exclude.groupId.equals(g.groupId) && exclude.artifactId.equals(g.artifactId)) return true;
+		return false;
 	}
 	
 }

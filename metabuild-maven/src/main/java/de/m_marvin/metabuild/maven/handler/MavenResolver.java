@@ -200,10 +200,12 @@ public class MavenResolver {
 						logger().warn("failed to download artifact: %s", transitive.artifact);
 						
 						// ignore optional dependencies if failed to resolve, just warn about it
-						if (!transitive.optional)
-							return false;
-						else
+						if (transitive.artifact.classifier.equals("sources"))
+							logger().warn("artifact clasified as sources, ignore");
+						else if (transitive.optional)
 							logger().warn("artifact marked as optional, ignore");
+						else
+							return false;
 					}
 					
 					if (localArtifact != null && !artifactOutput.contains(localArtifact))
@@ -273,11 +275,24 @@ public class MavenResolver {
 				}
 				
 				// get exclusion predicate for transitive dependencies
-				Predicate<Artifact> transitiveExclusion = transitiveGroup.excludes != null ? transitiveGroup.excludes::contains : g -> false;
+				Predicate<Artifact> transitiveExclusion = transitiveGroup.excludes != null ? g -> Artifact.excluded(transitiveGroup.excludes, g) : g -> false;
 				
 				// attempt to resolve child graph of transitive dependency
 				if (!resolveGraph(transitiveGroup.graph, transitiveExclusion, dependencyVersions, priority + 1, artifactScope)) {
 					logger().warn("unable to resolve transitive graphs for artifact group: %s (scope %s)", transitiveGroup.group, transitiveGroup.scope);
+					
+					// check if an another version of transitiveGroup.group is already present in dependencyVersions with an higher or equal priority
+					// this prevents the build from failing because of an missing outdated version even if it is replaced in with an newer one higher up in the dependency tree
+					
+					for (Entry<Artifact, Integer> definedGroup : dependencyVersions.entrySet()) {
+						if (definedGroup.getValue() > priority) continue;
+						if (	definedGroup.getKey().groupId.equals(transitiveGroup.group.groupId) &&
+								definedGroup.getKey().artifactId.equals(transitiveGroup.group.artifactId)) {
+							logger().warn("missing resolution ignored, higher priority defined in dependency tree: %s", definedGroup.getKey());
+							return true;
+						}
+					}
+					
 					return false;
 				}
 				
@@ -391,13 +406,19 @@ public class MavenResolver {
 				Artifact artifact = d.gavce();
 				if (artifact.baseVersion == null) {
 					String declaredVersion = transitiveVersions.get(artifact.getGAV());
-					if (declaredVersion == null)
-						throw new MavenException("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
+					if (declaredVersion == null) {
+						logger().warn("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
+						continue;
+//						throw new MavenException("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
+					}
 					artifact = artifact.withVersion(declaredVersion);
 				}
 				
-				if (!artifact.hasGAVCE())
-					throw new MavenException("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+				if (!artifact.hasGAVCE()) {
+					logger().warn("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+					continue;
+//					throw new MavenException("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+				}
 				
 				if (!nddepend.add(artifact)) continue; // avoid duplicate dependencies, pick first in order of import
 				
@@ -461,8 +482,8 @@ public class MavenResolver {
 					}
 				}).filter(Objects::nonNull).forEach(repositories2::add);
 			}
-			//repositories2.add(repository);
 			repositories2.addAll(repositories); // PARENT REPOSITORY FORWARDING 2
+			Collections.swap(repositories2, repositories2.indexOf(repository), 0);
 			
 			// parse dependency management imports
 			if (pom.dependencyManagement != null) {
@@ -535,7 +556,10 @@ public class MavenResolver {
 		if (localArtifact == null) return null;
 		
 		try {
-			return POM.fromXML(new FileInputStream(localArtifact));
+			POM pom = POM.fromXML(new FileInputStream(localArtifact));
+			if (pom.groupId == null || pom.artifactId == null || pom.version == null)
+				pom.gav(artifact);
+			return pom;
 		} catch (IOException | MavenException e) {
 			throw new MavenException(e, "problem when parsing POM: %s", artifact);
 		}

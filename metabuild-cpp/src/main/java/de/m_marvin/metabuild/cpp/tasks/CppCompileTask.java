@@ -59,38 +59,6 @@ public class CppCompileTask extends CommandLineTask {
 		return FileUtility.absolute(this.stateCache, FileUtility.absolute(this.objectsDir));
 	}
 	
-	// TODO XML format for object metadata
-//	protected void loadMetadata() {
-//		this.sourceMetadata = new HashMap<>();
-//		try {
-//			File metaFile = getMetaFile();
-//			if (!metaFile.isFile()) return;
-//			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(metaFile)));
-//			String line;
-//			while ((line = reader.readLine()) != null) {
-//				File sourceFile = new File(line);
-//				File objectFile = new File(reader.readLine());
-//				this.sourceMetadata.put(sourceFile, objectFile);
-//			}
-//			reader.close();
-//		} catch (IOException e) {
-//			throw BuildException.msg(e, "failed to load object meta data: %s", this.stateCache);
-//		}
-//	}
-//	
-//	protected void saveMetadata() {
-//		try {
-//			Writer writer = new OutputStreamWriter(new FileOutputStream(getMetaFile()));
-//			for (var entry : this.sourceMetadata.entrySet()) {
-//				writer.write(entry.getKey().getPath() + "\n");
-//				writer.write(entry.getValue().getPath() + "\n");
-//			}
-//			writer.close();
-//		} catch (IOException e) {
-//			throw BuildException.msg(e, "failed to save object meta data: %s", this.stateCache);
-//		}
-//	}
-
 	public static final URI METABUILD_CPP_OBJECTMETA_NAMESPACE = URI.create("https://github.com/M-Marvin/APP-Metabuild/cpp/objectmeta");
 	
 	protected void loadMetadata() {

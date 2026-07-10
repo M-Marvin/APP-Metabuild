@@ -45,7 +45,7 @@ public class DependencyGraph {
 	protected Repository resolutionRepository;
 	/* the transitive dependency artifacts of this graph, sorted by their GAV (group, artifact and version) */
 	protected final Map<Artifact, Map<Scope, TransitiveGroup>> transitives;
-
+	
 	public DependencyGraph() {
 		this(Collections.emptyList(), Collections.emptyList());
 	}
@@ -88,7 +88,7 @@ public class DependencyGraph {
 	}
 	
 	public void addRepository(Repository repository) {
-		if (!this.repositories.contains(repository))
+		if (this.repositories.contains(repository))
 			this.repositories.remove(repository); // to allow updating of credentials
 		this.repositories.add(repository);
 	}
@@ -98,7 +98,7 @@ public class DependencyGraph {
 		addRepository(resolutionRepository);
 	}
 	
-	public void addTransitive(Scope scope, Artifact artifact, Set<Artifact> excludes, String systemPath, boolean optional) {
+	public void addTransitive(Scope scope, Artifact artifact, Collection<Artifact> excludes, String systemPath, boolean optional) {
 		if (!artifact.hasGAVCE()) return;
 		Artifact group = artifact.getGAV();
 		Map<Scope, TransitiveGroup> scopes = this.transitives.get(group);

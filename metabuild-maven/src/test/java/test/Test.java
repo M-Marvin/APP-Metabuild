@@ -11,6 +11,7 @@ import java.util.Map;
 import de.m_marvin.metabuild.maven.Maven;
 import de.m_marvin.metabuild.maven.exception.MavenException;
 import de.m_marvin.metabuild.maven.handler.MavenResolver;
+import de.m_marvin.metabuild.maven.handler.MavenResolver.ResolutionStrategy;
 import de.m_marvin.metabuild.maven.types.Artifact;
 import de.m_marvin.metabuild.maven.types.DependencyGraph;
 import de.m_marvin.metabuild.maven.types.DependencyScope;
@@ -102,9 +103,10 @@ public class Test {
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.javarun:javarun:1.2"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.basicxml:basicxml:1.1"), null, null, false);
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("de.m_marvin.openui:openui:1.3.2.1-alpha"), null, null, false);
-		graph.addTransitive(Scope.COMPILE, Artifact.of("com.googlecode.matrix-toolkits-java:mtj:1.0.4"), null, null, false);
-		
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("com.googlecode.matrix-toolkits-java:mtj:1.0.4"), null, null, false);		
 //		graph.addTransitive(Scope.COMPILE, Artifact.of("com.googlecode.netlib-java:netlib-java:1.1"), null, null, false);
+		graph.addTransitive(Scope.COMPILE, Artifact.of("org.openjdk.nashorn:nashorn-core:15.7"), null, null, false);
+//		graph.addTransitive(Scope.COMPILE, Artifact.of("org.seleniumhq.selenium:selenium-java:4.39.0"), null, null, false);
 		
 		graph.addRepository(Maven.mavenCentral());
 //		graph.addRepository(new Repository(
@@ -132,7 +134,7 @@ public class Test {
 		List<File> artifacts = new ArrayList<File>();
 		Map<Artifact, Integer> effective = new HashMap<>();
 		MavenResolver resolver = new MavenResolver(Log.defaultLogger(), local);
-//		resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
+		resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
 		boolean success = false;
 		resolver.setAutoIncludeSources(true);
 //		resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);

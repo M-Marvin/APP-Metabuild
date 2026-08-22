@@ -160,6 +160,7 @@ public class MavenResolveTask extends BuildTask {
 	protected List<File> attemptResolution(DependencyScope scope, List<Artifact> completitionList) throws MavenException {
 		List<File> filepath = new ArrayList<File>();
 		Map<Artifact, Integer> effectiveDependencies = new HashMap<Artifact, Integer>();
+		this.resolver.resetResolutionCache();
 		if (!this.resolver.resolveGraph(this.graph, a -> false, effectiveDependencies, 0, scope)) return null;
 		if (!this.resolver.downloadArtifacts(this.graph, effectiveDependencies.keySet(), filepath, completitionList, scope)) return null;
 		return filepath;

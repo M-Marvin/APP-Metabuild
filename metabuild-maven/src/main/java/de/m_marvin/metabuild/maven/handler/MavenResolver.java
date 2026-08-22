@@ -71,6 +71,12 @@ public class MavenResolver {
 	private ZonedDateTime snapshotTimestamp = null;
 	private boolean autoIncludeSources = false;
 	
+	// caches keep track of what was attempted to resolve where before, to avoid spending unnecessary time
+	// in trying again, and preventing log spam for identical attempts due to complex dependency relations
+	private static record ResolutionPair(Repository respository, Artifact artifact) {}
+	private Set<ResolutionPair> resolutionAttempCache = new HashSet<>();
+	private Map<File, Boolean> cacheValidationList = new HashMap<>();
+	
 	public static enum ResolutionStrategy {
 		OFFLINE,REMOTE,FORCE_REMOTE;
 	}
@@ -138,6 +144,17 @@ public class MavenResolver {
 	
 	public File getLocalCache() {
 		return localCache;
+	}
+
+	/**
+	 * Resets the local artifact and dependency cache.
+	 * This is required before each {@link MavenResolver#resolveGraph()} 
+	 * and/or {@link MavenResolver#downloadArtifacts()} call, that 
+	 * should not be based on the previous results.
+	 */
+	public void resetResolutionCache() {
+		this.cacheValidationList.clear();
+		this.resolutionAttempCache.clear();
 	}
 	
 	/**
@@ -348,6 +365,7 @@ public class MavenResolver {
 		DependencyGraph graph = new DependencyGraph(parent.getRepositories(), Collections.emptyList()); // PARENT REPOSITORY FORWARDING 1
 		
 		// attempt to resolve full POM
+		
 		POM pom = resolveFullPOM(parent.getRepositories(), r -> graph.setResolutionRepository(r), pomArtifact);
 		
 		if (pom == null) return null;
@@ -463,8 +481,15 @@ public class MavenResolver {
 		
 		for (Repository repository : repositories) {
 			
+			// check if this is the first time we try to resolve this artifact on this repository
+			ResolutionPair reskey = new ResolutionPair(repository, artifact);
+			boolean firstAttempt = !this.resolutionAttempCache.contains(reskey);
+			if (firstAttempt)
+				this.resolutionAttempCache.add(reskey);
+			
 			// don't print message if resolving from cache, might be misleading since no actual repositroy is contacted
-			if (this.resolutionStrategy != ResolutionStrategy.OFFLINE)
+			// only log this the first time, would flood the logs otherwise
+			if (this.resolutionStrategy != ResolutionStrategy.OFFLINE && firstAttempt)
 				logger().info("attempt resolve '%s' on [%s]", artifact, repository.name == null ? repository.baseURL : repository.name);
 			
 			POM pom = downloadArtifactPOM(repository, artifact);
@@ -532,7 +557,9 @@ public class MavenResolver {
 			
 			pomRepository.accept(repository);
 			
-			logger().info("-> fully resolved POM: %s", artifact);
+			// only log this the first time, would flood the logs otherwise
+			if (firstAttempt)
+				logger().info("-> fully resolved POM: %s", artifact);
 			
 			return pom;
 			
@@ -649,17 +676,26 @@ public class MavenResolver {
 		// assemble remote URL and local path
 		File localArtifact = new File(this.localCache, repository.getCacheFolder() +"/" + artifact.getLocalPath(dataLevel));
 		
+		// check if the artifact has already been downloaded to the cache in this session
+		if (this.cacheValidationList.containsKey(localArtifact))
+			return this.cacheValidationList.get(localArtifact) ? localArtifact : null;
+		
 		// check if file already exists in local cache
 		if (strategy != ResolutionStrategy.FORCE_REMOTE) {
 			if (localArtifact.isFile()) {
-				if (!dataLevel.isMetadata()) return localArtifact;
+				if (!dataLevel.isMetadata()) {
+					this.cacheValidationList.put(localArtifact, true);
+					return localArtifact;
+				}
 				
 				// for metadata, check expiration time
 				try {
 					BasicFileAttributes atr = Files.readAttributes(Paths.get(localArtifact.getPath()), BasicFileAttributes.class);
 					long lastUpdate = System.currentTimeMillis() - atr.lastModifiedTime().toMillis();
-					if (lastUpdate < this.metadataExpirationUnit.toMillis(this.metadataExpiration))
+					if (lastUpdate < this.metadataExpirationUnit.toMillis(this.metadataExpiration)) {
+						this.cacheValidationList.put(localArtifact, true);
 						return localArtifact;
+					}
 				} catch (IOException e) {}
 				
 				// if expired, continue with remote download, even in OFFLINE mode
@@ -667,7 +703,10 @@ public class MavenResolver {
 		}
 		
 		// if no data in cache and in OFFLINE mode and not metadata, abort resolution, don't download anything
-		if (!localArtifact.isFile() && this.resolutionStrategy == ResolutionStrategy.OFFLINE && !dataLevel.isMetadata()) return null;
+		if (!localArtifact.isFile() && this.resolutionStrategy == ResolutionStrategy.OFFLINE && !dataLevel.isMetadata()) {
+			this.cacheValidationList.put(localArtifact, false);
+			return null;
+		}
 		
 		try {
 
@@ -678,7 +717,11 @@ public class MavenResolver {
 			InputStream onlineStream = openURLConnection(artifactURL, repository.credentials);
 			
 			// if remote connection failed, check if cache is still available to return
-			if (onlineStream == null) return (localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) ? localArtifact : null;
+			if (onlineStream == null) {
+				boolean f = localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE;
+				this.cacheValidationList.put(localArtifact, f);
+				return f ? localArtifact : null;
+			}
 			
 			// get local cache file stream
 			localArtifact.getParentFile().mkdirs();
@@ -719,6 +762,7 @@ public class MavenResolver {
 						if (Arrays.compare(localChecksum, onlineChecksum) != 0)
 							throw new MavenException("artifact checksum error: online %s != local %s > %s", HexFormat.of().formatHex(onlineChecksum), HexFormat.of().formatHex(localChecksum), checksumURL.toString());
 						
+						this.cacheValidationList.put(localArtifact, true);
 						return localArtifact;
 					} catch (IllegalArgumentException e) {
 						localStream.close();
@@ -744,6 +788,7 @@ public class MavenResolver {
 				onlineStream.close();
 				localStream.close();
 				
+				this.cacheValidationList.put(localArtifact, true);
 				return localArtifact;
 			} catch (IOException e) {
 				// transfer error

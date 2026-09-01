@@ -22,7 +22,7 @@ public class Buildfile extends JavaBuildScript {
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
 
-	// see Metabuild class
+	// see InitTask class
 	public String wrapperIncludeDir = "wrapper/wrapper.zip";
 	
 	JarTask apiJar;

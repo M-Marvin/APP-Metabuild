@@ -157,12 +157,12 @@ public class MavenResolveTask extends BuildTask {
 				.toList();
 	}
 	
-	protected List<File> attemptResolution(DependencyScope scope, List<Artifact> completitionList) throws MavenException {
+	protected List<File> attemptResolution(DependencyScope scope, Map<Artifact, File> artifactMap) throws MavenException {
 		List<File> filepath = new ArrayList<File>();
 		Map<Artifact, Integer> effectiveDependencies = new HashMap<Artifact, Integer>();
 		this.resolver.resetResolutionCache();
 		if (!this.resolver.resolveGraph(this.graph, a -> false, effectiveDependencies, 0, scope)) return null;
-		if (!this.resolver.downloadArtifacts(this.graph, effectiveDependencies.keySet(), filepath, completitionList, scope)) return null;
+		if (!this.resolver.downloadArtifacts(this.graph, effectiveDependencies.keySet(), filepath, artifactMap, scope)) return null;
 		return filepath;
 	}
 	
@@ -177,9 +177,9 @@ public class MavenResolveTask extends BuildTask {
 			this.resolver.setAutoIncludeSources(this.autoAddSources);
 			this.resolver.setResolutionStrategy(ResolutionStrategy.OFFLINE);
 			List<File> filepath;
-			List<Artifact> completitionList = new ArrayList<Artifact>();
+			Map<Artifact, File> artifactMap = new HashMap<>();
 			
-			filepath = attemptResolution(DependencyScope.COMPILETIME, completitionList);
+			filepath = attemptResolution(DependencyScope.COMPILETIME, artifactMap);
 			if (filepath == null) {
 				logger().infot(logTag(), "offline cache incomplete, COMPILETIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
@@ -189,7 +189,7 @@ public class MavenResolveTask extends BuildTask {
 			}
 			
 
-			filepath = attemptResolution(DependencyScope.RUNTIME, completitionList);
+			filepath = attemptResolution(DependencyScope.RUNTIME, artifactMap);
 			if (filepath == null) {
 				logger().infot(logTag(), "offline cache incomplete, RUNTIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
@@ -198,7 +198,7 @@ public class MavenResolveTask extends BuildTask {
 				return TaskState.OUTDATED;
 			}
 
-			filepath = attemptResolution(DependencyScope.TEST_COMPILETIME, completitionList);
+			filepath = attemptResolution(DependencyScope.TEST_COMPILETIME, artifactMap);
 			if (filepath == null) {
 				logger().infot(logTag(), "offline cache incomplete, TEST_COMPILETIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
@@ -207,7 +207,7 @@ public class MavenResolveTask extends BuildTask {
 				return TaskState.OUTDATED;
 			}
 
-			filepath = attemptResolution(DependencyScope.TEST_RUNTIME, completitionList);
+			filepath = attemptResolution(DependencyScope.TEST_RUNTIME, artifactMap);
 			if (filepath == null) {
 				logger().infot(logTag(), "offline cache incomplete, TEST_RUNTIME missing files, request remote resolution");
 				return TaskState.OUTDATED;
@@ -247,30 +247,30 @@ public class MavenResolveTask extends BuildTask {
 			this.resolver.setAutoIncludeSources(this.autoAddSources);
 			this.resolver.setResolutionStrategy(Metabuild.get().isRefreshDependencies() ? ResolutionStrategy.FORCE_REMOTE : ResolutionStrategy.REMOTE);
 			List<File> filepath;
-			List<Artifact> completitionList = new ArrayList<Artifact>();
+			Map<Artifact, File> artifactMap = new HashMap<>();
 			
-			filepath = attemptResolution(DependencyScope.COMPILETIME, completitionList);
+			filepath = attemptResolution(DependencyScope.COMPILETIME, artifactMap);
 			if (filepath == null) {
 				logger().errort(logTag(), "unable to resolve COMPILETIME dependencies!");
 				return false;
 			} 
 			writeFilepathFile(this.fpCompiletime, filepath);
 			
-			filepath = attemptResolution(DependencyScope.RUNTIME, completitionList);
+			filepath = attemptResolution(DependencyScope.RUNTIME, artifactMap);
 			if (filepath == null) {
 				logger().errort(logTag(), "unable to resolve RUNTIME dependencies!");
 				return false;
 			} 
 			writeFilepathFile(this.fpRunttime, filepath);
 			
-			filepath = attemptResolution(DependencyScope.TEST_COMPILETIME, completitionList);
+			filepath = attemptResolution(DependencyScope.TEST_COMPILETIME, artifactMap);
 			if (filepath == null) {
 				logger().errort(logTag(), "unable to resolve TEST_COMPILETIME dependencies!");
 				return false;
 			} 
 			writeFilepathFile(this.fpTestCompiletime, filepath);
 			
-			filepath = attemptResolution(DependencyScope.TEST_RUNTIME, completitionList);
+			filepath = attemptResolution(DependencyScope.TEST_RUNTIME, artifactMap);
 			if (filepath == null) {
 				logger().errort(logTag(), "unable to resolve TEST_RUNTIME dependencies!");
 				return false;

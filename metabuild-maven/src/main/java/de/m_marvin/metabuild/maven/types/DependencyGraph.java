@@ -90,7 +90,7 @@ public class DependencyGraph {
 	public void addRepository(Repository repository) {
 		if (this.repositories.contains(repository))
 			this.repositories.remove(repository); // to allow updating of credentials
-		this.repositories.add(repository);
+		this.repositories.add(0, repository);
 	}
 	
 	public void setResolutionRepository(Repository resolutionRepository) {

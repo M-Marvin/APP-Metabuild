@@ -17,7 +17,7 @@ public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of the metabuild runtime
 	public String coreVersion = "1.3.2";
-	public String mavenVersion = "1.3.3";
+	public String mavenVersion = "1.3.4";
 	public String version = "1.3.1";
 	
 	// local system directory to install metabuild to

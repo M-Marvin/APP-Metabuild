@@ -102,7 +102,6 @@ public class MavenPublishTask extends BuildTask {
 	protected TaskState prepare() {
 		
 		// try to acquire the timestamp of the newest artifact file
-		this.resolver.setResolutionStrategy(ResolutionStrategy.FORCE_REMOTE);
 		Instant newestTime = null;
 		for (File artifact : this.artifacts.values()) {
 			Optional<FileTime> artifactTime = FileUtility.timestamp(FileUtility.absolute(artifact));
@@ -125,7 +124,7 @@ public class MavenPublishTask extends BuildTask {
 		this.repositoriesToUpdate.clear();
 		for (Repository repository : this.repositories) {
 			try {
-				POM pom = this.resolver.downloadArtifactPOM(repository, this.coordinates);
+				POM pom = this.resolver.downloadArtifactPOM(repository, this.coordinates, ResolutionStrategy.FORCE_REMOTE);
 				if (pom != null) {
 					if (!this.coordinates.isSnapshot()) continue;
 					ZonedDateTime timestamp = this.resolver.getLastSnapshotVersion();

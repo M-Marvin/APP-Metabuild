@@ -77,6 +77,9 @@ public class MavenResolver {
 	private Set<ResolutionPair> resolutionAttempCache = new HashSet<>();
 	private Map<File, Boolean> cacheValidationList = new HashMap<>();
 	
+	private static record ArtifactScopePair(Artifact artifact, Scope scope) {}
+	private Map<ArtifactScopePair, DependencyGraph> graphCache = new HashMap<>();
+	
 	public static enum ResolutionStrategy {
 		OFFLINE,REMOTE,FORCE_REMOTE;
 	}
@@ -155,6 +158,7 @@ public class MavenResolver {
 	public void resetResolutionCache() {
 		this.cacheValidationList.clear();
 		this.resolutionAttempCache.clear();
+		this.graphCache.clear();
 	}
 	
 	/**
@@ -163,15 +167,15 @@ public class MavenResolver {
 	 * @param graph The graph to resolve the list of dependency versions against
 	 * @param dependencyVersions The list of dependency versions to resolve and download
 	 * @param artifactOutput The list to fill with the artifact file paths
-	 * @param completitionList An list which is filled with all Artifacts which have been resolved successfully, can be null, items on this list will not be resolved again
+	 * @param artifactMap A map that will be filled with entries for each resolved artifact, each entry will be mapped to an file for the local artifact, or null if the resolution failed, entries in this list will not be attempted to resolve again, can be null.
 	 * @param artifactScope The scope to limit the resolution to
 	 * @return true if all dependencies could be resolved and downloaded successfully, false is returned as soon as one resolution fails
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts
 	 */
-	public boolean downloadArtifacts(DependencyGraph graph, Collection<Artifact> dependencyVersions, List<File> artifactOutput, List<Artifact> completitionList, DependencyScope artifactScope) throws MavenException {
+	public boolean downloadArtifacts(DependencyGraph graph, Collection<Artifact> dependencyVersions, List<File> artifactOutput, Map<Artifact, File> artifactMap, DependencyScope artifactScope) throws MavenException {
 		
-		if (completitionList == null)
-			completitionList = new ArrayList<Artifact>();
+		if (artifactMap == null)
+			artifactMap = new HashMap<>();
 		
 		for (TransitiveGroup transitiveGroup : graph.getTransitiveGroups()) {
 			
@@ -181,60 +185,63 @@ public class MavenResolver {
 			
 			for (TransitiveEntry transitive : transitiveGroup.artifacts) {
 				
-				this.statusCallback.accept("resolving > " + transitive.artifact);
-				
-				if (transitiveGroup.scope == Scope.SYSTEM) {
+				if (!artifactMap.containsKey(transitive.artifact)) {
 					
-					// system dependencies are expected to be available on the system
-					File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
-					if (!systemFile.exists()) {
-						logger().warn("failed to find system artifact: %s", systemFile);
+					this.statusCallback.accept("resolving > " + transitive.artifact);
+					
+					if (transitiveGroup.scope == Scope.SYSTEM) {
 						
-						// ignore optional dependencies if failed to resolve, just warn about it
-						if (!transitive.optional)
-							return false;
-						else
-							logger().warn("artifact marked as optional, ignore");
-					}
-					
-					if (systemFile.exists() && !artifactOutput.contains(systemFile))
-						artifactOutput.add(systemFile);
-					
-				} else {
-					
-					Repository repository = transitiveGroup.graph.getResolutionRepository();
-					
-					ResolutionStrategy strategy = this.resolutionStrategy;
-					
-					// avoid downloading the same artifact multiple times
-					if (completitionList.contains(transitive.artifact)) strategy = strategy == ResolutionStrategy.FORCE_REMOTE ? ResolutionStrategy.REMOTE : ResolutionStrategy.OFFLINE;
+						// system dependencies are expected to be available on the system
+						File systemFile = FileUtility.absolute(new File(POM.fillPropertiesStatic(transitive.systemPath)));
+						if (!systemFile.exists()) {
+							logger().warn("failed to find system artifact: %s", systemFile);
+							
+							// ignore optional dependencies if failed to resolve, just warn about it (actually implemented further below)
+							if (transitive.optional)
+								logger().warn("artifact marked as optional, ignore");
 
-					// ignore optional dependencies if asked to
-					if (transitive.optional && this.ignoreOptionalDependencies) continue;
-					
-					File localArtifact = downloadArtifact(repository, transitive.artifact, strategy);
-					if (localArtifact == null) {
-						logger().warn("failed to download artifact: %s", transitive.artifact);
+							artifactMap.put(transitive.artifact, null);
+						}
 						
-						// ignore optional dependencies if failed to resolve, just warn about it
-						if (transitive.artifact.classifier.equals("sources"))
-							logger().warn("artifact clasified as sources, ignore");
-						else if (transitive.optional)
-							logger().warn("artifact marked as optional, ignore");
-						else
-							return false;
+						artifactMap.put(transitive.artifact, systemFile);
+						
+					} else {
+						
+						Repository repository = transitiveGroup.graph.getResolutionRepository();
+						
+						ResolutionStrategy strategy = this.resolutionStrategy;
+						
+						// ignore optional dependencies if asked to
+						if (transitive.optional && this.ignoreOptionalDependencies) continue;
+						
+						File localArtifact = downloadArtifact(repository, transitive.artifact, strategy);
+						if (localArtifact == null) {
+							logger().warn("failed to download artifact: %s", transitive.artifact);
+							
+							// ignore optional dependencies if failed to resolve, just warn about it
+							if (transitive.artifact.classifier.equals("sources"))
+								logger().warn("artifact clasified as sources, ignore");
+							else if (transitive.optional)
+								logger().warn("artifact marked as optional, ignore");
+
+							artifactMap.put(transitive.artifact, null);
+						}
+						
+						artifactMap.put(transitive.artifact, localArtifact);
 					}
-					
-					if (localArtifact != null && !artifactOutput.contains(localArtifact))
-						artifactOutput.add(localArtifact);
 					
 				}
-
-				completitionList.add(transitive.artifact);
+				
+				File localArtifact = artifactMap.get(transitive.artifact);
+				if (localArtifact == null && !transitive.optional)
+					return false;
+				if (localArtifact != null && !artifactOutput.contains(localArtifact))
+					artifactOutput.add(localArtifact);
 				
 			}
 			
-			if (transitiveGroup.graph != null && !downloadArtifacts(transitiveGroup.graph, dependencyVersions, artifactOutput, completitionList, artifactScope)) return false;
+			if (transitiveGroup.graph != null && !downloadArtifacts(transitiveGroup.graph, dependencyVersions, artifactOutput, artifactMap, artifactScope))
+				return false;
 			
 		}
 		
@@ -361,11 +368,15 @@ public class MavenResolver {
 	 */
 	public DependencyGraph resolveGraphPOM(DependencyGraph parent, Artifact pomArtifact, Scope scope) throws MavenException {
 		
+		ArtifactScopePair artifactScopePair = new ArtifactScopePair(pomArtifact, scope);
+		DependencyGraph cachedGraph = this.graphCache.get(artifactScopePair);
+		if (cachedGraph != null)
+			return cachedGraph;
+		
 		// create child graph for this POM
 		DependencyGraph graph = new DependencyGraph(parent.getRepositories(), Collections.emptyList()); // PARENT REPOSITORY FORWARDING 1
 		
 		// attempt to resolve full POM
-		
 		POM pom = resolveFullPOM(parent.getRepositories(), r -> graph.setResolutionRepository(r), pomArtifact);
 		
 		if (pom == null) return null;
@@ -425,17 +436,15 @@ public class MavenResolver {
 				if (artifact.baseVersion == null) {
 					String declaredVersion = transitiveVersions.get(artifact.getGAV());
 					if (declaredVersion == null) {
-						logger().warn("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
+						logger().warn("dependency inconsistencies, artifact '%s' has no version declared in dependency management: %s", artifact, pomArtifact);
 						continue;
-//						throw new MavenException("dependency inconsistencies, artifact '%s' has no version declared in dependency management!", artifact);
 					}
 					artifact = artifact.withVersion(declaredVersion);
 				}
 				
 				if (!artifact.hasGAVCE()) {
-					logger().warn("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
+					logger().warn("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate: %s", artifact, pomArtifact);
 					continue;
-//					throw new MavenException("dependency inconsistencies, artifact '%s' does not define a complete GAVCE coordinate!", artifact);
 				}
 				
 				if (!nddepend.add(artifact)) continue; // avoid duplicate dependencies, pick first in order of import
@@ -465,6 +474,7 @@ public class MavenResolver {
 			}
 		}
 		
+		this.graphCache.put(artifactScopePair, graph);
 		return graph;
 		
 	}
@@ -479,6 +489,18 @@ public class MavenResolver {
 	 */
 	public POM resolveFullPOM(Collection<Repository> repositories, Consumer<Repository> pomRepository, Artifact artifact) throws MavenException {
 		
+		// if not being forced to re-download everything, first check the local cache for all valid repositories ...
+		if (this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) {
+			for (Repository repository : repositories) {
+				POM pom = downloadArtifactPOM(repository, artifact, ResolutionStrategy.OFFLINE);
+				if (pom == null) continue;
+				fillInPOM(pom, repositories, repository, artifact);
+				pomRepository.accept(repository);
+				return pom;
+			}
+		}
+		
+		// ... only then potentially re-downlaod files
 		for (Repository repository : repositories) {
 			
 			// check if this is the first time we try to resolve this artifact on this repository
@@ -492,69 +514,11 @@ public class MavenResolver {
 			if (this.resolutionStrategy != ResolutionStrategy.OFFLINE && firstAttempt)
 				logger().info("attempt resolve '%s' on [%s]", artifact, repository.name == null ? repository.baseURL : repository.name);
 			
-			POM pom = downloadArtifactPOM(repository, artifact);
+			POM pom = downloadArtifactPOM(repository, artifact, this.resolutionStrategy);
 			if (pom == null) continue;
-			
-			// parse repositories for imports
-			List<Repository> repositories2 = new ArrayList<Repository>();
-			if (pom.repositories != null) {	
-				pom.repositories.repository.stream().map(r -> {
-					try {
-						return new Repository(pom.fillPoperties(r.name), new URI(pom.fillPoperties(r.url)).toURL());
-					} catch (MalformedURLException | URISyntaxException e) {
-						logger().warn("malformed URL in POM repository: %s", artifact, e);
-						return null;
-					}
-				}).filter(Objects::nonNull).forEach(repositories2::add);
-			}
-			repositories2.addAll(repositories); // PARENT REPOSITORY FORWARDING 2
-			Collections.swap(repositories2, repositories2.indexOf(repository), 0);
-			
-			// parse dependency management imports
-			if (pom.dependencyManagement != null) {
-				
-				for (Dependency dependency : pom.dependencyManagement.dependency) {
-					
-					// only care about POM related imports for now
-					if (dependency.scope != Scope.IMPORT) continue;
-					if (dependency.optional && this.ignoreOptionalDependencies) continue;
-					
-					Artifact importArtifactPOM = dependency.gavce();
-					try {
-						POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
-						if (importPOM == null)
-							if (dependency.optional)
-								logger().warn("unable to resolve optional dependency POM: %s", importArtifactPOM);
-							else
-								throw new MavenException("POM resolution inconsistencies, import not found on repositories: %s", importArtifactPOM);
-						else
-							pom.importPOM(importPOM, false);
-					} catch (MavenException e) {
-						if (dependency.optional)
-							logger().warn("unable to fully resolve optional dependency POM: %s", importArtifactPOM);
-						else
-							throw new MavenException(e, "POM resolution inconsistencies, failed to resolve import POM: %s", importArtifactPOM);
-					}
-					
-				}
-				
-			}
-			
-			// parse parent POM
-			if (pom.parent != null) {
-				
-				Artifact importArtifactPOM = pom.parent.gavce();
-				try {
-					POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
-					if (importPOM == null)
-						throw new MavenException("POM resolution inconsistencies, parent not found on repositories: %s", importArtifactPOM);
-					pom.importPOM(importPOM, true);
-				} catch (MavenException e) {
-					throw new MavenException(e, "POM resolution inconsistencies, failed to resolve parent POM: %s", importArtifactPOM);
-				}
-				
-			}
-			
+
+			fillInPOM(pom, repositories, repository, artifact);
+
 			pomRepository.accept(repository);
 			
 			// only log this the first time, would flood the logs otherwise
@@ -562,10 +526,73 @@ public class MavenResolver {
 				logger().info("-> fully resolved POM: %s", artifact);
 			
 			return pom;
-			
 		}
 		
 		return null;
+		
+	}
+	
+	private void fillInPOM(POM pom, Collection<Repository> repositories, Repository repository, Artifact artifact) throws MavenException {
+		
+		// parse repositories for imports
+		List<Repository> repositories2 = new ArrayList<Repository>();
+		if (pom.repositories != null) {	
+			pom.repositories.repository.stream().map(r -> {
+				try {
+					return new Repository(pom.fillPoperties(r.name), new URI(pom.fillPoperties(r.url)).toURL());
+				} catch (MalformedURLException | URISyntaxException e) {
+					logger().warn("malformed URL in POM repository: %s", artifact, e);
+					return null;
+				}
+			}).filter(Objects::nonNull).forEach(repositories2::add);
+		}
+		repositories2.addAll(repositories); // PARENT REPOSITORY FORWARDING 2
+		Collections.swap(repositories2, repositories2.indexOf(repository), 0);
+		
+		// parse dependency management imports
+		if (pom.dependencyManagement != null) {
+			
+			for (Dependency dependency : pom.dependencyManagement.dependency) {
+				
+				// only care about POM related imports for now
+				if (dependency.scope != Scope.IMPORT) continue;
+				if (dependency.optional && this.ignoreOptionalDependencies) continue;
+				
+				Artifact importArtifactPOM = dependency.gavce();
+				try {
+					POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
+					if (importPOM == null)
+						if (dependency.optional)
+							logger().warn("unable to resolve optional dependency POM: %s", importArtifactPOM);
+						else
+							throw new MavenException("POM resolution inconsistencies, import not found on repositories: %s", importArtifactPOM);
+					else
+						pom.importPOM(importPOM, false);
+				} catch (MavenException e) {
+					if (dependency.optional)
+						logger().warn("unable to fully resolve optional dependency POM: %s", importArtifactPOM);
+					else
+						throw new MavenException(e, "POM resolution inconsistencies, failed to resolve import POM: %s", importArtifactPOM);
+				}
+				
+			}
+			
+		}
+		
+		// parse parent POM
+		if (pom.parent != null) {
+			
+			Artifact importArtifactPOM = pom.parent.gavce();
+			try {
+				POM importPOM = resolveFullPOM(repositories2, r -> {}, importArtifactPOM);
+				if (importPOM == null)
+					throw new MavenException("POM resolution inconsistencies, parent not found on repositories: %s", importArtifactPOM);
+				pom.importPOM(importPOM, true);
+			} catch (MavenException e) {
+				throw new MavenException(e, "POM resolution inconsistencies, failed to resolve parent POM: %s", importArtifactPOM);
+			}
+			
+		}
 		
 	}
 	
@@ -574,12 +601,13 @@ public class MavenResolver {
 	 * Snapshot version resolution is handled automatically.
 	 * @param repository The remote repository from which to download the file if required
 	 * @param artifact The artifact to acquire, this must not necccessarly point to the POM itself
+	 * @param strategy The resolution strategy to apply
 	 * @return The path to the acquired remote file in the local cache, or null if the remote file was not acquired
 	 * @throws MavenException if an unexpected error occurred which prevents further resolving of other artifacts or repositories
 	 */
-	public POM downloadArtifactPOM(Repository repository, Artifact artifact) throws MavenException {
+	public POM downloadArtifactPOM(Repository repository, Artifact artifact, ResolutionStrategy strategy) throws MavenException {
 		
-		File localArtifact = downloadArtifact(repository, artifact.getPOMId(), this.resolutionStrategy);
+		File localArtifact = downloadArtifact(repository, artifact.getPOMId(), strategy);
 		if (localArtifact == null) return null;
 		
 		try {

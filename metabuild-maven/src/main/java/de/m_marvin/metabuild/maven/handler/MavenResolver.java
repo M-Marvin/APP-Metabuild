@@ -731,7 +731,7 @@ public class MavenResolver {
 		}
 		
 		// if no data in cache and in OFFLINE mode and not metadata, abort resolution, don't download anything
-		if (!localArtifact.isFile() && this.resolutionStrategy == ResolutionStrategy.OFFLINE && !dataLevel.isMetadata()) {
+		if (!localArtifact.isFile() && strategy == ResolutionStrategy.OFFLINE && !dataLevel.isMetadata()) {
 			this.cacheValidationList.put(localArtifact, false);
 			return null;
 		}
@@ -746,7 +746,7 @@ public class MavenResolver {
 			
 			// if remote connection failed, check if cache is still available to return
 			if (onlineStream == null) {
-				boolean f = localArtifact.isFile() && this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE;
+				boolean f = localArtifact.isFile() && strategy != ResolutionStrategy.FORCE_REMOTE;
 				this.cacheValidationList.put(localArtifact, f);
 				return f ? localArtifact : null;
 			}

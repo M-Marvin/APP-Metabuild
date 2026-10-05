@@ -17,7 +17,7 @@ import de.m_marvin.simplelogging.Log;
 public class Buildfile extends JavaBuildScript {
 	
 	// version declaration of this metabuild runtime
-	public String version = "1.3.2";
+	public String version = "1.3.3";
 	
 	// local system directory to install metabuild to
 	public File installDir = new File(System.getProperty("user.home"), "/.meta/versions/meta-" + version + "/");
@@ -129,6 +129,8 @@ public class Buildfile extends JavaBuildScript {
 	
 	@Override
 	public void dependencies() {
+		
+		dependencies.test("de.m_marvin.metabuild:metabuild-maven:1.3.5");
 		
 		// CommandLineParser
 		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.0");

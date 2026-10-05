@@ -492,7 +492,7 @@ public class MavenResolver {
 		// if not being forced to re-download everything, first check the local cache for all valid repositories ...
 		if (this.resolutionStrategy != ResolutionStrategy.FORCE_REMOTE) {
 			for (Repository repository : repositories) {
-				POM pom = downloadArtifactPOM(repository, artifact, ResolutionStrategy.OFFLINE);
+				POM pom = downloadArtifactPOM(repository, artifact, this.resolutionStrategy);
 				if (pom == null) continue;
 				fillInPOM(pom, repositories, repository, artifact);
 				pomRepository.accept(repository);

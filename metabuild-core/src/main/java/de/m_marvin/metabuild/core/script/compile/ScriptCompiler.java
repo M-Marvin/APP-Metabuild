@@ -66,8 +66,19 @@ public class ScriptCompiler {
 		Optional<FileTime> buildFileTime = FileUtility.timestamp(buildFile);
 		Optional<FileTime> classFileTime = FileUtility.timestamp(classCache);
 		
-		if (buildFileTime.isEmpty() || classFileTime.isEmpty() ||
-			buildFileTime.get().compareTo(classFileTime.get()) > 0) {
+		boolean buildfileCacheValid =	!buildFileTime.isEmpty() && !classFileTime.isEmpty() &&
+										buildFileTime.get().compareTo(classFileTime.get()) <= 0;
+		if (buildfileCacheValid) {
+			BuildScript buildscript = tryLoadBuildfile(classCache, pluginLoader);
+			if (buildscript == null) {
+				logger().warnt(LOG_TAG, "buildfile failed to load from cache, attempt recompile ...");
+				buildfileCacheValid = false;
+			} else {
+				return buildscript;
+			}
+		}
+		
+		if (!buildfileCacheValid) {
 
 			try {
 				InputStream source = new FileInputStream(buildFile);
@@ -97,6 +108,10 @@ public class ScriptCompiler {
 			
 		}
 		
+		return tryLoadBuildfile(classCache, pluginLoader);
+	}
+	
+	private BuildScript tryLoadBuildfile(File classCache, ClassLoader pluginLoader) {
 		try {
 			ClassLoader buildfileLoader = new SingleFileClassLoader(pluginLoader, Metabuild.BUILD_SCRIPT_CLASS_NAME, classCache);
 			Class<?> buildfileClass = buildfileLoader.loadClass(Metabuild.BUILD_SCRIPT_CLASS_NAME);
@@ -116,6 +131,9 @@ public class ScriptCompiler {
 			return null;
 		} catch (NoClassDefFoundError e) {
 			logger().errort(LOG_TAG, "class not found error in buildfile: %s", e.getMessage());
+			return null;
+		} catch (UnsupportedClassVersionError e) {
+			logger().errort(LOG_TAG, "buildfile compiled with newer jdk version: %s", e.getMessage(), e);
 			return null;
 		}
 	}

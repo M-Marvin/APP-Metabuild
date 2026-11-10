@@ -116,12 +116,12 @@ public class Artifact {
 		StringBuffer buff = new StringBuffer();
 		buff.append('/').append(this.groupId.replace('.', '/'));
 		if (level == DataLevel.META_GROUP) {
-			buff.append('/').append("maven-matedata.xml");
+			buff.append('/').append("maven-metadata.xml");
 			return buff.toString();
 		} else {
 			buff.append('/').append(this.artifactId);
 			if (level == DataLevel.META_ARTIFACT) {
-				buff.append('/').append("maven-matedata.xml");
+				buff.append('/').append("maven-metadata.xml");
 				return buff.toString();
 			} else {
 				if (this.baseVersion != null) {

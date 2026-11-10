@@ -20,7 +20,6 @@ import de.m_marvin.simplelogging.Log;
 
 public class Test {
 	
-	@SuppressWarnings("deprecation")
 	public static void main(String... args) throws MavenException, URISyntaxException, IOException {
 		
 //		URL url = URI.create("https://maven.pkg.github.com/m-marvin/library-serialportaccess/de/m_marvin/serialportaccess/jserialportaccess/maven-matedata.xml").toURL();

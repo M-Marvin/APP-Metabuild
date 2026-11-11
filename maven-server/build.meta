@@ -1,0 +1,58 @@
+import java.awt.Component;
+
+import de.m_marvin.metabuild.java.script.JavaBuildScript;
+import de.m_marvin.metabuild.maven.Maven;
+import de.m_marvin.metabuild.maven.types.Repository;
+import de.m_marvin.metabuild.maven.types.Repository.Credentials;
+
+public class Buildfile extends JavaBuildScript {
+	
+	@Override
+	public void init() {
+		
+		projectName = "maven-server";
+		
+		super.init();
+		
+		compileJava.sourceCompatibility = "17";
+		compileJava.targetCompatibility = "17";
+		
+		packageExecutable();
+		makeRunnable();
+		
+	}
+	
+	@Override
+	public void manifest() {
+		super.manifest();
+		
+		jar.metainfo.put("Main-Class", "de.m_marvin.mavenserver.MavenServer");
+	}
+	
+	@Override
+	public void repositories() {
+		dependencies.repository(new Repository(
+				"[GHP] HttpServer",
+				"https://maven.pkg.github.com/m-marvin/library-httpserver",
+				new Credentials(
+						() -> System.getenv("GITHUB_ACTOR"),	
+						() -> System.getenv("GITHUB_TOKEN")
+				)
+		));
+		dependencies.repository(Maven.mavenLocal());
+	}
+	
+	@Override
+	public void dependencies() {
+		
+		dependencies.implementation("de.m_marvin.httpserver:httpserver:1.5");
+		
+		dependencies.implementation("de.m_marvin.commandlineparser:commandlineutility:2.2.3");
+		
+		dependencies.implementation("de.m_marvin.basicxml:basicxml:1.2.4");
+		
+		dependencies.implementation("de.m_marvin.stdextras:stdextras:1.1");
+		
+	}
+	
+}

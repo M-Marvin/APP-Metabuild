@@ -2,3 +2,5 @@
 *.log
 *.classpath
 /temp
+/maven-server/run
+/maven-server/build

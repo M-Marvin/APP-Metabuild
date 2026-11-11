@@ -8,3 +8,5 @@ cd ../metabuild-maven
 cmd /C meta init -force -info -no-build
 cd ../metabuild-wrapper
 cmd /C meta init -force -info -no-build
+cd ../maven-server
+cmd /C meta init -force -info -no-build

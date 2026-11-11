@@ -14,6 +14,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -104,7 +106,7 @@ public class MavenPublisher {
 
 			this.statusCallback.accept("upload artifacts > " + repository.name + " " + repository.baseURL);
 			
-			if (!uploadArtifacts(repository, config.artifacts, pom, config.timeOfCreation))
+			if (!uploadArtifacts(repository, config.artifacts, pom, config.timeOfCreation, Instant.now().atZone(ZoneOffset.UTC)))
 				failure = true;
 			
 		}
@@ -182,20 +184,27 @@ public class MavenPublisher {
 	 * @return true if the files where all successfully uploaded and all metadata files updated
 	 * @throws MavenException if an unexpected error occurred which prevents further uploads of other artifacts
 	 */
-	public boolean uploadArtifacts(Repository repository, Map<String, File> artifacts, POM pom, ZonedDateTime timeOfCreation) throws MavenException {
+	public boolean uploadArtifacts(Repository repository, Map<String, File> artifacts, POM pom, ZonedDateTime timeOfCreation, ZonedDateTime timeOfUpload) throws MavenException {
 		
 		Artifact pomArtifact = pom.gav().getPOMId();
 
 		logger().info("attempt upload '%s' to repository: [%s] %s", pomArtifact, repository.name, repository.baseURL);
 
 		// get timestamp
-		String timestamp = String.format(TIMESTAMP_FORMAT, 
+		String timestampCreation = String.format(TIMESTAMP_FORMAT, 
 				timeOfCreation.getYear(), 
 				timeOfCreation.getMonthValue(), 
 				timeOfCreation.getDayOfMonth(), 
 				timeOfCreation.getHour(), 
 				timeOfCreation.getMinute(), 
 				timeOfCreation.getSecond());
+		String timestampUpload = String.format(TIMESTAMP_FORMAT, 
+				timeOfUpload.getYear(), 
+				timeOfUpload.getMonthValue(), 
+				timeOfUpload.getDayOfMonth(), 
+				timeOfUpload.getHour(), 
+				timeOfUpload.getMinute(), 
+				timeOfUpload.getSecond());
 		
 		if (pomArtifact.isSnapshot()) {
 			
@@ -213,21 +222,21 @@ public class MavenPublisher {
 			}
 			if (versionMetadata == null)
 				versionMetadata = new VersionMetadata();
-			String buildTimestamp = timestamp + "-" + Integer.toString(buildNumber);
+			String buildTimestamp = timestampCreation + "-" + Integer.toString(buildNumber);
 			
 			// update version metadata
 			versionMetadata.gav(pomArtifact);
 			if (versionMetadata.versioning == null)
 				versionMetadata.versioning = new VersionMetadata.Versioning();
-			versionMetadata.versioning.lastUpdated = timestamp;
+			versionMetadata.versioning.lastUpdated = timestampUpload;
 			versionMetadata.versioning.snapshot = new VersionMetadata.Versioning.Snapshot();
 			versionMetadata.versioning.snapshot.buildNumber = buildNumber;
-			versionMetadata.versioning.snapshot.timestamp = timestamp;
+			versionMetadata.versioning.snapshot.timestamp = timestampCreation;
 			if (versionMetadata.versioning.snapshotVersions == null)
 				versionMetadata.versioning.snapshotVersions = new VersionMetadata.Versioning.SnapshotVersions();
 			for (var cls : artifacts.entrySet()) {
 				VersionMetadata.Versioning.SnapshotVersion versionData = new VersionMetadata.Versioning.SnapshotVersion();
-				versionData.updated = timestamp;
+				versionData.updated = timestampUpload;
 				if (!cls.getKey().isBlank())
 					versionData.classifier = cls.getKey();
 				versionData.extension = FileUtility.getExtension(cls.getValue());
@@ -235,7 +244,7 @@ public class MavenPublisher {
 				versionMetadata.versioning.snapshotVersions.snapshotVersion.add(versionData);
 			}
 			VersionMetadata.Versioning.SnapshotVersion versionData = new VersionMetadata.Versioning.SnapshotVersion();
-			versionData.updated = timestamp;
+			versionData.updated = timestampUpload;
 			versionData.extension = "pom";
 			versionData.value = pomArtifact.getNumericVersion() + "-" + buildTimestamp;
 			versionMetadata.versioning.snapshotVersions.snapshotVersion.add(versionData);
@@ -293,7 +302,7 @@ public class MavenPublisher {
 		artifactMetadata.ga(pomArtifact);
 		if (artifactMetadata.versioning == null)
 			artifactMetadata.versioning = new ArtifactMetadata.Versioning();
-		artifactMetadata.versioning.lastUpdated = timestamp;
+		artifactMetadata.versioning.lastUpdated = timestampUpload;
 		artifactMetadata.versioning.latest = pomArtifact.baseVersion;
 		if (!pomArtifact.isSnapshot())
 			artifactMetadata.versioning.release = pomArtifact.baseVersion; 
